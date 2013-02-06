@@ -1,0 +1,481 @@
+#!/usr/bin/wish
+# Script inspired by David Revoy (www.davidrevoy.com , info@davidrevoy.com )
+# About format based on his Artscript comments.
+#----------------:::: ArtscriptTk ::::----------------------
+# IvanYossi colorathis.wordpress.com ghevan@gmail.com  GPL 3.0
+#-----------------------------------------------------------
+# Goal : Batch convert any image file supported by imagemagick and calligra.
+# Dependencies (that I know of) : calligraconverter, imagemagick, tk 8.5
+# Testednn: Xfce 4.10, thunar 1.4.0
+#      Program should run on Mac if imagemagick is installed
+#-------------------------------------------------------------
+# Disclamer: I'm not a developer, I learn programming on spare time. Caution in use.
+# 
+# __How to install__ (XFCE)
+#   Place script somewhere in your home folder
+#   Make executable
+#   Open thunar>Edit>Configure Custom Actions...
+#   Add New action (+) 
+#   Select a Name, Description and Icon. Add this to Command
+#     --> wish path/to/script/ artscript.tcl %N
+#   In Apperance Conditions Tab, set '*' as file pattern and select
+#     Image files and Other files
+#
+# __Usage:__
+#   A new submenu appears on right-click of Image Files
+#   Select files, right-click , select the item on the menu, use GUI.
+#   Watermark: Select any preset or add custom in empty field at bottom.
+#     Select color and opacity value. By defult is white
+#   Size: By default is off: Select from list or set a new value instead of "200x200"
+#   Output Select from radioboxes or set custom in the field at the right
+#   Suffix is off by default. Add any text to activate.
+#     the string will have an underscore before any text you input
+#   Press Convert to Run
+#
+#   Make grid Please checkbutton will generate a Tiled imagen containing all selected images
+#
+# __Customize:__
+#   You can modify any variable between "#--=====" markers
+#
+#
+
+#--====User variables, date preferences, watermarks, sizes, default values
+set now [exec date +%F]
+set autor "Your Name Here"
+set watermarks [list \
+  "Copyright (c) $autor" \
+  "Copyright (c) $autor\_$now" \
+  "http://www.yourwebsite.com" \
+  "Artwork: $autor" \
+  "$now" \
+]
+set sizes [list \
+  "1920x1920" \
+  "1650x1650" \
+  "1280x1280" \
+  "1024x1024" \
+  "800x800" \
+  "150x150" \
+  "100x100" \
+  "50%" \
+]
+set sizext "200x200"
+set opacity 0.8
+set rgb "#ffffff"
+#Image quality
+set sliderval 92
+#Extension
+set ::outextension "jpg"
+#--=====
+
+#Las message variable
+set lstmsg ""
+
+set suffix ""
+
+#Validation Functions
+#Function to send message boxes
+proc alert {type icon title msg} {
+    tk_messageBox -type $type -icon $icon -title $title \
+    -message $msg
+}
+#Check if we have files to work on, if not, finish program.
+if {[catch $argv] == 0 } { 
+  alert ok info "Operation Done" "No files selected Exiting"
+  exit
+}
+# listValidate:
+# Validates arguments input mimetypes, keeps images strip the rest
+# Creates a separate list for .kra and .ora to process separatedly
+proc listValidate {} {
+  global argv calligralist
+  set calligralist [list]
+  #We validate list elements
+  foreach el $argv {
+    #puts [exec file $el]
+    #Append to new list if mime is from type.
+    if [ regexp {application/x-krita|image/openraster|GIMP XCF image data|Adobe Photoshop Image} [exec file $el] ] {
+      lappend calligralist $el
+      set argv [lsearch -all -inline -not -exact $argv $el]
+    }
+    #Remove from list elements not supported by convert
+    if { [catch { exec identify $el } msg] } {
+      set argv [lsearch -all -inline -not -exact $argv $el]
+    }
+  }
+  #Check if resulting lists have elements
+  if {[llength $argv] + [llength $calligralist] == 0} {
+    alert ok info "Operation Done" "No image files selected Exiting"
+    exit
+  }
+}
+#We run function to validate input mimetypes
+listValidate
+
+
+#For future theming
+#tk_setPalette background black foreground white highlightbackground blue activebackground gray70 activeforeground black
+
+#Gui construct. This needs to be improved a lot
+#--- watermark options
+labelframe .wcol -bd 2 -padx 2m -pady 2m -font {-size 14} -text "Watermark options"  -relief ridge
+pack .wcol -side top -fill x
+
+label .wcol.title -font {-size 10} -text "Color"
+
+listbox .wcol.opwamtex -selectmode single
+foreach i $watermarks { .wcol.opwamtex insert end $i }
+bind .wcol.opwamtex <<ListboxSelect>> { setWatermark [%W curselection]}
+entry .wcol.custom -text "Custom" -textvariable watxt
+bind .wcol.custom <KeyRelease> { setWatermark false }
+label .wcol.label -text "Selected:"
+
+button .wcol.color -text "Choose Color" -command setWmColor
+canvas .wcol.viewcol -bg $rgb -width 96 -height 32
+.wcol.viewcol create text 30 16 -text "Current"
+canvas .wcol.black -bg black -width 48 -height 16
+canvas .wcol.white -bg white -width 48 -height 16
+
+
+label .wcol.lopacity -text "Opacity:"
+scale .wcol.opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 \
+  -variable opacity -showvalue 0 -command {writeVal .wcol.lopacity "Opacity:" }
+
+bind .wcol.viewcol <Button> { setWmColor }
+bind .wcol.black <Button> { set rgb black; .wcol.viewcol configure -bg $rgb }
+bind .wcol.white <Button> { set rgb white; .wcol.viewcol configure -bg $rgb }
+
+grid .wcol.opwamtex -rowspan 5 -column 1 -sticky nesw
+grid .wcol.custom -row 5 -column 1 -sticky we
+grid .wcol.label -row 6 -column 1 -sticky ew
+grid .wcol.title -row 1 -column 2 -sticky nw
+grid .wcol.viewcol -row 2 -column 2 -sticky nesw
+grid .wcol.black -row 3 -column 2 -sticky nsew
+grid .wcol.white -row 3 -column 3 -sticky nsew
+grid .wcol.color -row 4 -column 2 -sticky ew
+grid .wcol.lopacity -row 5 -column 2 -sticky wns
+grid .wcol.opacity -row 6 -column 2 -sticky ew
+grid .wcol.title .wcol.viewcol .wcol.color .wcol.lopacity .wcol.opacity -columnspan 2
+grid rowconfigure .wcol 1 -weight 0
+grid rowconfigure .wcol 2 -weight 1
+grid columnconfigure .wcol 1 -weight 1
+grid columnconfigure .wcol {2 3} -weight 0
+   
+
+#--- Size options
+labelframe .sz -bd 2 -padx 2m -pady 2m -font {-size 14} -text "Size &  Tile settings"  -relief ridge
+pack .sz -side top -fill x
+
+listbox .sz.opsize -selectmode single -relief flat -height 3
+foreach i $sizes { .sz.opsize insert end $i }
+bind .sz.opsize <<ListboxSelect>> { setSize [%W curselection]}
+message .sz.exp -width 280 -justify center -text "\
+ Size format can be expresed as: W x H \n\
+ as well as using percentages like: 50%\n\n\
+ When selecting the \"Tile\" option, the size will not be the final size!\
+ It refers to the size of each tile composing the montage\n\n\
+Tile: Referes to the tile layout (colxrows)\n\
+It's not necessary to define this value below, but sometimes you want precise control"
+
+scrollbar .sz.scroll -command ".sz.opsize yview" -orient v
+entry .sz.text -textvariable sizext -validate key \
+   -vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
+bind .sz.text <KeyRelease> { setSize false }
+entry .sz.tile -textvariable tileval -validate key \
+   -vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
+bind .sz.tile <KeyRelease> { .opt.tile select }
+label .sz.txsize -text "Size:"
+label .sz.txtile -text "Tile(ex 1x, 2x2):"
+
+grid .sz.opsize -row 1 -column 1 -sticky nwse
+grid .sz.scroll -row 1 -column 1 -sticky ens
+grid .sz.text -row 2 -column 1 -sticky ews
+grid .sz.txsize -row 3 -column 1 -sticky wns
+grid .sz.exp -row 1 -column 2 -columnspan 2 -sticky nsew
+grid .sz.txtile -row 2 -column 2 -sticky e
+grid .sz.tile -row 2 -column 3  -sticky ws
+grid rowconfigure .sz 1 -weight 3
+grid rowconfigure .sz 2 -weight 1
+grid columnconfigure .sz 1 -weight 1
+grid columnconfigure .sz 2 -weight 0
+
+
+#--- Format options
+labelframe .ex -bd 2 -padx 2m -pady 2m -font {-size 14} -text "Output Format"  -relief ridge
+pack .ex -side top -fill x
+radiobutton .ex.jpg -value "jpg" -text "JPG" -variable outextension
+radiobutton .ex.png -value "png" -text "PNG" -variable outextension
+radiobutton .ex.gif -value "gif" -text "GIF" -variable outextension
+radiobutton .ex.ora -value "ora" -text "ORA(no resize or wm)" -variable outextension
+.ex.jpg select
+label .ex.lbl -text "Other"
+entry .ex.sel -text "custom" -textvariable outextension -width 6
+text .ex.txt -height 3
+.ex.txt insert end "\
+Users beware! output for other extension formats is not tested\n\
+Be sure to use correct extension names when modifying"
+
+#--- Image quality options
+
+scale .ex.scl -orient horizontal -from 10 -to 100 -tickinterval 25 \
+    -label "" -length 200 -variable sliderval -showvalue 1
+#    -highlightbackground "#666" -highlightcolor "#333" -troughcolor "#888" -fg "#aaa" -bg "#333" -relief flat
+label .ex.qlbl -text "Quality:"
+button .ex.good -text "Good" -command resetSlider;#-relief flat -bg "#888"
+button .ex.best -text "Best" -command {set sliderval 100}
+button .ex.poor -text "Poor" -command {set sliderval 30}
+
+grid .ex.jpg .ex.png .ex.gif .ex.ora .ex.lbl .ex.sel -sticky wsne
+grid .ex.txt -columnspan 6 -sticky nesw
+grid .ex.qlbl .ex.poor .ex.good .ex.scl .ex.best  -sticky we
+grid columnconfigure .ex {1} -weight 0
+grid columnconfigure .ex {3} -weight 1
+
+#--- Suffix options
+labelframe .suffix -padx 2m -pady 2m -font {-size 14} -text "Suffix"  -relief ridge
+pack .suffix -side top -fill x
+entry .suffix.text -textvariable suffix
+checkbutton .suffix.date -text "Add Date Suffix" \
+    -onvalue true -offvalue false -variable datesel -command setdateCmd
+checkbutton .suffix.rname -text "Only rename" \
+    -onvalue true -offvalue false -variable renamesel
+checkbutton .suffix.prefix -text "Prefix" \
+    -onvalue true -offvalue false -variable prefixsel
+pack .suffix.text -side left -fill x -expand 1
+pack .suffix.rname .suffix.prefix .suffix.date -side right
+
+#--- On off values for watermark, size, date suffix and tiling options
+frame .opt -borderwidth 10
+pack .opt
+checkbutton .opt.wm -text "Watermark" \
+    -onvalue true -offvalue false -variable watsel
+checkbutton .opt.size -text "Resize" \
+    -onvalue true -offvalue false -variable sizesel
+checkbutton .opt.tile -text "Make Grid Please" \
+    -onvalue true -offvalue false -variable tilesel
+
+pack .opt.wm .opt.size .opt.tile -side left
+
+#--- Submit button
+frame .act -borderwidth 10
+pack .act -side right
+button .act.submit -text "Convert" -command convert
+pack .act.submit -side right -padx 0 -pady 0
+
+
+#--- Window options
+wm title . Artscript
+
+#General Functions
+
+#Controls watermark text events.
+proc setWatermark { indx } {
+  global watxt
+  #Check if variable comes from list, if not then get value from entry text
+  if {$indx} { 
+    set val [.wcol.opwamtex get $indx]
+  } else {
+    set val [.wcol.custom get]
+  }
+  .wcol.label configure -text "Selected: $val"
+  #If anything is selected we set Watermark option on automatically
+  .opt.wm select
+  set watxt $val
+}
+proc setWmColor {} {
+  global rgb
+  #Call color chooser and store value to set canvas color and get rgb values
+  set choosercolor [tk_chooseColor -title "Watermark color" -initialcolor $rgb -parent .]
+  if { [expr {$choosercolor ne "" ? 1 : 0}] } {
+    uplevel set rgb $choosercolor
+    .wcol.viewcol configure -bg $rgb
+  }
+}
+#Converts hex color value and returns rgb value with opacity setting to alpha channel
+proc setRGBColor { } {
+  global rgb opacity
+  #Transform hex value to rgb 16bit
+  set rgbval [ winfo rgb . $rgb ]
+  set rgbn "rgba("
+  foreach i $rgbval {
+    #For each value we divide by 256 to get 8big rgb value (0 to 255)
+    #I set it to 257 to get integer values, need to check this further.
+    append rgbn "[expr $i / 257],"
+  }
+  append rgbn "$opacity)"
+  return $rgbn
+}
+
+proc setSize { indx } {
+  global sizext
+  #Check if variable comes from list, if not then get value from entry text
+  if {$indx} { 
+    set val [.sz.opsize get $indx]
+  } else {
+    set val [.sz.text get]
+  }
+  .sz.txsize configure -text "Size: $val"
+  #If anything is selected we set Size option on automatically
+  .opt.size select
+  set sizext $val
+}
+
+#Sets text label to $val This function needs to generalize a lot more.
+proc writeVal { l text val } {
+  $l configure -text "$text $val"
+}
+
+#Set slider value to 75
+#The second funciton i made, probably its a good idea to strip it
+proc resetSlider {} {
+  global sliderval
+  set sliderval 92
+}
+
+#Function that controls suffix date construction
+proc setdateCmd {} {
+  global datesel now suffix
+  #We add the date string if checkbox On
+  if {$datesel} {
+    uplevel append suffix $now
+  } else {
+  #If user checkbox to off
+  #We erase it when suffix is same as date
+    if { $suffix == $now } {
+      uplevel set suffix "{}"
+    } else {
+  #Search date string to erase from suffix
+      uplevel set suffix [string map -nocase "$now { }" $suffix ]
+    }
+  }
+}
+#Run function
+proc convert {} {
+  global outextension sliderval watsel watxt sizesel sizext tilesel now argv calligralist
+  global renamesel prefixsel tileval
+  
+  #Before checking all see if user only wants to rename
+  if {$renamesel} {
+    if [llength $calligralist] {
+      foreach i $calligralist {
+        set io [setOutputName $i $outextension $prefixsel $renamesel]
+        file rename $i $io
+      }
+    }
+    if [llength $argv] {
+      foreach i $argv {
+        set io [setOutputName $i $outextension $prefixsel $renamesel]
+        file rename $i $io
+      }
+    }
+    exit
+  }
+  set rgbout [setRGBColor]
+  #Watermarks, we check if checkbox selected to add characters to string
+  set watval ""
+  if {$watsel} {
+	set watval "-pointsize 10 -fill $rgbout -gravity SouthEast -draw \"text 10,10 \'$watxt\'\""
+#png32:- | convert - -pointsize 10 -fill  -gravity SouthEast -annotate +3+3 "
+  }
+  #Size, checbox = True set size command
+  set sizeval ""
+  #We have to trim spaces?
+  set sizext [string trim $sizext]
+  #We check if user wants resize and $sizext not empty
+  if {$sizesel && ![string is boolean $sizext] } {
+    set sizeval "-resize $sizext"
+  }
+  if [llength $calligralist] {
+    foreach i $calligralist {
+      #Make png to feed convert, we feed errors to dev/null to stop calligra killing
+      # the process over warnings
+      exec calligraconverter --batch $i -mimetype image/png /tmp/$i.artscript_temppng 2> /dev/null
+      #Add png to argv file list on /tmp dir
+      lappend argv /tmp/$i.artscript_temppng
+    }
+  }
+  if [llength $argv] {
+    if {$tilesel} {
+      #we set a name for tiled image (temp)
+      set mname /tmp/$now-collage.artscript_temppng
+      #Run command
+      # We still have to add a way to resize it and set tile preferences (1x, 2x2 etc)
+      #We removed -label '%f' because we cant choose name placement.
+      if {![string is boolean $tileval]} {
+        set tileval "-tile $tileval"
+      }
+      eval exec montage $argv -geometry $sizext+6+6 $tileval $mname
+      #Overwrite image list with tiled image to add watermarks or change format
+      set argv $mname
+      #Add mesage to lastmessage
+      append lstmsg "Montage done \n"
+      #Set size to empty to avoid resizing
+      set sizeval ""
+    }
+    foreach i $argv {
+      incr m
+      #Get outputname with suffix and extension
+      set io [setOutputName $i $outextension $prefixsel]
+      #If output is ora we have to use calligraconverter
+      if { $outextension == "ora" } {
+        eval exec calligraconverter --batch $i $io 2> /dev/null
+      } else {
+	#Get color space to avoid color shift
+	set colorspace [lindex [split [ exec identify -format %r $i ] ] 1 ]
+	#Run command
+        eval exec convert $i -colorspace $colorspace $sizeval $watval -quality $sliderval $io
+        #Add messages to lastmessage
+        append lstmsg "$i converted to $io\n"
+        #If file has string it probably comes from ora or kra so erase it.
+        if [string match "*.artscript_temppng" $i] {
+          file delete $i
+        }
+      }
+    }
+    append lstmsg "$m files converted"
+ }
+  alert ok info "Operation Done" $lstmsg
+  exit
+}
+#Prepares output name adding Suffix or Prefix
+#Checks if destination file exists and adds a standard suffix
+proc setOutputName { fname fext { opreffix false } { orename false } } {
+  global suffix
+  set ext [file extension $fname]
+  set finalname ""
+  #Checks if path is defined as absolute path, like when we create a file in /tmp directory
+  #Strips directory leaving file in current directory
+  if { [file pathtype $fname] == "absolute" } {
+    set fname [lindex [file split $fname] end]
+  }
+  #Append suffix if user wrote something in entryfield
+  if { [catch $suffix] } {
+    if {$opreffix && $orename} {
+    #Makes preffix instead of suffix
+      return [append suffix _$fname]
+    } elseif {$orename} {
+    #Makes suffix but rename
+      return [string map -nocase "$ext _$suffix$ext" $fname ]
+    } elseif {$opreffix} {
+      set newnam [string map -nocase "$ext .$fext" $fname ]
+      return [append suffix _$newnam]
+    } else { 
+    append finalname _$suffix
+    }
+  }
+
+  append finalname ".$fext"
+  #If file exists we add string to avoid overwrites
+  if { [file exists [string map -nocase "$ext $finalname" $fname ] ] } {
+    append finalname "_artkFile_"
+  }
+
+  #If no extension we add the extension
+  if { $ext == "" } {
+    return [append fname $finalname]
+  } else {
+    #we search for the extension string and replace it with (suffix and/or date) and extension
+    return [string map -nocase "$ext $finalname" $fname ]
+  }
+}
+
