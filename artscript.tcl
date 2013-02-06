@@ -228,6 +228,9 @@ text .ex.txt -height 3
 #-- Select only rename no output transform
 checkbutton .ex.rname -text "Only rename" \
     -onvalue true -offvalue false -variable renamesel
+#-- Ignore output, use input extension as output.
+checkbutton .ex.keep -text "Leave ext unchanged" \
+    -onvalue true -offvalue false -variable keep
 #--- Image quality options
 
 scale .ex.scl -orient horizontal -from 10 -to 100 -tickinterval 25 \
@@ -238,16 +241,17 @@ button .ex.good -text "Good" -command resetSlider;#-relief flat -bg "#888"
 button .ex.best -text "Best" -command {set sliderval 100}
 button .ex.poor -text "Poor" -command {set sliderval 30}
 
-grid .ex.jpg .ex.png .ex.gif .ex.ora .ex.rname -column 1 -columnspan 2 -sticky w
+grid .ex.jpg .ex.png .ex.gif .ex.ora .ex.rname .ex.keep -column 1 -columnspan 2 -sticky w
 grid .ex.jpg -row 1
 grid .ex.png -row 2
 grid .ex.gif -row 3
 grid .ex.ora -row 4
 grid .ex.sel -row 5 -column 2
 grid .ex.lbl -row 5 -column 1
-grid .ex.rname -row 6
+grid .ex.keep -row 6
+grid .ex.rname -row 7
 grid .ex.txt -column 3 -row 1 -columnspan 5 -rowspan 4 -sticky nesw
-grid .ex.qlbl .ex.poor .ex.good .ex.scl .ex.best -row 5 -rowspan 2 -sticky we
+grid .ex.qlbl .ex.poor .ex.good .ex.scl .ex.best -row 6 -rowspan 2 -sticky we
 grid .ex.qlbl -column 3
 grid .ex.poor -column 4
 grid .ex.good -column 5
@@ -291,7 +295,7 @@ checkbutton .opt.watxt -text "Watermark" \
     -onvalue true -offvalue false -variable watsel
 checkbutton .opt.sizext -text "Resize" \
     -onvalue true -offvalue false -variable sizesel
-checkbutton .opt.tile -text "Make Grid Please" \
+checkbutton .opt.tile -text "Make Collage" \
     -onvalue true -offvalue false -variable tilesel
 
 pack .opt.watxt .opt.sizext .opt.tile -side left
@@ -400,21 +404,27 @@ proc setdateCmd {} {
     }
   }
 }
+proc keepExtension { i } {
+  global outextension
+  uplevel set outextension [ string trimleft [file extension $i] "."]
+}
 #Run function
 proc convert {} {
   global outextension sliderval watsel watxt sizesel sizext tilesel now argv calligralist
-  global renamesel prefixsel tileval
+  global renamesel prefixsel tileval keep
   
   #Before checking all see if user only wants to rename
   if {$renamesel} {
     if [llength $calligralist] {
       foreach i $calligralist {
+        if {$keep } { keepExtension $i }
         set io [setOutputName $i $outextension $prefixsel $renamesel]
         file rename $i $io
       }
     }
     if [llength $argv] {
       foreach i $argv {
+        if {$keep } { keepExtension $i }
         set io [setOutputName $i $outextension $prefixsel $renamesel]
         file rename $i $io
       }
@@ -466,10 +476,13 @@ proc convert {} {
     foreach i $argv {
       incr m
       #Get outputname with suffix and extension
+      if {$keep } { keepExtension $i }
       set io [setOutputName $i $outextension $prefixsel]
       #If output is ora we have to use calligraconverter
-      if { $outextension == "ora" } {
-        eval exec calligraconverter --batch $i $io 2> /dev/null
+      if { [regexp {ora|kra|xcf} $outextension] } {
+        if {!$keep } {
+          eval exec calligraconverter --batch $i $io 2> /dev/null
+        }
       } else {
 	#Get color space to avoid color shift
 	set colorspace [lindex [split [ exec identify -format %r $i ] ] 1 ]
