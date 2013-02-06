@@ -86,7 +86,7 @@ if {[catch $argv] == 0 } {
 }
 # listValidate:
 # Validates arguments input mimetypes, keeps images strip the rest
-# Creates a separate list for .kra and .ora to process separatedly
+# Creates a separate list for .kra, .xcf, .psd and .ora to process separatedly
 proc listValidate {} {
   global argv calligralist
   set calligralist [list]
@@ -118,58 +118,58 @@ listValidate
 
 #Gui construct. This needs to be improved a lot
 #--- watermark options
-labelframe .wcol -bd 2 -padx 2m -pady 2m -font {-size 14} -text "Watermark options"  -relief ridge
-pack .wcol -side top -fill x
+labelframe .wm -bd 2 -padx 2m -pady 2m -font {-size 14} -text "Watermark options"  -relief ridge
+pack .wm -side top -fill x
 
-label .wcol.title -font {-size 10} -text "Color"
+label .wm.title -font {-size 10} -text "Color"
 
-listbox .wcol.opwamtex -selectmode single
-foreach i $watermarks { .wcol.opwamtex insert end $i }
-bind .wcol.opwamtex <<ListboxSelect>> { setWatermark [%W curselection]}
-entry .wcol.custom -text "Custom" -textvariable watxt
-bind .wcol.custom <KeyRelease> { setWatermark false }
-label .wcol.label -text "Selected:"
+listbox .wm.listbox -selectmode single
+foreach i $watermarks { .wm.listbox insert end $i }
+bind .wm.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "wm" "watxt"}
+entry .wm.entry -text "Custom" -textvariable watxt
+bind .wm.entry <KeyRelease> { setSelectOnEntry false "wm" "watxt" }
+label .wm.label -text "Selected:"
 
-button .wcol.color -text "Choose Color" -command setWmColor
-canvas .wcol.viewcol -bg $rgb -width 96 -height 32
-.wcol.viewcol create text 30 16 -text "Current"
-canvas .wcol.black -bg black -width 48 -height 16
-canvas .wcol.white -bg white -width 48 -height 16
+button .wm.color -text "Choose Color" -command setWmColor
+canvas .wm.viewcol -bg $rgb -width 96 -height 32
+.wm.viewcol create text 30 16 -text "Current"
+canvas .wm.black -bg black -width 48 -height 16
+canvas .wm.white -bg white -width 48 -height 16
 
 
-label .wcol.lopacity -text "Opacity:"
-scale .wcol.opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 \
-  -variable opacity -showvalue 0 -command {writeVal .wcol.lopacity "Opacity:" }
+label .wm.lopacity -text "Opacity:"
+scale .wm.opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 \
+  -variable opacity -showvalue 0 -command {writeVal .wm.lopacity "Opacity:" }
 
-bind .wcol.viewcol <Button> { setWmColor }
-bind .wcol.black <Button> { set rgb black; .wcol.viewcol configure -bg $rgb }
-bind .wcol.white <Button> { set rgb white; .wcol.viewcol configure -bg $rgb }
+bind .wm.viewcol <Button> { setWmColor }
+bind .wm.black <Button> { set rgb black; .wm.viewcol configure -bg $rgb }
+bind .wm.white <Button> { set rgb white; .wm.viewcol configure -bg $rgb }
 
-grid .wcol.opwamtex -rowspan 5 -column 1 -sticky nesw
-grid .wcol.custom -row 5 -column 1 -sticky we
-grid .wcol.label -row 6 -column 1 -sticky ew
-grid .wcol.title -row 1 -column 2 -sticky nw
-grid .wcol.viewcol -row 2 -column 2 -sticky nesw
-grid .wcol.black -row 3 -column 2 -sticky nsew
-grid .wcol.white -row 3 -column 3 -sticky nsew
-grid .wcol.color -row 4 -column 2 -sticky ew
-grid .wcol.lopacity -row 5 -column 2 -sticky wns
-grid .wcol.opacity -row 6 -column 2 -sticky ew
-grid .wcol.title .wcol.viewcol .wcol.color .wcol.lopacity .wcol.opacity -columnspan 2
-grid rowconfigure .wcol 1 -weight 0
-grid rowconfigure .wcol 2 -weight 1
-grid columnconfigure .wcol 1 -weight 1
-grid columnconfigure .wcol {2 3} -weight 0
+grid .wm.listbox -rowspan 5 -column 1 -sticky nesw
+grid .wm.entry -row 5 -column 1 -sticky we
+grid .wm.label -row 6 -column 1 -sticky ew
+grid .wm.title -row 1 -column 2 -sticky nw
+grid .wm.viewcol -row 2 -column 2 -sticky nesw
+grid .wm.black -row 3 -column 2 -sticky nsew
+grid .wm.white -row 3 -column 3 -sticky nsew
+grid .wm.color -row 4 -column 2 -sticky ew
+grid .wm.lopacity -row 5 -column 2 -sticky wns
+grid .wm.opacity -row 6 -column 2 -sticky ew
+grid .wm.title .wm.viewcol .wm.color .wm.lopacity .wm.opacity -columnspan 2
+grid rowconfigure .wm 1 -weight 0
+grid rowconfigure .wm 2 -weight 1
+grid columnconfigure .wm 1 -weight 1
+grid columnconfigure .wm {2 3} -weight 0
    
 
 #--- Size options
-labelframe .sz -bd 2 -padx 2m -pady 2m -font {-size 14} -text "Size &  Tile settings"  -relief ridge
-pack .sz -side top -fill x
+labelframe .size -bd 2 -padx 2m -pady 2m -font {-size 14} -text "Size &  Tile settings"  -relief ridge
+pack .size -side top -fill x
 
-listbox .sz.opsize -selectmode single -relief flat -height 3
-foreach i $sizes { .sz.opsize insert end $i }
-bind .sz.opsize <<ListboxSelect>> { setSize [%W curselection]}
-message .sz.exp -width 280 -justify center -text "\
+listbox .size.listbox -selectmode single -relief flat -height 3
+foreach i $sizes { .size.listbox insert end $i }
+bind .size.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "size" "sizext"}
+message .size.exp -width 280 -justify center -text "\
  Size format can be expresed as: W x H \n\
  as well as using percentages like: 50%\n\n\
  When selecting the \"Tile\" option, the size will not be the final size!\
@@ -177,27 +177,27 @@ message .sz.exp -width 280 -justify center -text "\
 Tile: Referes to the tile layout (colxrows)\n\
 It's not necessary to define this value below, but sometimes you want precise control"
 
-scrollbar .sz.scroll -command ".sz.opsize yview" -orient v
-entry .sz.text -textvariable sizext -validate key \
+scrollbar .size.scroll -command ".size.listbox yview" -orient v
+entry .size.entry -textvariable sizext -validate key \
    -vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
-bind .sz.text <KeyRelease> { setSize false }
-entry .sz.tile -textvariable tileval -validate key \
+bind .size.entry <KeyRelease> { setSelectOnEntry false "size" "sizext" }
+entry .size.tile -textvariable tileval -validate key \
    -vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
-bind .sz.tile <KeyRelease> { .opt.tile select }
-label .sz.txsize -text "Size:"
-label .sz.txtile -text "Tile(ex 1x, 2x2):"
+bind .size.tile <KeyRelease> { .opt.tile select }
+label .size.label -text "Size:"
+label .size.txtile -text "Tile(ex 1x, 2x2):"
 
-grid .sz.opsize -row 1 -column 1 -sticky nwse
-grid .sz.scroll -row 1 -column 1 -sticky ens
-grid .sz.text -row 2 -column 1 -sticky ews
-grid .sz.txsize -row 3 -column 1 -sticky wns
-grid .sz.exp -row 1 -column 2 -columnspan 2 -sticky nsew
-grid .sz.txtile -row 2 -column 2 -sticky e
-grid .sz.tile -row 2 -column 3  -sticky ws
-grid rowconfigure .sz 1 -weight 3
-grid rowconfigure .sz 2 -weight 1
-grid columnconfigure .sz 1 -weight 1
-grid columnconfigure .sz 2 -weight 0
+grid .size.listbox -row 1 -column 1 -sticky nwse
+grid .size.scroll -row 1 -column 1 -sticky ens
+grid .size.entry -row 2 -column 1 -sticky ews
+grid .size.label -row 3 -column 1 -sticky wns
+grid .size.exp -row 1 -column 2 -columnspan 2 -sticky nsew
+grid .size.txtile -row 2 -column 2 -sticky e
+grid .size.tile -row 2 -column 3  -sticky ws
+grid rowconfigure .size 1 -weight 3
+grid rowconfigure .size 2 -weight 1
+grid columnconfigure .size 1 -weight 1
+grid columnconfigure .size 2 -weight 0
 
 
 #--- Format options
@@ -247,14 +247,14 @@ pack .suffix.rname .suffix.prefix .suffix.date -side right
 #--- On off values for watermark, size, date suffix and tiling options
 frame .opt -borderwidth 10
 pack .opt
-checkbutton .opt.wm -text "Watermark" \
+checkbutton .opt.watxt -text "Watermark" \
     -onvalue true -offvalue false -variable watsel
-checkbutton .opt.size -text "Resize" \
+checkbutton .opt.sizext -text "Resize" \
     -onvalue true -offvalue false -variable sizesel
 checkbutton .opt.tile -text "Make Grid Please" \
     -onvalue true -offvalue false -variable tilesel
 
-pack .opt.wm .opt.size .opt.tile -side left
+pack .opt.watxt .opt.sizext .opt.tile -side left
 
 #--- Submit button
 frame .act -borderwidth 10
@@ -269,26 +269,27 @@ wm title . Artscript
 #General Functions
 
 #Controls watermark text events.
-proc setWatermark { indx } {
-  global watxt
-  #Check if variable comes from list, if not then get value from entry text
-  if {$indx} { 
-    set val [.wcol.opwamtex get $indx]
-  } else {
-    set val [.wcol.custom get]
-  }
-  .wcol.label configure -text "Selected: $val"
-  #If anything is selected we set Watermark option on automatically
-  .opt.wm select
-  set watxt $val
-}
+#proc setWatermark { indx } {
+#  global watxt
+#  #Check if variable comes from list, if not then get value from entry text
+#  if {$indx} { 
+#    set val [.wcol.listbox get $indx]
+#  } else {
+#    set val [.wcol.custom get]
+#  }
+#  .wcol.label configure -text "Selected: $val"
+#  #If anything is selected we set Watermark option on automatically
+#  .opt.wm select
+#  set watxt $val
+#}
+
 proc setWmColor {} {
   global rgb
   #Call color chooser and store value to set canvas color and get rgb values
   set choosercolor [tk_chooseColor -title "Watermark color" -initialcolor $rgb -parent .]
   if { [expr {$choosercolor ne "" ? 1 : 0}] } {
     uplevel set rgb $choosercolor
-    .wcol.viewcol configure -bg $rgb
+    .wm.viewcol configure -bg $rgb
   }
 }
 #Converts hex color value and returns rgb value with opacity setting to alpha channel
@@ -306,19 +307,22 @@ proc setRGBColor { } {
   return $rgbn
 }
 
-proc setSize { indx } {
-  global sizext
+#Recieves an indexvalue a rootname and a global variable to call
+#Syncs listbox values with other label values and entry values
+proc setSelectOnEntry { indx r g } {
+  global $g
   #Check if variable comes from list, if not then get value from entry text
-  if {$indx} { 
-    set val [.sz.opsize get $indx]
+  if { [string is integer $indx] } { 
+    set val [.$r.listbox get $indx]
   } else {
-    set val [.sz.text get]
+    set val [.$r.entry get]
   }
-  .sz.txsize configure -text "Size: $val"
+  .$r.label configure -text "Size: $val"
   #If anything is selected we set Size option on automatically
-  .opt.size select
-  set sizext $val
+  .opt.$g select
+  set $g $val
 }
+
 
 #Sets text label to $val This function needs to generalize a lot more.
 proc writeVal { l text val } {
