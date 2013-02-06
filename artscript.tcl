@@ -59,6 +59,12 @@ set sizes [list \
   "100x100" \
   "50%" \
 ]
+set suffixes [list \
+  "net" \
+  "archive" \
+  "by-[string map -nocase {{ } -} $autor]" \
+  "my-cool-suffix" \
+]
 set sizext "200x200"
 set opacity 0.8
 set rgb "#ffffff"
@@ -206,7 +212,7 @@ pack .ex -side top -fill x
 radiobutton .ex.jpg -value "jpg" -text "JPG" -variable outextension
 radiobutton .ex.png -value "png" -text "PNG" -variable outextension
 radiobutton .ex.gif -value "gif" -text "GIF" -variable outextension
-radiobutton .ex.ora -value "ora" -text "ORA(no resize or wm)" -variable outextension
+radiobutton .ex.ora -value "ora" -text "ORA(No post)" -variable outextension
 .ex.jpg select
 label .ex.lbl -text "Other"
 entry .ex.sel -text "custom" -textvariable outextension -width 6
@@ -215,6 +221,9 @@ text .ex.txt -height 3
 Users beware! output for other extension formats is not tested\n\
 Be sure to use correct extension names when modifying"
 
+#-- Select only rename no output transform
+checkbutton .ex.rname -text "Only rename" \
+    -onvalue true -offvalue false -variable renamesel
 #--- Image quality options
 
 scale .ex.scl -orient horizontal -from 10 -to 100 -tickinterval 25 \
@@ -225,24 +234,51 @@ button .ex.good -text "Good" -command resetSlider;#-relief flat -bg "#888"
 button .ex.best -text "Best" -command {set sliderval 100}
 button .ex.poor -text "Poor" -command {set sliderval 30}
 
-grid .ex.jpg .ex.png .ex.gif .ex.ora .ex.lbl .ex.sel -sticky wsne
-grid .ex.txt -columnspan 6 -sticky nesw
-grid .ex.qlbl .ex.poor .ex.good .ex.scl .ex.best  -sticky we
+grid .ex.jpg .ex.png .ex.gif .ex.ora .ex.rname -column 1 -columnspan 2 -sticky w
+grid .ex.jpg -row 1
+grid .ex.png -row 2
+grid .ex.gif -row 3
+grid .ex.ora -row 4
+grid .ex.sel -row 5 -column 2
+grid .ex.lbl -row 5 -column 1
+grid .ex.rname -row 6
+grid .ex.txt -column 3 -row 1 -columnspan 5 -rowspan 4 -sticky nesw
+grid .ex.qlbl .ex.poor .ex.good .ex.scl .ex.best -row 5 -rowspan 2 -sticky we
+grid .ex.qlbl -column 3
+grid .ex.poor -column 4
+grid .ex.good -column 5
+grid .ex.scl  -column 6
+grid .ex.best -column 7
 grid columnconfigure .ex {1} -weight 0
-grid columnconfigure .ex {3} -weight 1
+grid columnconfigure .ex {6} -weight 1
 
 #--- Suffix options
 labelframe .suffix -padx 2m -pady 2m -font {-size 14} -text "Suffix"  -relief ridge
 pack .suffix -side top -fill x
-entry .suffix.text -textvariable suffix
+
+listbox .suffix.listbox -selectmode single -relief flat -height 3
+foreach i $suffixes { .suffix.listbox insert end $i }
+bind .suffix.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "suffix" "suffix"}
+label .suffix.label -text "Selected:"
+
+entry .suffix.entry -textvariable suffix -validate key \
+   -vcmd { string is graph %P }
+bind .suffix.entry <KeyRelease> { setSelectOnEntry false "suffix" "suffix" }
 checkbutton .suffix.date -text "Add Date Suffix" \
     -onvalue true -offvalue false -variable datesel -command setdateCmd
-checkbutton .suffix.rname -text "Only rename" \
-    -onvalue true -offvalue false -variable renamesel
 checkbutton .suffix.prefix -text "Prefix" \
-    -onvalue true -offvalue false -variable prefixsel
-pack .suffix.text -side left -fill x -expand 1
-pack .suffix.rname .suffix.prefix .suffix.date -side right
+    -onvalue true -offvalue false -variable prefixsel -command { setSelectOnEntry false "suffix" "suffix" }
+
+grid .suffix.listbox -column 1 -rowspan 4 -sticky nsew
+grid .suffix.label -row 1 -column 2 -columnspan 3 -sticky nsew
+grid .suffix.entry -row 2 -column 2 -columnspan 3 -sticky ew
+grid .suffix.date -row 3 -column 2 -sticky w
+grid .suffix.prefix -row 3 -column 4 -sticky w
+grid columnconfigure .suffix {1} -weight 0
+grid columnconfigure .suffix {2} -weight 1
+
+#pack .suffix.entry -side left -fill x -expand 1
+#pack .suffix.rname .suffix.prefix .suffix.date -side right
 
 #--- On off values for watermark, size, date suffix and tiling options
 frame .opt -borderwidth 10
@@ -317,10 +353,16 @@ proc setSelectOnEntry { indx r g } {
   } else {
     set val [.$r.entry get]
   }
-  .$r.label configure -text "Size: $val"
-  #If anything is selected we set Size option on automatically
-  .opt.$g select
   set $g $val
+  #Dirty hack to add suffix listbox but no select option
+  if {$g != "suffix"} {
+    .$r.label configure -text "Selected: $val"
+  #If anything is selected we set Size option on automatically
+    .opt.$g select
+  #Else $g is "suffix" 
+  } else {
+    .$r.label configure -text "Output: [getOutputName]"
+  }
 }
 
 
@@ -341,15 +383,16 @@ proc setdateCmd {} {
   global datesel now suffix
   #We add the date string if checkbox On
   if {$datesel} {
-    uplevel append suffix $now
+    uplevel append suffix _$now
+    .suffix.label configure -text "Output: [getOutputName]"
   } else {
   #If user checkbox to off
   #We erase it when suffix is same as date
-    if { $suffix == $now } {
+    if { $suffix == "_$now" } {
       uplevel set suffix "{}"
     } else {
   #Search date string to erase from suffix
-      uplevel set suffix [string map -nocase "$now { }" $suffix ]
+      uplevel set suffix [string map -nocase "_$now { }" $suffix ]
     }
   }
 }
@@ -445,6 +488,7 @@ proc convert {} {
 #Checks if destination file exists and adds a standard suffix
 proc setOutputName { fname fext { opreffix false } { orename false } } {
   global suffix
+  set tmpsuffix $suffix
   set ext [file extension $fname]
   set finalname ""
   #Checks if path is defined as absolute path, like when we create a file in /tmp directory
@@ -453,18 +497,18 @@ proc setOutputName { fname fext { opreffix false } { orename false } } {
     set fname [lindex [file split $fname] end]
   }
   #Append suffix if user wrote something in entryfield
-  if { [catch $suffix] } {
+  if { [catch $tmpsuffix] } {
     if {$opreffix && $orename} {
     #Makes preffix instead of suffix
-      return [append suffix _$fname]
+      return [append tmpsuffix _$fname]
     } elseif {$orename} {
     #Makes suffix but rename
-      return [string map -nocase "$ext _$suffix$ext" $fname ]
+      return [string map -nocase "$ext _$tmpsuffix$ext" $fname ]
     } elseif {$opreffix} {
       set newnam [string map -nocase "$ext .$fext" $fname ]
-      return [append suffix _$newnam]
+      return [append tmpsuffix _$newnam]
     } else { 
-    append finalname _$suffix
+    append finalname _$tmpsuffix
     }
   }
 
@@ -481,5 +525,10 @@ proc setOutputName { fname fext { opreffix false } { orename false } } {
     #we search for the extension string and replace it with (suffix and/or date) and extension
     return [string map -nocase "$ext $finalname" $fname ]
   }
+}
+proc getOutputName { {indx 0} } {
+  global outextension prefixsel argv
+  set i [lindex $argv $indx]
+  return [setOutputName $i $outextension $prefixsel]
 }
 
