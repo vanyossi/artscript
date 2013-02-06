@@ -94,7 +94,9 @@ if {[catch $argv] == 0 } {
 # Validates arguments input mimetypes, keeps images strip the rest
 # Creates a separate list for .kra, .xcf, .psd and .ora to process separatedly
 proc listValidate {} {
-  global argv calligralist
+  global argv calligralist lfiles fc
+  set lfiles "Files to be processed\n"
+  set fc 0
   set calligralist [list]
   #We validate list elements
   foreach el $argv {
@@ -102,11 +104,15 @@ proc listValidate {} {
     #Append to new list if mime is from type.
     if [ regexp {application/x-krita|image/openraster|GIMP XCF image data|Adobe Photoshop Image} [exec file $el] ] {
       lappend calligralist $el
+      append lfiles "No: $el\n"
       set argv [lsearch -all -inline -not -exact $argv $el]
     }
     #Remove from list elements not supported by convert
     if { [catch { exec identify $el } msg] } {
       set argv [lsearch -all -inline -not -exact $argv $el]
+    } else {
+      append lfiles "$fc: $el\n"
+      incr fc
     }
   }
   #Check if resulting lists have elements
@@ -127,9 +133,9 @@ listValidate
 labelframe .wm -bd 2 -padx 2m -pady 2m -font {-size 14} -text "Watermark options"  -relief ridge
 pack .wm -side top -fill x
 
-label .wm.title -font {-size 10} -text "Color"
+label .wm.title -font {-size 10} -text "Current color"
 
-listbox .wm.listbox -selectmode single
+listbox .wm.listbox -selectmode single -height 6
 foreach i $watermarks { .wm.listbox insert end $i }
 bind .wm.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "wm" "watxt"}
 entry .wm.entry -text "Custom" -textvariable watxt
@@ -138,7 +144,7 @@ label .wm.label -text "Selected:"
 
 button .wm.color -text "Choose Color" -command setWmColor
 canvas .wm.viewcol -bg $rgb -width 96 -height 32
-.wm.viewcol create text 30 16 -text "Current"
+.wm.viewcol create text 30 16 -text "click me"
 canvas .wm.black -bg black -width 48 -height 16
 canvas .wm.white -bg white -width 48 -height 16
 
@@ -217,9 +223,7 @@ radiobutton .ex.ora -value "ora" -text "ORA(No post)" -variable outextension
 label .ex.lbl -text "Other"
 entry .ex.sel -text "custom" -textvariable outextension -width 6
 text .ex.txt -height 3
-.ex.txt insert end "\
-Users beware! output for other extension formats is not tested\n\
-Be sure to use correct extension names when modifying"
+.ex.txt insert end $lfiles
 
 #-- Select only rename no output transform
 checkbutton .ex.rname -text "Only rename" \
@@ -256,7 +260,7 @@ grid columnconfigure .ex {6} -weight 1
 labelframe .suffix -padx 2m -pady 2m -font {-size 14} -text "Suffix"  -relief ridge
 pack .suffix -side top -fill x
 
-listbox .suffix.listbox -selectmode single -relief flat -height 3
+listbox .suffix.listbox -selectmode single -height 4
 foreach i $suffixes { .suffix.listbox insert end $i }
 bind .suffix.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "suffix" "suffix"}
 label .suffix.label -text "Selected:"
@@ -300,7 +304,7 @@ pack .act.submit -side right -padx 0 -pady 0
 
 
 #--- Window options
-wm title . Artscript
+wm title . "Artscript -- $fc Files selected"
 
 #General Functions
 
@@ -383,16 +387,16 @@ proc setdateCmd {} {
   global datesel now suffix
   #We add the date string if checkbox On
   if {$datesel} {
-    uplevel append suffix _$now
+    uplevel append suffix $now
     .suffix.label configure -text "Output: [getOutputName]"
   } else {
   #If user checkbox to off
   #We erase it when suffix is same as date
-    if { $suffix == "_$now" } {
+    if { $suffix == "$now" } {
       uplevel set suffix "{}"
     } else {
   #Search date string to erase from suffix
-      uplevel set suffix [string map -nocase "_$now { }" $suffix ]
+      uplevel set suffix [string map -nocase "$now { }" $suffix ]
     }
   }
 }
