@@ -102,18 +102,27 @@ if {[catch $argv] == 0 } {
 # Validates arguments input mimetypes, keeps images strip the rest
 # Creates a separate list for .kra, .xcf, .psd and .ora to process separatedly
 proc listValidate {} {
-  global argv calligralist lfiles fc
+  global argv calligralist inkscapelist lfiles fc
   set lfiles "Files to be processed\n"
   set fc 0
   set calligralist [list]
+  set inkscapelist ""
   #We validate list elements
   foreach el $argv {
     #puts [exec file $el]
     #Append to new list if mime is from type.
     if [ regexp {application/x-krita|image/openraster|GIMP XCF image data|Adobe Photoshop Image} [exec file $el] ] {
       lappend calligralist $el
-      append lfiles "No: $el\n"
+      append lfiles "Cal: $el\n"
       set argv [lsearch -all -inline -not -exact $argv $el]
+      continue
+    }
+    #Append to inkscapelist
+    if [ regexp {SVG Scalable Vector Graphics image} [exec file $el] ] {
+      lappend inkscapelist $el
+      append lfiles "Ink: $el\n"
+      set argv [lsearch -all -inline -not -exact $argv $el]
+      continue
     }
     #Remove from list elements not supported by convert
     if { [catch { exec identify $el } msg] } {
@@ -124,7 +133,7 @@ proc listValidate {} {
     }
   }
   #Check if resulting lists have elements
-  if {[llength $argv] + [llength $calligralist] == 0} {
+  if {[llength $argv] + [llength $calligralist] + [llength $inkscapelist] == 0} {
     alert ok info "Operation Done" "No image files selected Exiting"
     exit
   }
@@ -416,7 +425,7 @@ proc keepExtension { i } {
 }
 #Run function
 proc convert {} {
-  global outextension sliderval watsel watxt sizesel sizext tilesel now argv calligralist
+  global outextension sliderval watsel watxt sizesel sizext tilesel now argv calligralist inkscapelist
   global renamesel prefixsel tileval keep mborder mspace mname
   set sizeval $sizext
   
@@ -463,6 +472,29 @@ proc convert {} {
       #Sends file input for processing, stripping input directory
       set io [setOutputName $i "artscript_temppng" 0 0 1]
       exec calligraconverter --batch $i -mimetype image/png /tmp/$io 2> /dev/null
+      #Add png to argv file list on /tmp dir
+      lappend argv /tmp/$io
+      lappend tmplist /tmp/$io
+    }
+  }
+  if [llength $inkscapelist] {
+    foreach i $inkscapelist {
+      set inksize ""
+      if {$sizesel || $tilesel } {
+        puts "aqui"
+        if {![string match -nocase {*[0-9]\%} $sizext]} {
+          set mgap [expr [expr $mborder + $mspace ] *2 ]
+          set inksize [string range $sizext 0 [string last "x" $sizext]-1]
+          set inksize "-w $inksize"
+        } else {
+          set inksize [expr 90 * [ expr 50 / 100.0 ] ]
+          set inksize "-d $inksize"
+        }
+      }
+      #Make png to feed convert, we try catch, inkscape cant be quiet
+      #Sends file input for processing, stripping input directory
+      set io [setOutputName $i "artscript_temppng" 0 0 1]
+      catch [ exec inkscape $i -z -C $inksize -e /tmp/$io 2> /dev/null ]
       #Add png to argv file list on /tmp dir
       lappend argv /tmp/$io
       lappend tmplist /tmp/$io
@@ -563,9 +595,9 @@ proc setOutputName { fname fext { opreffix false } { orename false } {tmpdir fal
   }
 }
 proc getOutputName { {indx 0} } {
-  global outextension prefixsel argv calligralist
+  global outextension prefixsel argv calligralist inkscapelist
   #Concatenate both lists to always have an output example name
-  set i [lindex [concat $argv $calligralist] $indx]
+  set i [lindex [concat $argv $calligralist $inkscapelist] $indx]
   return [setOutputName $i $outextension $prefixsel]
 }
 
