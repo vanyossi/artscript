@@ -41,6 +41,8 @@
 
 #--====User variables, date preferences, watermarks, sizes, default values
 set now [exec date +%F]
+#Get a different number each run
+set raninter [exec date +%N]
 set autor "Your Name Here"
 set watermarks [list \
   "Copyright (c) $autor" \
@@ -70,20 +72,21 @@ set opacity 0.8
 set rgb "#ffffff"
 #Image quality
 set sliderval 92
-#Extension
+#Extension & output
 set ::outextension "jpg"
 #Montage:
 # mborder Adds a grey border around each image. set 0 disable
 # mspace Adds space between images. set 0 no gap
 set ::mborder 5
 set ::mspace 3
+# moutput Montarge filename output
+set ::mname "collage-$raninter"
 #--=====
 
 #Las message variable
 set lstmsg ""
 
 set suffix ""
-
 #Validation Functions
 #Function to send message boxes
 proc alert {type icon title msg} {
@@ -414,7 +417,7 @@ proc keepExtension { i } {
 #Run function
 proc convert {} {
   global outextension sliderval watsel watxt sizesel sizext tilesel now argv calligralist
-  global renamesel prefixsel tileval keep mborder mspace
+  global renamesel prefixsel tileval keep mborder mspace mname
   
   #Before checking all see if user only wants to rename
   if {$renamesel} {
@@ -449,6 +452,8 @@ proc convert {} {
   if {$sizesel && ![string is boolean $sizext] } {
     set sizeval "-resize $sizext"
   }
+  #Declare a empty list to fill with tmp files for deletion
+  set tmplist ""
   if [llength $calligralist] {
     foreach i $calligralist {
       #Make png to feed convert, we feed errors to dev/null to stop calligra killing
@@ -458,12 +463,14 @@ proc convert {} {
       exec calligraconverter --batch $i -mimetype image/png /tmp/$io 2> /dev/null
       #Add png to argv file list on /tmp dir
       lappend argv /tmp/$io
+      lappend tmplist /tmp/$io
     }
   }
   if [llength $argv] {
     if {$tilesel} {
       #we set a name for tiled image (temp)
-      set mname /tmp/$now-collage.artscript_temppng
+      set tmpvar ""
+      set mname [ append tmpvar "/tmp/" $mname ".artscript_temppng" ]
       #Run command
       # We still have to add a way to resize it and set tile preferences (1x, 2x2 etc)
       #We removed -label '%f' because we cant choose name placement.
@@ -477,9 +484,10 @@ proc convert {} {
         set sizext [expr [string range $sizext 0 [string last "x" $sizext]-1]-$mgap]
         set sizext "$sizext\x$sizext"
       }
-      eval exec montage $argv -geometry "$sizext+$mspace+$mspace" -border $mborder $tileval $mname
+      eval exec montage $argv -geometry "$sizext+$mspace+$mspace" -border $mborder $tileval "png:$mname"
       #Overwrite image list with tiled image to add watermarks or change format
       set argv $mname
+      lappend tmplist $mname
       #Add mesage to lastmessage
       append lstmsg "Collage done \n"
       #Set size to empty to avoid resizing
@@ -502,12 +510,10 @@ proc convert {} {
         eval exec convert $i -colorspace $colorspace $sizeval $watval -quality $sliderval $io
         #Add messages to lastmessage
         #append lstmsg "$i converted to $io\n"
-        #If file has string it probably comes from ora or kra so erase it.
-        if [string match "*.artscript_temppng" $i] {
-          file delete $i
-        }
       }
     }
+    #cleaning tmp files
+    foreach tmpf $tmplist {  file delete $tmpf }
     append lstmsg "$m files converted"
  }
   alert ok info "Operation Done" $lstmsg
@@ -540,12 +546,11 @@ proc setOutputName { fname fext { opreffix false } { orename false } {tmpdir fal
     append finalname _$tmpsuffix
     }
   }
-
-  append finalname ".$fext"
   #If file exists we add string to avoid overwrites
-  if { [file exists [string map -nocase "$ext $finalname" $fname ] ] } {
+  if { [file exists [string map -nocase "$ext $finalname.$fext" $fname ] ] } {
     append finalname "_artkFile_"
   }
+  append finalname ".$fext"
 
   #If no extension we add the extension
   if { $ext == "" } {
