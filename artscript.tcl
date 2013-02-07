@@ -72,6 +72,11 @@ set rgb "#ffffff"
 set sliderval 92
 #Extension
 set ::outextension "jpg"
+#Montage:
+# mborder Adds a grey border around each image. set 0 disable
+# mspace Adds space between images. set 0 no gap
+set ::mborder 5
+set ::mspace 3
 #--=====
 
 #Las message variable
@@ -409,7 +414,7 @@ proc keepExtension { i } {
 #Run function
 proc convert {} {
   global outextension sliderval watsel watxt sizesel sizext tilesel now argv calligralist
-  global renamesel prefixsel tileval keep
+  global renamesel prefixsel tileval keep mborder mspace
   
   #Before checking all see if user only wants to rename
   if {$renamesel} {
@@ -468,10 +473,11 @@ proc convert {} {
       #We have to substract the margin from the tile value, in this way the user gets
       # the results is expecting (200px tile 2x2 = 400px)
       if {![string match -nocase {*[0-9]\%} $sizext]} {
-        set sizext [expr [string range $sizext 0 [string last "x" $sizext]-1]-16]
+        set mgap [expr [expr $mborder + $mspace ] *2 ]
+        set sizext [expr [string range $sizext 0 [string last "x" $sizext]-1]-$mgap]
         set sizext "$sizext\x$sizext"
       }
-      eval exec montage $argv -geometry $sizext+3+3 -border 5 $tileval $mname
+      eval exec montage $argv -geometry "$sizext+$mspace+$mspace" -border $mborder $tileval $mname
       #Overwrite image list with tiled image to add watermarks or change format
       set argv $mname
       #Add mesage to lastmessage
