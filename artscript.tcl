@@ -448,9 +448,11 @@ proc convert {} {
     foreach i $calligralist {
       #Make png to feed convert, we feed errors to dev/null to stop calligra killing
       # the process over warnings
-      exec calligraconverter --batch $i -mimetype image/png /tmp/$i.artscript_temppng 2> /dev/null
+      #Sends file input for processing, stripping input directory
+      set io [setOutputName $i "artscript_temppng" 0 0 1]
+      exec calligraconverter --batch $i -mimetype image/png /tmp/$io 2> /dev/null
       #Add png to argv file list on /tmp dir
-      lappend argv /tmp/$i.artscript_temppng
+      lappend argv /tmp/$io
     }
   }
   if [llength $argv] {
@@ -480,7 +482,7 @@ proc convert {} {
     foreach i $argv {
       incr m
       #Get outputname with suffix and extension
-      if {$keep } { keepExtension $i }
+      if { $keep } { keepExtension $i }
       set io [setOutputName $i $outextension $prefixsel]
       #If output is ora we have to use calligraconverter
       if { [regexp {ora|kra|xcf} $outextension] } {
@@ -493,7 +495,7 @@ proc convert {} {
 	#Run command
         eval exec convert $i -colorspace $colorspace $sizeval $watval -quality $sliderval $io
         #Add messages to lastmessage
-        append lstmsg "$i converted to $io\n"
+        #append lstmsg "$i converted to $io\n"
         #If file has string it probably comes from ora or kra so erase it.
         if [string match "*.artscript_temppng" $i] {
           file delete $i
@@ -507,7 +509,7 @@ proc convert {} {
 }
 #Prepares output name adding Suffix or Prefix
 #Checks if destination file exists and adds a standard suffix
-proc setOutputName { fname fext { opreffix false } { orename false } } {
+proc setOutputName { fname fext { opreffix false } { orename false } {tmpdir false} } {
   global suffix
   set tmpsuffix $suffix
   set ext [file extension $fname]
@@ -518,7 +520,7 @@ proc setOutputName { fname fext { opreffix false } { orename false } } {
     set fname [lindex [file split $fname] end]
   #}
   #Append suffix if user wrote something in entryfield
-  if { [catch $tmpsuffix] } {
+  if { [catch $tmpsuffix] && !$tmpdir} {
     if {$opreffix && $orename} {
     #Makes preffix instead of suffix
       return [append tmpsuffix _$fname]
@@ -548,8 +550,9 @@ proc setOutputName { fname fext { opreffix false } { orename false } } {
   }
 }
 proc getOutputName { {indx 0} } {
-  global outextension prefixsel argv
-  set i [lindex $argv $indx]
+  global outextension prefixsel argv calligralist
+  #Concatenate both lists to always have an output example name
+  set i [lindex [concat $argv $calligralist] $indx]
   return [setOutputName $i $outextension $prefixsel]
 }
 
