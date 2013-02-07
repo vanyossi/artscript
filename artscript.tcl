@@ -465,11 +465,17 @@ proc convert {} {
       if {![string is boolean $tileval]} {
         set tileval "-tile $tileval"
       }
-      eval exec montage $argv -geometry $sizext+6+6 $tileval $mname
+      #We have to substract the margin from the tile value, in this way the user gets
+      # the results is expecting (200px tile 2x2 = 400px)
+      if {![string match -nocase {*[0-9]\%} $sizext]} {
+        set sizext [expr [string range $sizext 0 [string last "x" $sizext]-1]-16]
+        set sizext "$sizext\x$sizext"
+      }
+      eval exec montage $argv -geometry $sizext+3+3 -border 5 $tileval $mname
       #Overwrite image list with tiled image to add watermarks or change format
       set argv $mname
       #Add mesage to lastmessage
-      append lstmsg "Montage done \n"
+      append lstmsg "Collage done \n"
       #Set size to empty to avoid resizing
       set sizeval ""
     }
@@ -510,9 +516,9 @@ proc setOutputName { fname fext { opreffix false } { orename false } } {
   set finalname ""
   #Checks if path is defined as absolute path, like when we create a file in /tmp directory
   #Strips directory leaving file in current directory
-  if { [file pathtype $fname] == "absolute" } {
+  #if { [file pathtype $fname] == "absolute" } {
     set fname [lindex [file split $fname] end]
-  }
+  #}
   #Append suffix if user wrote something in entryfield
   if { [catch $tmpsuffix] } {
     if {$opreffix && $orename} {
