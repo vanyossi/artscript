@@ -190,10 +190,10 @@ listbox .size.listbox -selectmode single -relief flat -height 3
 foreach i $sizes { .size.listbox insert end $i }
 bind .size.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "size" "sizext"}
 message .size.exp -width 280 -justify center -text "\
- Size format can be expresed as: W x H \n\
- as well as using percentages like: 50%\n\n\
+ Size format can be expresed as: W x H or 40%, 50% \n\
  In Collage mode size refers to tile size\n\
- Size 200x200 + Tile 2x2 = w400 x h400"
+ Size 200x200 + Tile 2x2 = w400 x h400 \n\
+ (Use \"x\" as Size to ignore tile size, and use imagesize"
 
 scrollbar .size.scroll -command ".size.listbox yview" -orient v
 entry .size.entry -textvariable sizext -validate key \
@@ -418,6 +418,7 @@ proc keepExtension { i } {
 proc convert {} {
   global outextension sliderval watsel watxt sizesel sizext tilesel now argv calligralist
   global renamesel prefixsel tileval keep mborder mspace mname
+  set sizeval $sizext
   
   #Before checking all see if user only wants to rename
   if {$renamesel} {
@@ -445,12 +446,13 @@ proc convert {} {
 #png32:- | convert - -pointsize 10 -fill  -gravity SouthEast -annotate +3+3 "
   }
   #Size, checbox = True set size command
-  set sizeval ""
   #We have to trim spaces?
-  set sizext [string trim $sizext]
-  #We check if user wants resize and $sizext not empty
-  if {$sizesel && ![string is boolean $sizext] } {
-    set sizeval "-resize $sizext"
+  set sizeval [string trim $sizeval]
+  #We check if user wants resize and $sizeval not empty
+  if {$sizesel && ![string is boolean $sizeval] && $sizeval != "x" } {
+    set sizeval "-resize $sizeval"
+  } else {
+    set sizeval ""
   }
   #Declare a empty list to fill with tmp files for deletion
   set tmplist ""
@@ -479,12 +481,12 @@ proc convert {} {
       }
       #We have to substract the margin from the tile value, in this way the user gets
       # the results is expecting (200px tile 2x2 = 400px)
-      if {![string match -nocase {*[0-9]\%} $sizext]} {
+      if {![string match -nocase {*[0-9]\%} $sizeval]} {
         set mgap [expr [expr $mborder + $mspace ] *2 ]
-        set sizext [expr [string range $sizext 0 [string last "x" $sizext]-1]-$mgap]
-        set sizext "$sizext\x$sizext"
+        set sizeval [expr [string range $sizeval 0 [string last "x" $sizeval]-1]-$mgap]
+        set sizeval "$sizeval\x$sizeval"
       }
-      eval exec montage $argv -geometry "$sizext+$mspace+$mspace" -border $mborder $tileval "png:$mname"
+      eval exec montage $argv -geometry "$sizeval+$mspace+$mspace" -border $mborder $tileval "png:$mname"
       #Overwrite image list with tiled image to add watermarks or change format
       set argv $mname
       lappend tmplist $mname
