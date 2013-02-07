@@ -184,10 +184,8 @@ bind .size.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "size"
 message .size.exp -width 280 -justify center -text "\
  Size format can be expresed as: W x H \n\
  as well as using percentages like: 50%\n\n\
- When selecting the \"Tile\" option, the size will not be the final size!\
- It refers to the size of each tile composing the montage\n\n\
-Tile: Referes to the tile layout (colxrows)\n\
-It's not necessary to define this value below, but sometimes you want precise control"
+ In Collage mode size refers to tile size\n\
+ Size 200x200 + Tile 2x2 = w400 x h400"
 
 scrollbar .size.scroll -command ".size.listbox yview" -orient v
 entry .size.entry -textvariable sizext -validate key \
