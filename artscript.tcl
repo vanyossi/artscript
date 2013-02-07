@@ -483,9 +483,9 @@ proc convert {} {
     foreach i $inkscapelist {
       set inksize ""
       if {$sizesel || $tilesel } {
-        if {![string match -nocase {*[0-9]\%} $sizext]} {
+        if {![string match -nocase {*[0-9]\%} $sizeval]} {
           set mgap [expr [expr $mborder + $mspace ] *2 ]
-          set inksize [string range $sizext 0 [string last "x" $sizext]-1]
+          set inksize [string range $sizeval 0 [string last "x" $sizeval]-1]
           set inksize "-w $inksize"
         } else {
           set inksize [expr 90 * [ expr 50 / 100.0 ] ]
