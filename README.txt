@@ -1,9 +1,9 @@
-artscriptk
-==========
 
-Artscript is a TK GUI wrapper for convert and calligraconverter
+----------------:::: ArtscriptTk ::::----------------------
+ IvanYossi colorathis.wordpress.com ghevan@gmail.com  GPL 3.0
+-----------------------------------------------------------
 
-#About
+### About
 Script inspired by David Revoy (www.davidrevoy.com , info@davidrevoy.com )
 About format based on his Artscript comments.
 
@@ -12,8 +12,6 @@ Batch convert most image formats supported by imagemagick and calligraconvert.
 Dependencies (that I know of) : calligraconverter, imagemagick, tk 8.5
 Tested in: Xfce 4.10, thunar 1.4.0
 
-###License
-GPL 3.0
 ### Disclamer
 
 I'm not a developer, I learn programming on my spare time.
@@ -29,18 +27,18 @@ calligraconverter: Handles converts from XCF, ORA and KRA files.
 
 
 ### What it does
-Artscript is a GUI wrapper for convert and calligraconvert.
+Artscript is a GUI wrapper for convert and calligraconvert
 It will accept a list of images and make a series of operations like resize, add watermark, add suffix,preffx to output filename and change file format. All or some at the same time.
 
 It will output all files to the current directory.
 
 It's perfect for preparing images before publishing (web for ex), create thumbnails or collage of images in directory, for example
 
-# How to run it
+### How to run it
 
 Place script somewhere in your hard drive ( I choose /home/User/.scripts )
 Make script executable if it isn't
-  $sh: chmod u+x artscripttk.tcl
+	$sh: chmod u+x artscripttk.tcl
 Run the script feeing files as arguments
 	$sh: /path/to/script/artscripttk.tcl file1.jpg file2.png file3.ora
 You can add a bash alias in ~/.bashrc file
@@ -50,10 +48,9 @@ And you can feed arguments using "xargs" feed pipe like
 Or if you use an alias
 	find . -name '*.png' -print0 | xargs -0 bash -cil 'artscript "$@"' arg0
 	
-## Use in Context Menus
+### Use in Context Menus
 
-* XFCE
-
+#### XFCE
 Open thunar>Edit>Configure Custom Actions...
 Add New action (+) 
 Select a Name, Description and Icon.
@@ -68,36 +65,37 @@ A new submenu appears on right-click of Image Files
 Select files, right-click , select the item on the menu, use GUI.
 
 
-# Usage GUI
-*Watermark
+### Usage GUI
+Watermark
+--------------
 Select any preset or add custom in empty field at the bottom.
 Select color pressing upper white color box and set opacity value using the slider. By default the color si white, pressing the black rectangle will change the color to black.
 
-*Size
+Size
 By default resize is off:
 Select from list or set a new value in the box below the list.
 Tile is not used unless you want to make an image Collage.
 Size in Collage refers to the tile size of each individual image composing the collage
 A Tile of 2x2 with Size 200x200 will produce an image close to 400x400.
 
-*Output
+Output
 Select extension from radioboxes or set a custom extension.
 Only rename will ignore the extension setting since no convert will be done.
 Leave ext unchanged. Supose you select 10 files, 5 jpg, 4 png and 1 gif. The program will convert, add watermarks and suffix, making the copies the same file format as the originals.
 
-*Suffix is off by default
+Suffix is off by default
 Add any text to activate.
 The string will have an underscore before any text you input, or after If you check the box called "Prefix"
 Add Date suffix, adds the current date un the format YY-MM-DD
 
 Press Convert to Run options
 
-*Collage
+Collage
 To make a Collage from input files set "Make Collage Please" to on
 Make Collage Please checkbutton will generate a Tiled image containing all selected images. It will add a watermark if you set it so and a suffix.
 
 
-# Customize:
+### Customize:
    Lists contain User predefined values.
    You can modify any variable between "#--=====" markers to get the options you use the most.
 
