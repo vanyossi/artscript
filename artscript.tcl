@@ -88,6 +88,8 @@ set lstmsg ""
 
 set suffix ""
 #Validation Functions
+#Inkscape path, if true converts using inkscape to /tmp/*.png
+set hasinkscape [file exists "/usr/bin/inkscape"]
 #Function to send message boxes
 proc alert {type icon title msg} {
     tk_messageBox -type $type -icon $icon -title $title \
@@ -102,7 +104,7 @@ if {[catch $argv] == 0 } {
 # Validates arguments input mimetypes, keeps images strip the rest
 # Creates a separate list for .kra, .xcf, .psd and .ora to process separatedly
 proc listValidate {} {
-  global argv calligralist inkscapelist lfiles fc
+  global argv calligralist inkscapelist lfiles fc hasinkscape
   set lfiles "Files to be processed\n"
   set fc 0
   set calligralist [list]
@@ -118,7 +120,7 @@ proc listValidate {} {
       continue
     }
     #Append to inkscapelist
-    if [ regexp {SVG Scalable Vector Graphics image} [exec file $el] ] {
+    if { [regexp {SVG Scalable Vector Graphics image} [exec file $el]] && $hasinkscape } {
       lappend inkscapelist $el
       append lfiles "Ink: $el\n"
       set argv [lsearch -all -inline -not -exact $argv $el]
@@ -481,7 +483,6 @@ proc convert {} {
     foreach i $inkscapelist {
       set inksize ""
       if {$sizesel || $tilesel } {
-        puts "aqui"
         if {![string match -nocase {*[0-9]\%} $sizext]} {
           set mgap [expr [expr $mborder + $mspace ] *2 ]
           set inksize [string range $sizext 0 [string last "x" $sizext]-1]
