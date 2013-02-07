@@ -460,10 +460,10 @@ proc convert {} {
   #We have to trim spaces?
   set sizeval [string trim $sizeval]
   #We check if user wants resize and $sizeval not empty
-  if {$sizesel && ![string is boolean $sizeval] && $sizeval != "x" } {
-    set sizeval "-resize $sizeval"
-  } else {
+  if {!$sizesel && [string is boolean $sizeval] && $sizeval == "x" } {
     set sizeval ""
+  } else {
+    set resizeval "-resize $sizeval"
   }
   #Declare a empty list to fill with tmp files for deletion
   set tmplist ""
@@ -526,7 +526,7 @@ proc convert {} {
       #Add mesage to lastmessage
       append lstmsg "Collage done \n"
       #Set size to empty to avoid resizing
-      set sizeval ""
+      set resizeval ""
     }
     foreach i $argv {
       incr m
@@ -542,7 +542,7 @@ proc convert {} {
 	#Get color space to avoid color shift
 	set colorspace [lindex [split [ exec identify -format %r $i ] ] 1 ]
 	#Run command
-        eval exec convert $i -colorspace $colorspace $sizeval $watval -quality $sliderval $io
+        eval exec convert $i -colorspace $colorspace $resizeval $watval -quality $sliderval $io
         #Add messages to lastmessage
         #append lstmsg "$i converted to $io\n"
       }
