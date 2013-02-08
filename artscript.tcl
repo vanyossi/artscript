@@ -460,8 +460,9 @@ proc convert {} {
   #We have to trim spaces?
   set sizeval [string trim $sizeval]
   #We check if user wants resize and $sizeval not empty
-  if {!$sizesel && [string is boolean $sizeval] && $sizeval == "x" } {
+  if {!$sizesel || [string is boolean $sizeval] || $sizeval == "x" } {
     set sizeval ""
+    set resizeval ""
   } else {
     set resizeval "-resize $sizeval"
   }
@@ -470,10 +471,11 @@ proc convert {} {
   if [llength $calligralist] {
     foreach i $calligralist {
       #Make png to feed convert, we feed errors to dev/null to stop calligra killing
-      # the process over warnings
+      # the process over warnings, and exec inside a try/catch event as the program send
+      # a lot of errors on some of my files breaking the loop
       #Sends file input for processing, stripping input directory
       set io [setOutputName $i "artscript_temppng" 0 0 1]
-      exec calligraconverter --batch $i -mimetype image/png /tmp/$io 2> /dev/null
+      catch [ exec calligraconverter --batch $i -mimetype image/png /tmp/$io 2> /dev/null ]
       #Add png to argv file list on /tmp dir
       lappend argv /tmp/$io
       lappend tmplist /tmp/$io
