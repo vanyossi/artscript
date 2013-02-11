@@ -430,7 +430,13 @@ proc convert {} {
   global outextension sliderval watsel watxt sizesel sizext tilesel now argv calligralist inkscapelist
   global renamesel prefixsel tileval keep mborder mspace mname
   set sizeval $sizext
-  
+  # For extension with no alpha channel we have to add this lines so the user gets the results
+  # he is expecting
+  if { $outextension == "jpg" } {
+    set alpha "-background white -alpha remove"
+  } else {
+    set alpha ""
+  }
   #Before checking all see if user only wants to rename
   if {$renamesel} {
     if [llength $calligralist] {
@@ -544,7 +550,7 @@ proc convert {} {
 	#Get color space to avoid color shift
 	set colorspace [lindex [split [ exec identify -format %r $i ] ] 1 ]
 	#Run command
-        eval exec convert $i -colorspace $colorspace $resizeval $watval -quality $sliderval $io
+        eval exec convert $i $alpha -colorspace $colorspace $resizeval $watval -quality $sliderval $io
         #Add messages to lastmessage
         #append lstmsg "$i converted to $io\n"
       }
