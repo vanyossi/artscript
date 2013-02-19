@@ -522,6 +522,14 @@ proc convert {} {
       #we set a name for tiled image (temp)
       set tmpvar ""
       set mname [ append tmpvar "/tmp/" $mname ".artscript_temppng" ]
+      #If paths comes empty we get last file path as output directory
+      # else we use the last processed tmp file original path
+      if {[string is false $paths]} {
+        dict set paths $mname [file dirname [lindex $argv end] ]
+      } else {
+        set origin [dict get $paths /tmp/$outname]
+        dict set paths $mname $origin
+      }
       #Run command
       # We still have to add a way to resize it and set tile preferences (1x, 2x2 etc)
       #We removed -label '%f' because we cant choose name placement.
