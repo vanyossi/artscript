@@ -470,7 +470,7 @@ proc convert {} {
     set sizeval ""
     set resizeval ""
   } else {
-    set resizeval "-resize $sizeval"
+    set resizeval "-resize $sizeval\\>"
   }
   #Declare a empty list to fill with tmp files for deletion
   set tmplist ""
