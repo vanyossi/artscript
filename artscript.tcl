@@ -459,7 +459,7 @@ proc convert {} {
   #Watermarks, we check if checkbox selected to add characters to string
   set watval ""
   if {$watsel} {
-	set watval "-pointsize 10 -fill $rgbout -gravity SouthEast -draw \"text 10,10 \'$watxt\'\""
+    set watval "-pointsize 10 -fill $rgbout -gravity SouthEast -draw \"text 10,10 \'$watxt\'\""
 #png32:- | convert - -pointsize 10 -fill  -gravity SouthEast -annotate +3+3 "
   }
   #Size, checbox = True set size command
@@ -474,6 +474,8 @@ proc convert {} {
   }
   #Declare a empty list to fill with tmp files for deletion
   set tmplist ""
+  #Declare empty dict to fill original path location
+  set paths [dict create]
   if [llength $calligralist] {
     foreach i $calligralist {
       #Make png to feed convert, we feed errors to dev/null to stop calligra killing
@@ -481,10 +483,13 @@ proc convert {} {
       # a lot of errors on some of my files breaking the loop
       #Sends file input for processing, stripping input directory
       set io [setOutputName $i "artscript_temppng" 0 0 1]
-      catch [ exec calligraconverter --batch $i -mimetype image/png /tmp/$io 2> /dev/null ]
-      #Add png to argv file list on /tmp dir
-      lappend argv /tmp/$io
-      lappend tmplist /tmp/$io
+      set outname [lindex $io 0]
+      set origin [lindex $io 1]
+      catch [ exec calligraconverter --batch $i -mimetype image/png /tmp/$outname 2> /dev/null ]
+      #Add png to argv file list on /tmp dir and originalpath to dict
+      dict set paths /tmp/$outname $origin
+      lappend argv /tmp/$outname
+      lappend tmplist /tmp/$outname
     }
   }
   if [llength $inkscapelist] {
@@ -503,10 +508,13 @@ proc convert {} {
       #Make png to feed convert, we try catch, inkscape cant be quiet
       #Sends file input for processing, stripping input directory
       set io [setOutputName $i "artscript_temppng" 0 0 1]
-      catch [ exec inkscape $i -z -C $inksize -e /tmp/$io 2> /dev/null ]
-      #Add png to argv file list on /tmp dir
-      lappend argv /tmp/$io
-      lappend tmplist /tmp/$io
+      set outname [lindex $io 0]
+      set origin [lindex $io 1]
+      catch [ exec inkscape $i -z -C $inksize -e /tmp/$outname 2> /dev/null ]
+      #Add png to argv file list on /tmp dir and originalpath to dict
+      dict set paths /tmp/$outname $origin
+      lappend argv /tmp/$outname
+      lappend tmplist /tmp/$outname
     }
   }
   if [llength $argv] {
@@ -541,16 +549,24 @@ proc convert {} {
       #Get outputname with suffix and extension
       if { $keep } { keepExtension $i }
       set io [setOutputName $i $outextension $prefixsel]
+      set outname [lindex $io 0]
+      if {[dict exists $paths $i]} {
+        set origin [dict get $paths $i]
+      } else {
+        set origin [lindex $io 1]
+      }
+      set outputfile [append origin "/" $outname]
+      puts $outputfile
       #If output is ora we have to use calligraconverter
       if { [regexp {ora|kra|xcf} $outextension] } {
         if {!$keep } {
-          eval exec calligraconverter --batch $i $io 2> /dev/null
+          eval exec calligraconverter --batch $i $outputfile 2> /dev/null
         }
       } else {
-	#Get color space to avoid color shift
-	set colorspace [lindex [split [ exec identify -format %r $i ] ] 1 ]
-	#Run command
-        eval exec convert $i $alpha -colorspace $colorspace $resizeval $watval -quality $sliderval $io
+    #Get color space to avoid color shift
+    set colorspace [lindex [split [ exec identify -format %r $i ] ] 1 ]
+    #Run command
+        eval exec convert $i $alpha -colorspace $colorspace $resizeval $watval -quality $sliderval $outputfile
         #Add messages to lastmessage
         #append lstmsg "$i converted to $io\n"
       }
@@ -572,19 +588,21 @@ proc setOutputName { fname fext { opreffix false } { orename false } {tmpdir fal
   #Checks if path is defined as absolute path, like when we create a file in /tmp directory
   #Strips directory leaving file in current directory
   #if { [file pathtype $fname] == "absolute" } {
+    #get filepath origin path
+    set origpath [file dirname $fname]
     set fname [lindex [file split $fname] end]
   #}
   #Append suffix if user wrote something in entryfield
   if { [catch $tmpsuffix] && !$tmpdir} {
     if {$opreffix && $orename} {
     #Makes preffix instead of suffix
-      return [append tmpsuffix _$fname]
+      set fname [append tmpsuffix _$fname]
     } elseif {$orename} {
     #Makes suffix but rename
-      return [string map -nocase "$ext _$tmpsuffix$ext" $fname ]
+      set fname [string map -nocase "$ext _$tmpsuffix$ext" $fname ]
     } elseif {$opreffix} {
       set newnam [string map -nocase "$ext .$fext" $fname ]
-      return [append tmpsuffix _$newnam]
+      set fname [append tmpsuffix _$newnam]
     } else { 
     append finalname _$tmpsuffix
     }
@@ -597,16 +615,18 @@ proc setOutputName { fname fext { opreffix false } { orename false } {tmpdir fal
 
   #If no extension we add the extension
   if { $ext == "" } {
-    return [append fname $finalname]
+    set fname [append fname $finalname]
   } else {
     #we search for the extension string and replace it with (suffix and/or date) and extension
-    return [string map -nocase "$ext $finalname" $fname ]
+    set fname [string map -nocase "$ext $finalname" $fname ]
   }
+  #If file is called from tmpdir we return a tupple with the original file location
+  return [lappend fname $origpath]
 }
 proc getOutputName { {indx 0} } {
   global outextension prefixsel argv calligralist inkscapelist
   #Concatenate both lists to always have an output example name
   set i [lindex [concat $argv $calligralist $inkscapelist] $indx]
-  return [setOutputName $i $outextension $prefixsel]
+  return [lindex [setOutputName $i $outextension $prefixsel] 0]
 }
 
