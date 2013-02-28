@@ -51,7 +51,7 @@ It's perfect for preparing images before publishing (web for ex), create thumbna
 	
 ## Use in Context Menus
 
-* XFCE
+### XFCE
 
 1. Open thunar>Edit>Configure Custom Actions...  
 2. Add New action (+)  
@@ -65,8 +65,8 @@ It's perfect for preparing images before publishing (web for ex), create thumbna
 7. A new submenu appears on right-click of Image Files
 8. Select files, right-click , select the item on the menu, use GUI.
 
-* KDE
-Inside the KD folder there is a file "arscript.desktop" tailored to use in Dolphin
+### KDE
+Inside the KDE folder there is a file "arscript.desktop" tailored to use in Dolphin
 
 1. Verify that ServiceMenus folder exists in ~/.kde/share/kde4/services/ServiceMenus (it can also be inside ~/.kde4/ or some variants) 
 2. If ServiceMenus does not exist, create it.  
