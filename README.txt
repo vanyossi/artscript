@@ -64,6 +64,32 @@ The script filters input file by mimetype so its safe to set the Appearance Cond
 A new submenu appears on right-click of Image Files
 Select files, right-click , select the item on the menu, use GUI.
 
+
+### Gnome / Nautilus
+
+You will need "nautilus-actions" package installed.
+```sudo apt-get install nautilus-actions```
+```emerge nautilus-actions```
+etc...
+
+(I don't have Nautilus myself, so if you find anything strange please tell, references after point 9)
+
+1. Open nautilus-actions (terminal 'nautilus-actions-config-tool')
+2. Click on the plus (+) symbol to add a new action.
+3. On the action Tab set "Context Label" with "Artscript TCL"
+4. In the Command tab set "Path:" as "~./path/to/script.tcl"
+5. In the same tab set "Parameters" as "%M"
+6. On mimetype set Mimetype filter as "*/*" and "must match one of "selected"
+7. Hit save.
+8. A new submenu appears on right-click of Image Files
+9. Select files, right-click , select the item on the menu, use GUI.
+
+(references
+http://techthrob.com/2009/03/02/howto-add-items-to-the-right-click-menu-in-nautilus/
+http://www.howtogeek.com/116807/how-to-easily-add-custom-right-click-options-to-ubuntus-file-manager/
+)
+
+
 #### KDE
 Inside the KD folder there is a file "arscript.desktop" tailored to use in Dolphin
 
