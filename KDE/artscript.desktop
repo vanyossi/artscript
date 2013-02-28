@@ -1,0 +1,13 @@
+[Desktop Entry]
+Encoding=UTF-8
+ServiceTypes=KonqPopupMenu/Plugin
+MimeType=all/all;
+Type=Service
+X-KDE-Priority=TopLevel
+Actions=artscript
+TryExec=convert
+
+[Desktop Action artscript]
+Name=Artscript Tcl
+Icon=view-catalog
+Exec=~/.kde/share/kde4/services/ServiceMenus/artscript.tcl %F
