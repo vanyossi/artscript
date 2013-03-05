@@ -23,7 +23,7 @@ I made it for my personal use and I tested it as much as I could to avoid corrup
 ### Dependencies
 
 - **Tk:** For Gui.  
-- **ImageMagick:** Library for manipulating image formats.  
+- **ImageMagick (6.7.5 and up):** Library for manipulating image formats.
 - **calligraconverter:** Handles converts from XCF, ORA and KRA files.  
 
 
@@ -73,17 +73,19 @@ You will need "nautilus-actions" package installed.
 ```emerge nautilus-actions```
 etc...
 
-(I don't have Nautilus myself, so if you find anything strange please tell, references after point 9)
+Tested on liveCD Mint 13
 
 1. Open nautilus-actions (terminal 'nautilus-actions-config-tool')
-2. Click on the plus (+) symbol to add a new action.
+2. Click on the plus (+) symbol to add a new action. (or go to "file > add new action")
 3. On the action Tab set "Context Label" with "Artscript TCL"
-4. In the Command tab set "Path:" as "~./path/to/script.tcl"
-5. In the same tab set "Parameters" as "%M"
+4. In the Command tab set "Path:" as "/path/to/script.tcl" (absolute path)
+5. In the same tab set "Parameters" as "%B"
 6. On mimetype set Mimetype filter as "*/*" and "must match one of "selected"
 7. Hit save.
-8. A new submenu appears on right-click of Image Files
+8. Restart nautilus (On the liveCD I had to)
+8. A new submenu appears "Nautilus-actions actions", click it, your action should be there.
 9. Select files, right-click , select the item on the menu, use GUI.
+10. To get "Artscriopt TCL" on root context menu, open "nautilus-actions-config-tool", in preferences "runtime preferences" uncheck "Create a root 'Nautilus actions' menu"
 
 (references
 http://techthrob.com/2009/03/02/howto-add-items-to-the-right-click-menu-in-nautilus/
