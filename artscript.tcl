@@ -127,7 +127,7 @@ proc listValidate {} {
       continue
     }
     #Remove from list elements not supported by convert
-    if { [catch { exec identify $el } msg] } {
+    if { [catch { exec identify -quiet $el } msg] } {
       set argv [lsearch -all -inline -not -exact $argv $el]
     } else {
       append lfiles "$fc: $el\n"
@@ -543,7 +543,7 @@ proc convert {} {
         set sizeval [expr [string range $sizeval 0 [string last "x" $sizeval]-1]-$mgap]
         set sizeval "$sizeval\x$sizeval"
       }
-      eval exec montage $argv -geometry "$sizeval+$mspace+$mspace" -border $mborder $tileval "png:$mname"
+      eval exec montage -quiet $argv -geometry "$sizeval+$mspace+$mspace" -border $mborder $tileval "png:$mname"
       #Overwrite image list with tiled image to add watermarks or change format
       set argv $mname
       lappend tmplist $mname
@@ -572,9 +572,9 @@ proc convert {} {
         }
       } else {
     #Get color space to avoid color shift
-    set colorspace [lindex [split [ exec identify -format %r $i ] ] 1 ]
+    set colorspace [lindex [split [ exec identify -quiet -format %r $i ] ] 1 ]
     #Run command
-        eval exec convert $i $alpha -colorspace $colorspace $resizeval $watval -quality $sliderval $outputfile
+        eval exec convert -quiet $i $alpha -colorspace $colorspace $resizeval $watval -quality $sliderval $outputfile
         #Add messages to lastmessage
         #append lstmsg "$i converted to $io\n"
       }
