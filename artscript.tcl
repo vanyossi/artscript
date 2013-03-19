@@ -155,13 +155,12 @@ proc listValidate {} {
 #We run function to validate input mimetypes
 listValidate
 
-
 #For future theming
 #tk_setPalette background black foreground white highlightbackground blue activebackground gray70 activeforeground black
 
 #Gui construct. This needs to be improved a lot
 #--- watermark options
-labelframe .wm -bd 2 -padx 2m -pady 2m -font {-size 14} -text "Watermark options"  -relief ridge
+labelframe .wm -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Watermark options"  -relief ridge
 pack .wm -side top -fill x
 
 label .wm.title -font {-size 10} -text "Current color"
@@ -178,7 +177,6 @@ canvas .wm.viewcol -bg $rgb -width 96 -height 32
 .wm.viewcol create text 30 16 -text "click me"
 canvas .wm.black -bg black -width 48 -height 16
 canvas .wm.white -bg white -width 48 -height 16
-
 
 label .wm.lopacity -text "Opacity:"
 scale .wm.opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 \
@@ -204,21 +202,24 @@ grid rowconfigure .wm 2 -weight 1
 grid columnconfigure .wm 1 -weight 1
 grid columnconfigure .wm {2 3} -weight 0
    
-
 #--- Size options
-labelframe .size -bd 2 -padx 2m -pady 2m -font {-size 14} -text "Size &  Tile settings"  -relief ridge
+labelframe .size -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Size & Tile settings"  -relief ridge
 pack .size -side top -fill x
+#scrollbar binding function
+proc showargs {args} {puts $args; eval $args}
 
-listbox .size.listbox -selectmode single -relief flat -height 3
+listbox .size.listbox -selectmode single -relief flat -height 2
 foreach i $sizes { .size.listbox insert end $i }
 bind .size.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "size" "sizext"}
-message .size.exp -width 280 -justify center -text "\
- Size format can be expresed as: W x H or 40%, 50% \n\
- In Collage mode size refers to tile size\n\
- Size 200x200 + Tile 2x2 = w400 x h400 \n\
- (Use \"x\" as Size to ignore tile size, and use imagesize"
+scrollbar .size.scroll -command {showargs .size.listbox yview} -orient vert
+.size.listbox conf -yscrollcommand {showargs .size.scroll set}
 
-scrollbar .size.scroll -command ".size.listbox yview" -orient v
+message .size.exp -width 280 -justify center -text "\
+ Size format can be expresed as: \nW x H or 40%, 50% \n\
+ In Collage mode size refers to tile size\n\
+ Size 200x200 + Tile 2x2 = w400 x h400"
+
+#size and tile entry boxes and validation
 entry .size.entry -textvariable sizext -validate key \
    -vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
 bind .size.entry <KeyRelease> { setSelectOnEntry false "size" "sizext" }
@@ -240,9 +241,8 @@ grid rowconfigure .size 2 -weight 1
 grid columnconfigure .size 1 -weight 1
 grid columnconfigure .size 2 -weight 0
 
-
 #--- Format options
-labelframe .ex -bd 2 -padx 2m -pady 2m -font {-size 14} -text "Output Format"  -relief ridge
+labelframe .ex -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Output Format"  -relief ridge
 pack .ex -side top -fill x
 radiobutton .ex.jpg -value "jpg" -text "JPG" -variable outextension
 radiobutton .ex.png -value "png" -text "PNG" -variable outextension
@@ -250,20 +250,20 @@ radiobutton .ex.gif -value "gif" -text "GIF" -variable outextension
 radiobutton .ex.ora -value "ora" -text "ORA(No post)" -variable outextension
 .ex.jpg select
 label .ex.lbl -text "Other"
-entry .ex.sel -text "custom" -textvariable outextension -width 6
-text .ex.txt -height 3
+entry .ex.sel -text "custom" -textvariable outextension -width 4
+text .ex.txt -height 3 -width 4
 .ex.txt insert end $lfiles
 
 #-- Select only rename no output transform
 checkbutton .ex.rname -text "Only rename" \
     -onvalue true -offvalue false -variable renamesel
 #-- Ignore output, use input extension as output.
-checkbutton .ex.keep -text "Leave ext unchanged" \
+checkbutton .ex.keep -text "Keep extension" \
     -onvalue true -offvalue false -variable keep
 #--- Image quality options
 
 scale .ex.scl -orient horizontal -from 10 -to 100 -tickinterval 25 \
-    -label "" -length 200 -variable sliderval -showvalue 1
+    -label "" -length 150 -variable sliderval -showvalue 1
 #    -highlightbackground "#666" -highlightcolor "#333" -troughcolor "#888" -fg "#aaa" -bg "#333" -relief flat
 label .ex.qlbl -text "Quality:"
 button .ex.good -text "Good" -command resetSlider;#-relief flat -bg "#888"
@@ -290,7 +290,7 @@ grid columnconfigure .ex {1} -weight 0
 grid columnconfigure .ex {6} -weight 1
 
 #--- Suffix options
-labelframe .suffix -padx 2m -pady 2m -font {-size 14} -text "Suffix"  -relief ridge
+labelframe .suffix -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Suffix"  -relief ridge
 pack .suffix -side top -fill x
 
 listbox .suffix.listbox -selectmode single -height 4
@@ -318,7 +318,7 @@ grid columnconfigure .suffix {2} -weight 1
 #pack .suffix.rname .suffix.prefix .suffix.date -side right
 
 #--- On off values for watermark, size, date suffix and tiling options
-frame .opt -borderwidth 10
+frame .opt -borderwidth 2
 pack .opt
 checkbutton .opt.watxt -text "Watermark" \
     -onvalue true -offvalue false -variable watsel
@@ -330,9 +330,9 @@ checkbutton .opt.tile -text "Make Collage" \
 pack .opt.watxt .opt.sizext .opt.tile -side left
 
 #--- Submit button
-frame .act -borderwidth 10
+frame .act -borderwidth 6
 pack .act -side right
-button .act.submit -text "Convert" -command convert
+button .act.submit -text "Convert" -font {-weight bold} -command convert
 pack .act.submit -side right -padx 0 -pady 0
 
 
