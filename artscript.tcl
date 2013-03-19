@@ -552,8 +552,10 @@ proc convert {} {
       # the results is expecting (200px tile 2x2 = 400px)
       if {![string match -nocase {*[0-9]\%} $sizeval]} {
         set mgap [expr [expr $mborder + $mspace ] *2 ]
-        set sizeval [expr [string range $sizeval 0 [string last "x" $sizeval]-1]-$mgap]
-        set sizeval "$sizeval\x$sizeval"
+        set xpos [string last "x" $sizeval]
+        set sizelast [expr [string range $sizeval $xpos+1 end]-$mgap]
+        set sizeval [expr [string range $sizeval 0 $xpos-1]-$mgap]
+        set sizeval "$sizeval\x$sizelast\\>"
       }
       eval exec montage -quiet $argv -geometry "$sizeval+$mspace+$mspace" -border $mborder $tileval "png:$mname"
       #Overwrite image list with tiled image to add watermarks or change format
