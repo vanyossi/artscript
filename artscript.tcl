@@ -85,11 +85,21 @@ set ::mname "collage-$raninter"
 
 #Las message variable
 set lstmsg ""
-
 set suffix ""
+
 #Validation Functions
+#Finds program in path using which, return 0 if program missing
+proc validate {program} {
+  if { [catch {exec which $program}] } {
+     return 0
+  }
+  return 1
+}
 #Inkscape path, if true converts using inkscape to /tmp/*.png
-set hasinkscape [file exists "/usr/bin/inkscape"]
+set hasinkscape [validate "inkscape"]
+#calligraconvert path, if true converts using calligra to /tmp/*.png
+set hascalligra [validate "calligraconverter"]
+
 #Function to send message boxes
 proc alert {type icon title msg} {
     tk_messageBox -type $type -icon $icon -title $title \
@@ -104,7 +114,7 @@ if {[catch $argv] == 0 } {
 # Validates arguments input mimetypes, keeps images strip the rest
 # Creates a separate list for .kra, .xcf, .psd and .ora to process separatedly
 proc listValidate {} {
-  global argv calligralist inkscapelist lfiles fc hasinkscape
+  global argv calligralist inkscapelist lfiles fc hasinkscape hascalligra
   set lfiles "Files to be processed\n"
   set fc 0
   set calligralist [list]
@@ -113,24 +123,26 @@ proc listValidate {} {
   foreach el $argv {
     #puts [exec file $el]
     #Append to new list if mime is from type.
-    if [ regexp {application/x-krita|image/openraster|GIMP XCF image data|Adobe Photoshop Image} [exec file $el] ] {
+    if { [ regexp {application/x-krita|image/openraster|GIMP XCF image data|Adobe Photoshop Image} [exec file $el] ] && $hascalligra } {
       lappend calligralist $el
-      append lfiles "Cal: $el\n"
+      append lfiles "$fc Cal: $el\n"
       set argv [lsearch -all -inline -not -exact $argv $el]
+      incr fc
       continue
     }
     #Append to inkscapelist
     if { [regexp {SVG Scalable Vector Graphics image} [exec file $el]] && $hasinkscape } {
       lappend inkscapelist $el
-      append lfiles "Ink: $el\n"
+      append lfiles "$fc Ink: $el\n"
       set argv [lsearch -all -inline -not -exact $argv $el]
+      incr fc
       continue
     }
     #Remove from list elements not supported by convert
     if { [catch { exec identify -quiet $el } msg] } {
       set argv [lsearch -all -inline -not -exact $argv $el]
     } else {
-      append lfiles "$fc: $el\n"
+      append lfiles "$fc Img: $el\n"
       incr fc
     }
   }
