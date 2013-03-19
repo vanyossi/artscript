@@ -9,8 +9,9 @@ About format based on his Artscript comments.
 
 #### Goal
 - Batch convert most image formats supported by imagemagick and calligraconvert.
-- Dependencies (that I know of) : calligraconverter, imagemagick, tk 8.5
-- Tested in: Xfce 4.10, thunar 1.4.0
+- Dependencies (that I know of) : imagemagick, tk 8.5
+- Optional dependencies: calligraconverter, inkscape
+- Tested in: Xfce 4.10, thunar 1.4.0, dolphin and nautilus
 
 ###License
 GPL 3.0
@@ -24,16 +25,17 @@ I made it for my personal use and I tested it as much as I could to avoid corrup
 
 - **Tk:** For Gui.  
 - **ImageMagick (6.7.5 and up):** Library for manipulating image formats.
-- **calligraconverter:** Handles converts from XCF, ORA and KRA files.  
+- **calligraconverter (optional):** Handles converts from XCF, ORA and KRA files.
+- **inkscape (optional):** If inkscape is present it will be usen to convert svg, otherwise imagemagick will process them.  
 
 
 ### What it does
 Artscript is a GUI wrapper for convert and calligraconvert.
-It will accept a list of images and make a series of operations like resize, add watermark, add suffix,preffx to output filename and change file format. All or some at the same time.
+It will accept a list of images and make a series of operations such as resize, add watermark, add a suffix or preffx to the output filename and change file format. All or some at the same time.
 
 It will output all files to the current directory.  
 
-It's perfect for preparing images before publishing (web for ex), create thumbnails or collage of images in directory, for example
+It's perfect for preparing images before publishing (web for ex), create thumbnails or collage of images in directory, for example.
 
 # How to run it
 
