@@ -46,7 +46,7 @@ set raninter [exec date +%N]
 set autor "Your Name Here"
 set watermarks [list \
   "Copyright (c) $autor" \
-  "Copyright (c) $autor\_$now" \
+  "Copyright (c) $autor / $now" \
   "http://www.yourwebsite.com" \
   "Artwork: $autor" \
   "$now" \
@@ -69,6 +69,7 @@ set suffixes [list \
 ]
 set sizext "200x200"
 set opacity 0.8
+set wmsize 10
 set rgb "#ffffff"
 #Image quality
 set sliderval 92
@@ -172,6 +173,12 @@ entry .wm.entry -text "Custom" -textvariable watxt
 bind .wm.entry <KeyRelease> { setSelectOnEntry false "wm" "watxt" }
 label .wm.label -text "Selected:"
 
+label .wm.lwmsize -text "Size:"
+entry .wm.wmsizentry -textvariable wmsize -width 3 -validate key \
+   -vcmd { regexp {^(\s?|[1-9]|[1-4][0-8])$} %P }
+scale .wm.wmsize -orient vertical -from 48 -to 1 \
+  -variable wmsize -showvalue 0
+
 button .wm.color -text "Choose Color" -command setWmColor
 canvas .wm.viewcol -bg $rgb -width 96 -height 32
 .wm.viewcol create text 30 16 -text "click me"
@@ -188,25 +195,31 @@ bind .wm.white <Button> { set rgb white; .wm.viewcol configure -bg $rgb }
 
 grid .wm.listbox -rowspan 5 -column 1 -sticky nesw
 grid .wm.entry -row 5 -column 1 -sticky we
-grid .wm.label -row 6 -column 1 -sticky ew
-grid .wm.title -row 1 -column 2 -sticky nw
-grid .wm.viewcol -row 2 -column 2 -sticky nesw
-grid .wm.black -row 3 -column 2 -sticky nsew
-grid .wm.white -row 3 -column 3 -sticky nsew
-grid .wm.color -row 4 -column 2 -sticky ew
-grid .wm.lopacity -row 5 -column 2 -sticky wns
-grid .wm.opacity -row 6 -column 2 -sticky ew
+grid .wm.label -row 6 -column 1 -sticky w
+grid .wm.lwmsize -row 1 -column 2 -sticky nsw
+grid .wm.wmsize -row 2 -rowspan 4 -column 2 -sticky ns
+grid .wm.wmsizentry -row 6 -column 2 -sticky w 
+grid .wm.title -row 1 -column 3 -sticky nw
+grid .wm.viewcol -row 2 -column 3 -sticky nesw
+grid .wm.black -row 3 -column 3 -sticky nsew
+grid .wm.white -row 3 -column 4 -sticky nsew
+grid .wm.color -row 4 -column 3 -sticky ew
+grid .wm.lopacity -row 5 -column 3 -sticky wns
+grid .wm.opacity -row 6 -column 3 -sticky ew
 grid .wm.title .wm.viewcol .wm.color .wm.lopacity .wm.opacity -columnspan 2
 grid rowconfigure .wm 1 -weight 0
 grid rowconfigure .wm 2 -weight 1
 grid columnconfigure .wm 1 -weight 1
-grid columnconfigure .wm {2 3} -weight 0
+grid columnconfigure .wm {2 3 4} -weight 0
    
 #--- Size options
 labelframe .size -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Size & Tile settings"  -relief ridge
 pack .size -side top -fill x
 #scrollbar binding function
-proc showargs {args} {puts $args; eval $args}
+proc showargs {args} {
+  #puts $args;
+  eval $args
+}
 
 listbox .size.listbox -selectmode single -relief flat -height 2
 foreach i $sizes { .size.listbox insert end $i }
@@ -437,9 +450,26 @@ proc keepExtension { i } {
   global outextension
   uplevel set outextension [ string trimleft [file extension $i] "."]
 }
-#Run function
+#Preproces functions
+#watermark
+proc watermark {} {
+  global watxt watsel wmsize
+
+  set rgbout [setRGBColor]
+  set wmpos "SouthEast"
+  #Watermarks, we check if checkbox selected to add characters to string
+  if {$watsel} {
+    set watval "-pointsize $wmsize -fill $rgbout -gravity $wmpos -draw \"text 10,10 \'$watxt\'\""
+#png32:- | convert - -pointsize 10 -fill  -gravity SouthEast -annotate +3+3 "
+  } else {
+    set watval ""
+  }
+  return $watval
+}
+
+#Run Converter
 proc convert {} {
-  global outextension sliderval watsel watxt sizesel sizext tilesel now argv calligralist inkscapelist
+  global outextension sliderval sizesel sizext tilesel now argv calligralist inkscapelist
   global renamesel prefixsel tileval keep mborder mspace mname
   set sizeval $sizext
   # For extension with no alpha channel we have to add this lines so the user gets the results
@@ -467,13 +497,8 @@ proc convert {} {
     }
     exit
   }
-  set rgbout [setRGBColor]
-  #Watermarks, we check if checkbox selected to add characters to string
-  set watval ""
-  if {$watsel} {
-    set watval "-pointsize 10 -fill $rgbout -gravity SouthEast -draw \"text 10,10 \'$watxt\'\""
-#png32:- | convert - -pointsize 10 -fill  -gravity SouthEast -annotate +3+3 "
-  }
+  #Run watermark preprocess
+  set watval [watermark]
   #Size, checbox = True set size command
   #We have to trim spaces?
   set sizeval [string trim $sizeval]
