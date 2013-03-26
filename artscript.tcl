@@ -238,7 +238,7 @@ entry .size.entry -textvariable sizext -validate key \
 bind .size.entry <KeyRelease> { setSelectOnEntry false "size" "sizext" }
 entry .size.tile -textvariable tileval -validate key \
    -vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
-bind .size.tile <KeyRelease> { .opt.tile select }
+bind .size.tile <KeyRelease> { checkstate $tileval .opt.tile }
 label .size.label -text "Size:"
 label .size.txtile -text "Tile(ex 1x, 2x2):"
 
@@ -368,7 +368,13 @@ wm title . "Artscript -- $fc Files selected"
 #  .opt.wm select
 #  set watxt $val
 #}
-
+proc checkstate { val cb } {
+  if {$val != {} } {
+    $cb select
+  } else {
+    $cb deselect
+  }
+}
 proc setWmColor {} {
   global rgb
   #Call color chooser and store value to set canvas color and get rgb values
