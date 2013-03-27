@@ -5,34 +5,7 @@
 # IvanYossi colorathis.wordpress.com ghevan@gmail.com  GPL 3.0
 #-----------------------------------------------------------
 # Goal : Batch convert any image file supported by imagemagick and calligra.
-# Dependencies (that I know of) : calligraconverter, imagemagick, tk 8.5
-# Testednn: Xfce 4.10, thunar 1.4.0
-#      Program should run on Mac if imagemagick is installed
-#-------------------------------------------------------------
-# Disclamer: I'm not a developer, I learn programming on spare time. Caution in use.
-# 
-# __How to install__ (XFCE)
-#   Place script somewhere in your home folder
-#   Make executable
-#   Open thunar>Edit>Configure Custom Actions...
-#   Add New action (+) 
-#   Select a Name, Description and Icon. Add this to Command
-#     --> wish path/to/script/ artscript.tcl %N
-#   In Apperance Conditions Tab, set '*' as file pattern and select
-#     Image files and Other files
-#
-# __Usage:__
-#   A new submenu appears on right-click of Image Files
-#   Select files, right-click , select the item on the menu, use GUI.
-#   Watermark: Select any preset or add custom in empty field at bottom.
-#     Select color and opacity value. By defult is white
-#   Size: By default is off: Select from list or set a new value instead of "200x200"
-#   Output Select from radioboxes or set custom in the field at the right
-#   Suffix is off by default. Add any text to activate.
-#     the string will have an underscore before any text you input
-#   Press Convert to Run
-#
-#   Make grid Please checkbutton will generate a Tiled imagen containing all selected images
+# Dependencies (that I know of) : calligraconverter, >=imagemagick-6.7.5,tk 8.5
 #
 # __Customize:__
 #   You can modify any variable between "#--=====" markers
