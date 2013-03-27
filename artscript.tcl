@@ -446,6 +446,24 @@ proc watermark {} {
   return $watval
 }
 
+#Collage mode
+proc collage { list range } {
+
+proc range { ilist range } {
+  set rangelists ""
+  set listsize [llength $ilist]
+  set times [expr [expr $listsize/$range]+[expr bool($listsize % $range) ] ]
+
+  for {set i 0} { $i < $times } { incr i } {
+    set val1 [expr $range * $i]
+    set val2 [expr $range * [expr $i+1] - 1 ]
+    lappend rangelists [lrange $ilist $val1 $val2]
+  }
+  return $rangelists
+}
+
+}
+
 #Run Converter
 proc convert {} {
   global outextension sliderval sizesel sizext tilesel now argv calligralist inkscapelist
