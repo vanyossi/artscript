@@ -208,20 +208,20 @@ proc colorSelector { frame suffix colorvar op title colors {row 0} } {
 
   label $frame.${suffix}title -font {size 12} -text $title
 
-  canvas $frame.${suffix}viewcol -bg [set $colorvar] -width 96 -height 32
+  canvas $frame.${suffix}viewcol -bg [set $colorvar] -width 60 -height 30
   $frame.${suffix}viewcol create text 30 16 -text "click me"
 
   #canvas $frame.${suffix}black -bg black -width 32 -height 16
   #canvas $frame.${suffix}gray -bg gray -width 32 -height 16
   #canvas $frame.${suffix}white -bg white -width 32 -height 16
 
-  label $frame.${suffix}lopacity -text "Opacity:";
-  scale $frame.${suffix}opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 \
-  -variable $op -showvalue 0 -command "writeVal $frame.${suffix}lopacity {Opacity:}"
+  label $frame.${suffix}lopacity -text "Opacity:"
+  scale $frame.${suffix}opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 -relief flat -bd 0  \
+  -variable $op -showvalue 0 -width 8	 -command "writeVal $frame.${suffix}lopacity {Opacity:}"
 
   bind $frame.${suffix}viewcol <Button> [ list colorBind $frame.${suffix}viewcol $colorvar 0 $title ]
   foreach i $colors {
-    canvas $frame.${suffix}$i -bg $i -width [expr 96/[llength $colors]] -height 16
+    canvas $frame.${suffix}$i -bg $i -width [expr 60/[llength $colors]] -height 16
     bind $frame.${suffix}$i <Button> [ list colorBind $frame.${suffix}viewcol $colorvar $i $title ]
   }
   #bind $frame.${suffix}black <Button> [ list colorBind $frame.${suffix}viewcol $colorvar black $title ]
@@ -255,7 +255,7 @@ colorSelector ".color" "br" "bordercol" "brop" "Border Col" $brswatch 15
 colorSelector ".color" "fil" "tfill" "tfop" "Label Col" $tswatch 20
 
 #--- Size options
-labelframe .size -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Size & Tile settings"  -relief ridge
+labelframe .size -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Size & Collage settings"  -relief ridge
 pack .size -side top -fill x
 #scrollbar binding function
 proc showargs {args} {
@@ -269,10 +269,10 @@ bind .size.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "size"
 scrollbar .size.scroll -command {showargs .size.listbox yview} -orient vert
 .size.listbox conf -yscrollcommand {showargs .size.scroll set}
 
-message .size.exp -width 280 -justify center -text "\
+message .size.exp -width 220 -justify center -text "\
  Size format can be expresed as: \nW x H or 40%, 50% \n\
  In Collage mode size refers to tile size\n\
- Size 200x200 + Tile 2x2 = w400 x h400"
+ Size 200x200 + Layout 2x2 = w400xh400"
 
 #size and tile entry boxes and validation
 entry .size.entry -textvariable sizext -validate key \
@@ -286,14 +286,14 @@ entry .size.range -textvariable mrange -width 4 -validate key \
 bind .size.range <KeyRelease> { checkstate $mrange .opt.tile }
 
 label .size.label -text "Size:"
-label .size.txtile -text "Tile(ex 1x, 2x2):"
+label .size.txtile -text "Layout:"
 label .size.lblrange -text "Range:"
 
 grid .size.listbox -row 1 -column 1 -sticky nwse
 grid .size.scroll -row 1 -column 1 -sticky ens
 grid .size.entry -row 2 -column 1 -sticky ews
 grid .size.label -row 3 -column 1 -sticky wns
-grid .size.exp -row 1 -column 2 -columnspan 3 -sticky nsew
+grid .size.exp -row 1 -column 2 -columnspan 4 -sticky nsew
 grid .size.txtile -row 2 -column 2 -sticky e
 grid .size.tile -row 2 -column 3  -sticky ws
 grid .size.range -row 2 -column 5 -sticky ws
@@ -324,13 +324,13 @@ checkbutton .ex.keep -text "Keep extension" \
     -onvalue true -offvalue false -variable keep
 #--- Image quality options
 
-scale .ex.scl -orient horizontal -from 10 -to 100 -tickinterval 25 \
+scale .ex.scl -orient horizontal -from 10 -to 100 -tickinterval 25 -width 12 \
     -label "" -length 150 -variable sliderval -showvalue 1
 #    -highlightbackground "#666" -highlightcolor "#333" -troughcolor "#888" -fg "#aaa" -bg "#333" -relief flat
 label .ex.qlbl -text "Quality:"
-button .ex.good -text "Good" -command resetSlider;#-relief flat -bg "#888"
-button .ex.best -text "Best" -command {set sliderval 100}
-button .ex.poor -text "Poor" -command {set sliderval 30}
+button .ex.good -pady 1 -padx 8 -text "Good" -command resetSlider; #-relief flat -bg "#888"
+button .ex.best -pady 1 -padx 8 -text "Best" -command {set sliderval 100}
+button .ex.poor -pady 1 -padx 8 -text "Poor" -command {set sliderval 30}
 
 grid .ex.jpg .ex.png .ex.gif .ex.ora .ex.rname .ex.keep -column 1 -columnspan 2 -sticky w
 grid .ex.jpg -row 1
