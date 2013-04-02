@@ -44,6 +44,7 @@ set sizext "200x200"
 set opacity 0.8
 set wmsize 10
 set rgb "#ffffff"
+set ::wmswatch "black gray white"
 #Image quality
 set sliderval 92
 #Extension & output
@@ -161,6 +162,43 @@ entry .wm.wmsizentry -textvariable wmsize -width 3 -validate key \
 scale .wm.wmsize -orient vertical -from 48 -to 1 \
   -variable wmsize -showvalue 0
 
+
+
+#label .wm.title -font {-size 10} -text "Color"
+#button .wm.color -text "Choose Color" -command { set rgb [setWmColor $rgb .wm.viewcol "Watermark Color"] }
+#canvas .wm.viewcol -bg $rgb -width 96 -height 32
+#.wm.viewcol create text 30 16 -text "click me"
+#canvas .wm.black -bg black -width 48 -height 16
+#canvas .wm.white -bg white -width 48 -height 16
+
+#label .wm.lopacity -text "Opacity:"
+#scale .wm.opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 \
+#  -variable opacity -showvalue 0 -command {writeVal .wm.lopacity "Opacity:" }
+
+#bind .wm.viewcol <Button> { set rgb [setWmColor $rgb %W "Watermark Color"] }
+#bind .wm.black <Button> { set rgb black; .wm.viewcol configure -bg $rgb }
+#bind .wm.white <Button> { set rgb white; .wm.viewcol configure -bg $rgb }
+
+grid .wm.listbox -row 1 -rowspan 2 -column 1 -sticky nesw
+grid .wm.entry -row 3 -column 1 -sticky we
+grid .wm.label -row 4 -column 1 -sticky w
+grid .wm.lwmsize -row 1 -column 2 -sticky nw
+grid .wm.wmsize -row 2 -rowspan 2 -column 2 -sticky ns
+grid .wm.wmsizentry -row 4 -column 2 -sticky w 
+#grid .wm.title -row 1 -column 3 -sticky nw
+#grid .wm.viewcol -row 2 -column 3 -sticky nesw
+#grid .wm.black -row 3 -column 3 -sticky nsew
+#grid .wm.white -row 3 -column 4 -sticky nsew
+#grid .wm.color -row 4 -column 3 -sticky ew
+#grid .wm.lopacity -row 4 -column 3 -sticky wns
+#grid .wm.opacity -row 5 -column 3 -sticky ew
+#grid .wm.title .wm.viewcol .wm.lopacity .wm.opacity -columnspan 2
+grid rowconfigure .wm 1 -weight 0
+grid rowconfigure .wm {2 3 4} -weight 1
+grid columnconfigure .wm 1 -weight 1
+grid columnconfigure .wm {2} -weight 0
+
+#--- Color options
 proc colorSelector { frame suffix colorvar op title colors {row 0} } {
   global $colorvar
   #set ::frame $frame
@@ -208,47 +246,13 @@ proc colorSelector { frame suffix colorvar op title colors {row 0} } {
   grid $frame.${suffix}title $frame.${suffix}viewcol $frame.${suffix}lopacity $frame.${suffix}opacity -columnspan [llength $colors]
 }
 
-label .wm.title -font {-size 10} -text "Color"
-#button .wm.color -text "Choose Color" -command { set rgb [setWmColor $rgb .wm.viewcol "Watermark Color"] }
-canvas .wm.viewcol -bg $rgb -width 96 -height 32
-.wm.viewcol create text 30 16 -text "click me"
-canvas .wm.black -bg black -width 48 -height 16
-canvas .wm.white -bg white -width 48 -height 16
-
-label .wm.lopacity -text "Opacity:"
-scale .wm.opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 \
-  -variable opacity -showvalue 0 -command {writeVal .wm.lopacity "Opacity:" }
-
-bind .wm.viewcol <Button> { set rgb [setWmColor $rgb %W "Watermark Color"] }
-bind .wm.black <Button> { set rgb black; .wm.viewcol configure -bg $rgb }
-bind .wm.white <Button> { set rgb white; .wm.viewcol configure -bg $rgb }
-
-grid .wm.listbox -rowspan 5 -column 1 -sticky nesw
-grid .wm.entry -row 5 -column 1 -sticky we
-grid .wm.label -row 6 -column 1 -sticky w
-grid .wm.lwmsize -row 1 -column 2 -sticky nsw
-grid .wm.wmsize -row 2 -rowspan 4 -column 2 -sticky ns
-grid .wm.wmsizentry -row 6 -column 2 -sticky w 
-grid .wm.title -row 1 -column 3 -sticky nw
-grid .wm.viewcol -row 2 -column 3 -sticky nesw
-grid .wm.black -row 3 -column 3 -sticky nsew
-grid .wm.white -row 3 -column 4 -sticky nsew
-#grid .wm.color -row 4 -column 3 -sticky ew
-grid .wm.lopacity -row 4 -column 3 -sticky wns
-grid .wm.opacity -row 5 -column 3 -sticky ew
-grid .wm.title .wm.viewcol .wm.lopacity .wm.opacity -columnspan 2
-grid rowconfigure .wm 1 -weight 0
-grid rowconfigure .wm 2 -weight 1
-grid columnconfigure .wm 1 -weight 1
-grid columnconfigure .wm {2 3 4} -weight 0
-
-#--- Color options
 labelframe .color -bd 0 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Color settings"  -relief solid
 pack .color -side left -fill y
 
-colorSelector ".color" "bg" "bgcolor" "bgop" "Background Col" $bgswatch 0
-colorSelector ".color" "br" "bordercol" "brop" "Border Col" $brswatch 5
-colorSelector ".color" "fil" "tfill" "tfop" "Label Col" $tswatch 10
+colorSelector ".color" "wm" "rgb" "opacity" "Watermark" $wmswatch 0
+colorSelector ".color" "bg" "bgcolor" "bgop" "Background Col" $bgswatch 10
+colorSelector ".color" "br" "bordercol" "brop" "Border Col" $brswatch 15
+colorSelector ".color" "fil" "tfill" "tfop" "Label Col" $tswatch 20
 
 #--- Size options
 labelframe .size -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Size & Tile settings"  -relief ridge
