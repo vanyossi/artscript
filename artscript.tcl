@@ -50,6 +50,14 @@ set sliderval 92
 set ::outextension "jpg"
 #Color:
 set ::bgcolor "#ffffff"
+set ::bgop 1
+set ::bgswatch "black gray white"
+set ::bordercol "#aaaaaa"
+set ::brop .8
+set ::brswatch "black gray white"
+set ::tfill "#ffffff"
+set ::tfop .8
+set ::tswatch "black gray white"
 #Montage:
 # mborder Adds a grey border around each image. set 0 disable
 # mspace Adds space between images. set 0 no gap
@@ -140,8 +148,6 @@ listValidate
 labelframe .wm -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Watermark options"  -relief ridge
 pack .wm -side top -fill x
 
-label .wm.title -font {-size 10} -text "Current color"
-
 listbox .wm.listbox -selectmode single -height 6
 foreach i $watermarks { .wm.listbox insert end $i }
 bind .wm.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "wm" "watxt"}
@@ -155,7 +161,55 @@ entry .wm.wmsizentry -textvariable wmsize -width 3 -validate key \
 scale .wm.wmsize -orient vertical -from 48 -to 1 \
   -variable wmsize -showvalue 0
 
-button .wm.color -text "Choose Color" -command { set rgb [setWmColor $rgb .wm.viewcol "Watermark Color"] }
+proc colorSelector { frame suffix colorvar op title colors {row 0} } {
+  global $colorvar
+  #set ::frame $frame
+  #set ::colorvar $colorvar
+  #set ::suffix $suffix
+  #set ::title $title
+
+  label $frame.${suffix}title -font {size 12} -text $title
+
+  canvas $frame.${suffix}viewcol -bg [set $colorvar] -width 96 -height 32
+  $frame.${suffix}viewcol create text 30 16 -text "click me"
+
+  #canvas $frame.${suffix}black -bg black -width 32 -height 16
+  #canvas $frame.${suffix}gray -bg gray -width 32 -height 16
+  #canvas $frame.${suffix}white -bg white -width 32 -height 16
+
+  label $frame.${suffix}lopacity -text "Opacity:";
+  scale $frame.${suffix}opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 \
+  -variable $op -showvalue 0 -command "writeVal $frame.${suffix}lopacity {Opacity:}"
+
+  bind $frame.${suffix}viewcol <Button> [ list colorBind $frame.${suffix}viewcol $colorvar 0 $title ]
+  foreach i $colors {
+    canvas $frame.${suffix}$i -bg $i -width [expr 96/[llength $colors]] -height 16
+    bind $frame.${suffix}$i <Button> [ list colorBind $frame.${suffix}viewcol $colorvar $i $title ]
+  }
+  #bind $frame.${suffix}black <Button> [ list colorBind $frame.${suffix}viewcol $colorvar black $title ]
+  #bind $frame.${suffix}gray <Button> [ list colorBind $frame.${suffix}viewcol $colorvar gray $title ]
+  #bind $frame.${suffix}white <Button> [ list colorBind $frame.${suffix}viewcol $colorvar white $title ]
+
+  grid $frame.${suffix}title -row $row -column 1 -sticky nw
+  incr row
+  grid $frame.${suffix}viewcol -row $row -column 1 -sticky nesw
+  incr row
+  set cn 0
+  foreach i $colors {
+    grid $frame.${suffix}$i -row $row -column [incr cn] -sticky nsew
+  }
+  #grid $frame.${suffix}black -row $row -column 1 -sticky nsew
+  #grid $frame.${suffix}gray -row $row -column 2 -sticky nsew
+  #grid $frame.${suffix}white -row $row -column 3 -sticky nsew
+  incr row
+  grid $frame.${suffix}lopacity -row $row -column 1 -sticky wns
+  incr row
+  grid $frame.${suffix}opacity -row $row -column 1 -sticky ew
+  grid $frame.${suffix}title $frame.${suffix}viewcol $frame.${suffix}lopacity $frame.${suffix}opacity -columnspan [llength $colors]
+}
+
+label .wm.title -font {-size 10} -text "Color"
+#button .wm.color -text "Choose Color" -command { set rgb [setWmColor $rgb .wm.viewcol "Watermark Color"] }
 canvas .wm.viewcol -bg $rgb -width 96 -height 32
 .wm.viewcol create text 30 16 -text "click me"
 canvas .wm.black -bg black -width 48 -height 16
@@ -179,15 +233,23 @@ grid .wm.title -row 1 -column 3 -sticky nw
 grid .wm.viewcol -row 2 -column 3 -sticky nesw
 grid .wm.black -row 3 -column 3 -sticky nsew
 grid .wm.white -row 3 -column 4 -sticky nsew
-grid .wm.color -row 4 -column 3 -sticky ew
-grid .wm.lopacity -row 5 -column 3 -sticky wns
-grid .wm.opacity -row 6 -column 3 -sticky ew
-grid .wm.title .wm.viewcol .wm.color .wm.lopacity .wm.opacity -columnspan 2
+#grid .wm.color -row 4 -column 3 -sticky ew
+grid .wm.lopacity -row 4 -column 3 -sticky wns
+grid .wm.opacity -row 5 -column 3 -sticky ew
+grid .wm.title .wm.viewcol .wm.lopacity .wm.opacity -columnspan 2
 grid rowconfigure .wm 1 -weight 0
 grid rowconfigure .wm 2 -weight 1
 grid columnconfigure .wm 1 -weight 1
 grid columnconfigure .wm {2 3 4} -weight 0
-   
+
+#--- Color options
+labelframe .color -bd 0 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Color settings"  -relief solid
+pack .color -side left -fill y
+
+colorSelector ".color" "bg" "bgcolor" "bgop" "Background Col" $bgswatch 0
+colorSelector ".color" "br" "bordercol" "brop" "Border Col" $brswatch 5
+colorSelector ".color" "fil" "tfill" "tfop" "Label Col" $tswatch 10
+
 #--- Size options
 labelframe .size -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Size & Tile settings"  -relief ridge
 pack .size -side top -fill x
@@ -358,18 +420,9 @@ proc checkstate { val cb } {
     $cb deselect
   }
 }
-proc setWmColor { rgb window { title "Choose color"} } {
-  #Call color chooser and store value to set canvas color and get rgb values
-  set choosercolor [tk_chooseColor -title $title -initialcolor $rgb -parent .]
-  if { [expr {$choosercolor ne "" ? 1 : 0}] } {
-    set rgb $choosercolor
-    $window configure -bg $rgb
-  }
-  return $rgb
-}
+
 #Converts hex color value and returns rgb value with opacity setting to alpha channel
-proc setRGBColor { } {
-  global rgb opacity
+proc setRGBColor { rgb {opacity 1.0} } {
   #Transform hex value to rgb 16bit
   set rgbval [ winfo rgb . $rgb ]
   set rgbn "rgba("
@@ -380,6 +433,31 @@ proc setRGBColor { } {
   }
   append rgbn "$opacity)"
   return $rgbn
+}
+
+#Sets text label to $val This function needs to generalize a lot more.
+proc writeVal { l text val } {
+  $l configure -text "$text $val"
+}
+
+proc setWmColor { rgb window { title "Choose color"} } {
+  #Call color chooser and store value to set canvas color and get rgb values
+  set choosercolor [tk_chooseColor -title $title -initialcolor $rgb -parent .]
+  if { [expr {$choosercolor ne "" ? 1 : 0}] } {
+    set rgb $choosercolor
+    $window configure -bg $rgb
+  }
+  return $rgb
+}
+
+proc colorBind { w var {color false} title } {
+  global $var
+  if {![string is boolean $color]} {
+    set $var $color
+    $w configure -bg $color
+  } else {
+    set $var [setWmColor [set $var] $w $title]
+  }
 }
 
 #Recieves an indexvalue a rootname and a global variable to call
@@ -404,11 +482,6 @@ proc setSelectOnEntry { indx r g } {
   }
 }
 
-
-#Sets text label to $val This function needs to generalize a lot more.
-proc writeVal { l text val } {
-  $l configure -text "$text $val"
-}
 
 #Set slider value to 75
 #The second funciton i made, probably its a good idea to strip it
@@ -442,9 +515,9 @@ proc keepExtension { i } {
 #Preproces functions
 #watermark
 proc watermark {} {
-  global watxt watsel wmsize
+  global watxt watsel wmsize rgb opacity
 
-  set rgbout [setRGBColor]
+  set rgbout [setRGBColor $rgb $opacity]
   set wmpos "SouthEast"
   #Watermarks, we check if checkbox selected to add characters to string
   if {$watsel} {
@@ -459,6 +532,8 @@ proc watermark {} {
 #Collage mode
 proc collage { olist path } {
   global tileval mborder mspace mname mrange sizext
+  #colors
+  global bgcolor bgop bordercol brop tfill tfop
   set sizeval [string trim $sizext]
   set clist ""
 
@@ -494,12 +569,16 @@ proc collage { olist path } {
     set sizeval [expr [string range $sizeval 0 $xpos-1]-$mgap]
     set sizeval "$sizeval\x$sizelast\\>"
   }
-  #Run command
+  #color transforms
+  set rgbout [setRGBColor $bgcolor $bgop]
+  lappend rgbout [setRGBColor $bordercol $brop]
+  lappend rgbout [setRGBColor $tfill $tfop]
+  #Run montage
   set count 0
   foreach i $clist {
     set tmpvar ""
     set name [ append tmpvar "/tmp/" $count "_" $mname ".artscript_temppng" ]
-    eval exec montage -quiet $i -geometry "$sizeval+$mspace+$mspace" -border $mborder $tileval "png:$name"
+    eval exec montage -quiet $i -geometry "$sizeval+$mspace+$mspace" -border $mborder -background [lindex $rgbout 0] -bordercolor [lindex $rgbout 1] $tileval -fill [lindex $rgbout 2]  "png:$name"
     dict set paths $name $path
     incr count
   }
@@ -510,12 +589,12 @@ proc collage { olist path } {
 #Run Converter
 proc convert {} {
   global outextension sliderval sizesel sizext tilesel now argv calligralist inkscapelist
-  global renamesel prefixsel tileval keep mborder mspace mname
+  global renamesel prefixsel tileval keep mborder mspace mname bgcolor
   set sizeval $sizext
   # For extension with no alpha channel we have to add this lines so the user gets the results
   # he is expecting
   if { $outextension == "jpg" } {
-    set alpha "-background white -alpha remove"
+    set alpha "-background $bgcolor -alpha remove"
   } else {
     set alpha ""
   }
