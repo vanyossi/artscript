@@ -45,6 +45,7 @@ set opacity 0.8
 set wmsize 10
 set rgb "#ffffff"
 set ::wmswatch "black gray white"
+set ::wmpos "SouthEast"
 #Image quality
 set sliderval 92
 #Extension & output
@@ -149,6 +150,8 @@ listValidate
 labelframe .wm -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Watermark options"  -relief ridge
 pack .wm -side top -fill x
 
+label .wm.txtlabel -text "Watermark presets"
+label .wm.poslabel -text "Position"
 listbox .wm.listbox -selectmode single -height 6
 foreach i $watermarks { .wm.listbox insert end $i }
 bind .wm.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "wm" "watxt"}
@@ -162,7 +165,11 @@ entry .wm.wmsizentry -textvariable wmsize -width 3 -validate key \
 scale .wm.wmsize -orient vertical -from 48 -to 1 \
   -variable wmsize -showvalue 0
 
-
+set wmpos_index {"NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"}
+foreach i $wmpos_index {
+  radiobutton .wm.pos$i -value $i -variable wmpos -command { writeVal .wm.posresult "" $wmpos }
+}
+label .wm.posresult
 
 #label .wm.title -font {-size 10} -text "Color"
 #button .wm.color -text "Choose Color" -command { set rgb [setWmColor $rgb .wm.viewcol "Watermark Color"] }
@@ -179,12 +186,13 @@ scale .wm.wmsize -orient vertical -from 48 -to 1 \
 #bind .wm.black <Button> { set rgb black; .wm.viewcol configure -bg $rgb }
 #bind .wm.white <Button> { set rgb white; .wm.viewcol configure -bg $rgb }
 
-grid .wm.listbox -row 1 -rowspan 2 -column 1 -sticky nesw
-grid .wm.entry -row 3 -column 1 -sticky we
-grid .wm.label -row 4 -column 1 -sticky w
+grid .wm.txtlabel -row 1 -column 1 -sticky w
+grid .wm.listbox -row 2 -rowspan 5 -column 1 -sticky nesw
+grid .wm.entry -row 7 -column 1 -sticky we
+grid .wm.label -row 8 -column 1 -sticky w
 grid .wm.lwmsize -row 1 -column 2 -sticky nw
-grid .wm.wmsize -row 2 -rowspan 2 -column 2 -sticky ns
-grid .wm.wmsizentry -row 4 -column 2 -sticky w 
+grid .wm.wmsize -row 2 -rowspan 6 -column 2 -sticky ns
+grid .wm.wmsizentry -row 8 -column 2 -sticky w 
 #grid .wm.title -row 1 -column 3 -sticky nw
 #grid .wm.viewcol -row 2 -column 3 -sticky nesw
 #grid .wm.black -row 3 -column 3 -sticky nsew
@@ -193,10 +201,21 @@ grid .wm.wmsizentry -row 4 -column 2 -sticky w
 #grid .wm.lopacity -row 4 -column 3 -sticky wns
 #grid .wm.opacity -row 5 -column 3 -sticky ew
 #grid .wm.title .wm.viewcol .wm.lopacity .wm.opacity -columnspan 2
-grid rowconfigure .wm 1 -weight 0
-grid rowconfigure .wm {2 3 4} -weight 1
-grid columnconfigure .wm 1 -weight 1
+grid .wm.poslabel -row 1 -column 3 -columnspan 2 -sticky w
+set m 0
+for {set i 2} { $i < 7 } { incr i 2 } {
+  for {set j 3} { $j < 6 } { incr j } {
+     grid .wm.pos[lindex $wmpos_index $m] -row $i -column $j -columnspan 2 -sticky w
+     incr m
+  }
+}
+grid .wm.posresult -row 8 -column 3 -columnspan 3 -sticky sw
+grid rowconfigure .wm 2 -weight 0
+grid rowconfigure .wm {1 3 4 5 6 7 8} -weight 1
+grid columnconfigure .wm {1} -weight 16
 grid columnconfigure .wm {2} -weight 0
+grid columnconfigure .wm {3 4 5} -weight 1
+
 
 #--- Color options
 proc colorSelector { frame suffix colorvar op title colors {row 0} } {
@@ -211,13 +230,15 @@ proc colorSelector { frame suffix colorvar op title colors {row 0} } {
   canvas $frame.${suffix}viewcol -bg [set $colorvar] -width 60 -height 30
   $frame.${suffix}viewcol create text 30 16 -text "click me"
 
+  canvas $frame.${suffix}margin -height 2m -width 60
+
   #canvas $frame.${suffix}black -bg black -width 32 -height 16
   #canvas $frame.${suffix}gray -bg gray -width 32 -height 16
   #canvas $frame.${suffix}white -bg white -width 32 -height 16
 
   label $frame.${suffix}lopacity -text "Opacity:"
   scale $frame.${suffix}opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 -relief flat -bd 0  \
-  -variable $op -showvalue 0 -width 8	 -command "writeVal $frame.${suffix}lopacity {Opacity:}"
+  -variable $op -showvalue 0 -width 8 -command "writeVal $frame.${suffix}lopacity {Opacity:}"
 
   bind $frame.${suffix}viewcol <Button> [ list colorBind $frame.${suffix}viewcol $colorvar 0 $title ]
   foreach i $colors {
@@ -243,16 +264,18 @@ proc colorSelector { frame suffix colorvar op title colors {row 0} } {
   grid $frame.${suffix}lopacity -row $row -column 1 -sticky wns
   incr row
   grid $frame.${suffix}opacity -row $row -column 1 -sticky ew
-  grid $frame.${suffix}title $frame.${suffix}viewcol $frame.${suffix}lopacity $frame.${suffix}opacity -columnspan [llength $colors]
+  grid $frame.${suffix}title $frame.${suffix}viewcol $frame.${suffix}lopacity $frame.${suffix}opacity $frame.${suffix}margin -columnspan [llength $colors]
+  incr row
+  grid $frame.${suffix}margin -row $row -column 1
 }
 
 labelframe .color -bd 0 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Color settings"  -relief solid
 pack .color -side left -fill y
 
 colorSelector ".color" "wm" "rgb" "opacity" "Watermark" $wmswatch 0
-colorSelector ".color" "bg" "bgcolor" "bgop" "Background Col" $bgswatch 10
-colorSelector ".color" "br" "bordercol" "brop" "Border Col" $brswatch 15
-colorSelector ".color" "fil" "tfill" "tfop" "Label Col" $tswatch 20
+colorSelector ".color" "bg" "bgcolor" "bgop" "Background Col" $bgswatch 6
+colorSelector ".color" "br" "bordercol" "brop" "Border Col" $brswatch 12
+colorSelector ".color" "fil" "tfill" "tfop" "Label Col" $tswatch 18
 
 #--- Size options
 labelframe .size -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Size & Collage settings"  -relief ridge
@@ -519,10 +542,9 @@ proc keepExtension { i } {
 #Preproces functions
 #watermark
 proc watermark {} {
-  global watxt watsel wmsize rgb opacity
+  global watxt watsel wmsize wmpos rgb opacity
 
   set rgbout [setRGBColor $rgb $opacity]
-  set wmpos "SouthEast"
   #Watermarks, we check if checkbox selected to add characters to string
   if {$watsel} {
     set watval "-pointsize $wmsize -fill $rgbout -gravity $wmpos -draw \"text 10,10 \'$watxt\'\""
