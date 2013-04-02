@@ -48,12 +48,15 @@ set rgb "#ffffff"
 set sliderval 92
 #Extension & output
 set ::outextension "jpg"
+#Color:
+set ::bgcolor "#ffffff"
 #Montage:
 # mborder Adds a grey border around each image. set 0 disable
 # mspace Adds space between images. set 0 no gap
 set ::mborder 5
 set ::mspace 3
-# moutput Montarge filename output
+set ::mrange {}
+# moutput Montage filename output
 set ::mname "collage-$raninter"
 #--=====
 
@@ -152,7 +155,7 @@ entry .wm.wmsizentry -textvariable wmsize -width 3 -validate key \
 scale .wm.wmsize -orient vertical -from 48 -to 1 \
   -variable wmsize -showvalue 0
 
-button .wm.color -text "Choose Color" -command setWmColor
+button .wm.color -text "Choose Color" -command { set rgb [setWmColor $rgb .wm.viewcol "Watermark Color"] }
 canvas .wm.viewcol -bg $rgb -width 96 -height 32
 .wm.viewcol create text 30 16 -text "click me"
 canvas .wm.black -bg black -width 48 -height 16
@@ -162,7 +165,7 @@ label .wm.lopacity -text "Opacity:"
 scale .wm.opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 \
   -variable opacity -showvalue 0 -command {writeVal .wm.lopacity "Opacity:" }
 
-bind .wm.viewcol <Button> { setWmColor }
+bind .wm.viewcol <Button> { set rgb [setWmColor $rgb %W "Watermark Color"] }
 bind .wm.black <Button> { set rgb black; .wm.viewcol configure -bg $rgb }
 bind .wm.white <Button> { set rgb white; .wm.viewcol configure -bg $rgb }
 
@@ -209,23 +212,30 @@ message .size.exp -width 280 -justify center -text "\
 entry .size.entry -textvariable sizext -validate key \
    -vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
 bind .size.entry <KeyRelease> { setSelectOnEntry false "size" "sizext" }
-entry .size.tile -textvariable tileval -validate key \
+entry .size.tile -textvariable tileval -width 6  -validate key \
    -vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
 bind .size.tile <KeyRelease> { checkstate $tileval .opt.tile }
+entry .size.range -textvariable mrange -width 4 -validate key \
+   -vcmd { regexp {^(\s*|[0-9])+$} %P }
+bind .size.range <KeyRelease> { checkstate $mrange .opt.tile }
+
 label .size.label -text "Size:"
 label .size.txtile -text "Tile(ex 1x, 2x2):"
+label .size.lblrange -text "Range:"
 
 grid .size.listbox -row 1 -column 1 -sticky nwse
 grid .size.scroll -row 1 -column 1 -sticky ens
 grid .size.entry -row 2 -column 1 -sticky ews
 grid .size.label -row 3 -column 1 -sticky wns
-grid .size.exp -row 1 -column 2 -columnspan 2 -sticky nsew
+grid .size.exp -row 1 -column 2 -columnspan 3 -sticky nsew
 grid .size.txtile -row 2 -column 2 -sticky e
 grid .size.tile -row 2 -column 3  -sticky ws
+grid .size.range -row 2 -column 5 -sticky ws
+grid .size.lblrange -row 2 -column 4 -sticky e
 grid rowconfigure .size 1 -weight 3
 grid rowconfigure .size 2 -weight 1
 grid columnconfigure .size 1 -weight 1
-grid columnconfigure .size 2 -weight 0
+grid columnconfigure .size {2 3 4} -weight 0
 
 #--- Format options
 labelframe .ex -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Output Format"  -relief ridge
@@ -264,7 +274,7 @@ grid .ex.ora -row 4
 grid .ex.sel -row 5 -column 2
 grid .ex.lbl -row 5 -column 1
 grid .ex.keep -row 6
-grid .ex.rname -row 7
+grid .ex.rname -row 7	
 grid .ex.txt -column 3 -row 1 -columnspan 5 -rowspan 4 -sticky nesw
 grid .ex.qlbl .ex.poor .ex.good .ex.scl .ex.best -row 6 -rowspan 2 -sticky we
 grid .ex.qlbl -column 3
@@ -348,14 +358,14 @@ proc checkstate { val cb } {
     $cb deselect
   }
 }
-proc setWmColor {} {
-  global rgb
+proc setWmColor { rgb window { title "Choose color"} } {
   #Call color chooser and store value to set canvas color and get rgb values
-  set choosercolor [tk_chooseColor -title "Watermark color" -initialcolor $rgb -parent .]
+  set choosercolor [tk_chooseColor -title $title -initialcolor $rgb -parent .]
   if { [expr {$choosercolor ne "" ? 1 : 0}] } {
-    uplevel set rgb $choosercolor
-    .wm.viewcol configure -bg $rgb
+    set rgb $choosercolor
+    $window configure -bg $rgb
   }
+  return $rgb
 }
 #Converts hex color value and returns rgb value with opacity setting to alpha channel
 proc setRGBColor { } {
@@ -445,23 +455,56 @@ proc watermark {} {
   }
   return $watval
 }
-
+#Image magick processes
 #Collage mode
-proc collage { list range } {
+proc collage { olist path } {
+  global tileval mborder mspace mname mrange sizext
+  set sizeval [string trim $sizext]
+  set clist ""
 
-proc range { ilist range } {
-  set rangelists ""
-  set listsize [llength $ilist]
-  set times [expr [expr $listsize/$range]+[expr bool($listsize % $range) ] ]
+  proc range { ilist range } {
+    set rangelists ""
+    set listsize [llength $ilist]
+    set times [expr [expr $listsize/$range]+[expr bool($listsize % $range) ] ]
 
-  for {set i 0} { $i < $times } { incr i } {
-    set val1 [expr $range * $i]
-    set val2 [expr $range * [expr $i+1] - 1 ]
-    lappend rangelists [lrange $ilist $val1 $val2]
+    for {set i 0} { $i < $times } { incr i } {
+      set val1 [expr $range * $i]
+      set val2 [expr $range * [expr $i+1] - 1 ]
+      lappend rangelists [lrange $ilist $val1 $val2]
+    }
+    return $rangelists
   }
-  return $rangelists
-}
 
+  if { [string length $mrange] > 0 } {
+    set clist [range $olist $mrange]
+  } else {
+    lappend clist $olist
+  }
+
+  #Check if user set something in tile entry field
+  if {![string is boolean $tileval]} {
+    set tileval "-tile $tileval"
+  }
+  #We have to substract the margin from the tile value, in this way the user gets
+  # the results is expecting (200px tile 2x2 = 400px)
+  if {![string match -nocase {*[0-9]\%} $sizeval]} {
+    set mgap [expr [expr $mborder + $mspace ] *2 ]
+    set xpos [string last "x" $sizeval]
+    set sizelast [expr [string range $sizeval $xpos+1 end]-$mgap]
+    set sizeval [expr [string range $sizeval 0 $xpos-1]-$mgap]
+    set sizeval "$sizeval\x$sizelast\\>"
+  }
+  #Run command
+  set count 0
+  foreach i $clist {
+    set tmpvar ""
+    set name [ append tmpvar "/tmp/" $count "_" $mname ".artscript_temppng" ]
+    eval exec montage -quiet $i -geometry "$sizeval+$mspace+$mspace" -border $mborder $tileval "png:$name"
+    dict set paths $name $path
+    incr count
+  }
+  lappend rlist [dict keys $paths] $paths
+  return $rlist
 }
 
 #Run Converter
@@ -480,14 +523,14 @@ proc convert {} {
   if {$renamesel} {
     if [llength $calligralist] {
       foreach i $calligralist {
-        if {$keep } { keepExtension $i }
+        keepExtension $i
         set io [setOutputName $i $outextension $prefixsel $renamesel]
         file rename $i $io
       }
     }
     if [llength $argv] {
       foreach i $argv {
-        if {$keep } { keepExtension $i }
+        keepExtension $i
         set io [setOutputName $i $outextension $prefixsel $renamesel]
         file rename $i $io
       }
@@ -553,36 +596,23 @@ proc convert {} {
   }
   if [llength $argv] {
     if {$tilesel} {
-      #we set a name for tiled image (temp)
-      set tmpvar ""
-      set mname [ append tmpvar "/tmp/" $mname ".artscript_temppng" ]
+
       #If paths comes empty we get last file path as output directory
       # else we use the last processed tmp file original path
       if {[string is false $paths]} {
-        dict set paths $mname [file dirname [lindex $argv end] ]
+        set path [file dirname [lindex $argv end] ]
       } else {
-        set origin [dict get $paths /tmp/$outname]
-        dict set paths $mname $origin
+        set path [dict get $paths /tmp/$outname]
       }
-      #Run command
-      # We still have to add a way to resize it and set tile preferences (1x, 2x2 etc)
-      #We removed -label '%f' because we cant choose name placement.
-      if {![string is boolean $tileval]} {
-        set tileval "-tile $tileval"
-      }
-      #We have to substract the margin from the tile value, in this way the user gets
-      # the results is expecting (200px tile 2x2 = 400px)
-      if {![string match -nocase {*[0-9]\%} $sizeval]} {
-        set mgap [expr [expr $mborder + $mspace ] *2 ]
-        set xpos [string last "x" $sizeval]
-        set sizelast [expr [string range $sizeval $xpos+1 end]-$mgap]
-        set sizeval [expr [string range $sizeval 0 $xpos-1]-$mgap]
-        set sizeval "$sizeval\x$sizelast\\>"
-      }
-      eval exec montage -quiet $argv -geometry "$sizeval+$mspace+$mspace" -border $mborder $tileval "png:$mname"
+
+      #Run command return list with file paths
+      set clist [collage $argv $path]
+      set ckeys [lindex $clist 0]
+
+      set paths [dict merge $paths [lindex $clist 1]]
       #Overwrite image list with tiled image to add watermarks or change format
-      set argv $mname
-      lappend tmplist $mname
+      set argv $ckeys
+      set tmplist [concat $tmplist $ckeys]
       #Add mesage to lastmessage
       append lstmsg "Collage done \n"
       #Set size to empty to avoid resizing
@@ -651,6 +681,7 @@ proc setOutputName { fname fext { opreffix false } { orename false } {tmpdir fal
     append finalname _$tmpsuffix
     }
   }
+  if {$orename} { return $fname }
   #If file exists we add string to avoid overwrites
   if { [file exists [string map -nocase "$ext $finalname.$fext" $fname ] ] } {
     append finalname "_artkFile_"
