@@ -172,20 +172,6 @@ foreach i $wmpos_index {
 }
 label .wm.posresult
 
-#label .wm.title -font {-size 10} -text "Color"
-#button .wm.color -text "Choose Color" -command { set rgb [setWmColor $rgb .wm.viewcol "Watermark Color"] }
-#canvas .wm.viewcol -bg $rgb -width 96 -height 32
-#.wm.viewcol create text 30 16 -text "click me"
-#canvas .wm.black -bg black -width 48 -height 16
-#canvas .wm.white -bg white -width 48 -height 16
-
-#label .wm.lopacity -text "Opacity:"
-#scale .wm.opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 \
-#  -variable opacity -showvalue 0 -command {writeVal .wm.lopacity "Opacity:" }
-
-#bind .wm.viewcol <Button> { set rgb [setWmColor $rgb %W "Watermark Color"] }
-#bind .wm.black <Button> { set rgb black; .wm.viewcol configure -bg $rgb }
-#bind .wm.white <Button> { set rgb white; .wm.viewcol configure -bg $rgb }
 
 grid .wm.txtlabel -row 1 -column 1 -sticky w
 grid .wm.listbox -row 2 -rowspan 5 -column 1 -sticky nesw
@@ -194,15 +180,9 @@ grid .wm.label -row 8 -column 1 -sticky w
 grid .wm.lwmsize -row 1 -column 2 -sticky nw
 grid .wm.wmsize -row 2 -rowspan 6 -column 2 -sticky ns
 grid .wm.wmsizentry -row 8 -column 2 -sticky w 
-#grid .wm.title -row 1 -column 3 -sticky nw
-#grid .wm.viewcol -row 2 -column 3 -sticky nesw
-#grid .wm.black -row 3 -column 3 -sticky nsew
-#grid .wm.white -row 3 -column 4 -sticky nsew
-#grid .wm.color -row 4 -column 3 -sticky ew
-#grid .wm.lopacity -row 4 -column 3 -sticky wns
-#grid .wm.opacity -row 5 -column 3 -sticky ew
-#grid .wm.title .wm.viewcol .wm.lopacity .wm.opacity -columnspan 2
 grid .wm.poslabel -row 1 -column 3 -columnspan 2 -sticky w
+
+#Make position grid
 set m 0
 for {set i 2} { $i < 7 } { incr i 2 } {
   for {set j 3} { $j < 6 } { incr j } {
@@ -221,10 +201,6 @@ grid columnconfigure .wm {3 4 5} -weight 1
 #--- Color options
 proc colorSelector { frame suffix colorvar op title colors {row 0} } {
   global $colorvar
-  #set ::frame $frame
-  #set ::colorvar $colorvar
-  #set ::suffix $suffix
-  #set ::title $title
 
   label $frame.${suffix}title -font {size 12} -text $title
 
@@ -233,23 +209,17 @@ proc colorSelector { frame suffix colorvar op title colors {row 0} } {
 
   canvas $frame.${suffix}margin -height 2m -width 60
 
-  #canvas $frame.${suffix}black -bg black -width 32 -height 16
-  #canvas $frame.${suffix}gray -bg gray -width 32 -height 16
-  #canvas $frame.${suffix}white -bg white -width 32 -height 16
-
   label $frame.${suffix}lopacity -text "Opacity:"
   scale $frame.${suffix}opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 -relief flat -bd 0  \
   -variable $op -showvalue 0 -width 8 -command "writeVal $frame.${suffix}lopacity {Opacity:}"
 
   bind $frame.${suffix}viewcol <Button> [ list colorBind $frame.${suffix}viewcol $colorvar 0 $title ]
+  #Make color swatches depending on number of colors selected.
   foreach i $colors {
     canvas $frame.${suffix}$i -bg $i -width [expr 60/[llength $colors]] -height 16
     bind $frame.${suffix}$i <Button> [ list colorBind $frame.${suffix}viewcol $colorvar $i $title ]
   }
-  #bind $frame.${suffix}black <Button> [ list colorBind $frame.${suffix}viewcol $colorvar black $title ]
-  #bind $frame.${suffix}gray <Button> [ list colorBind $frame.${suffix}viewcol $colorvar gray $title ]
-  #bind $frame.${suffix}white <Button> [ list colorBind $frame.${suffix}viewcol $colorvar white $title ]
-
+  #Add widgets to GUI, row increments to prevent overlaps
   grid $frame.${suffix}title -row $row -column 1 -sticky nw
   incr row
   grid $frame.${suffix}viewcol -row $row -column 1 -sticky nesw
@@ -258,9 +228,6 @@ proc colorSelector { frame suffix colorvar op title colors {row 0} } {
   foreach i $colors {
     grid $frame.${suffix}$i -row $row -column [incr cn] -sticky nsew
   }
-  #grid $frame.${suffix}black -row $row -column 1 -sticky nsew
-  #grid $frame.${suffix}gray -row $row -column 2 -sticky nsew
-  #grid $frame.${suffix}white -row $row -column 3 -sticky nsew
   incr row
   grid $frame.${suffix}lopacity -row $row -column 1 -sticky wns
   incr row
@@ -270,9 +237,10 @@ proc colorSelector { frame suffix colorvar op title colors {row 0} } {
   grid $frame.${suffix}margin -row $row -column 1
 }
 
+#Construct color settings label frame
 labelframe .color -bd 0 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Color settings"  -relief solid
 pack .color -side left -fill y
-
+#Construct color dialogs
 colorSelector ".color" "wm" "rgb" "opacity" "Watermark" $wmswatch 0
 colorSelector ".color" "bg" "bgcolor" "bgop" "Background Col" $bgswatch 6
 colorSelector ".color" "br" "bordercol" "brop" "Border Col" $brswatch 12
@@ -286,7 +254,7 @@ proc showargs {args} {
   #puts $args;
   eval $args
 }
-
+#Size menu options
 listbox .size.listbox -selectmode single -relief flat -height 2
 foreach i $sizes { .size.listbox insert end $i }
 bind .size.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "size" "sizext"}
@@ -430,22 +398,8 @@ pack .act.submit -side right -padx 0 -pady 0
 #--- Window options
 wm title . "Artscript -- $fc Files selected"
 
-#General Functions
+#--- General Functions
 
-#Controls watermark text events.
-#proc setWatermark { indx } {
-#  global watxt
-#  #Check if variable comes from list, if not then get value from entry text
-#  if {$indx} { 
-#    set val [.wcol.listbox get $indx]
-#  } else {
-#    set val [.wcol.custom get]
-#  }
-#  .wcol.label configure -text "Selected: $val"
-#  #If anything is selected we set Watermark option on automatically
-#  .opt.wm select
-#  set watxt $val
-#}
 proc checkstate { val cb } {
   if {$val != {} } {
     $cb select
@@ -473,6 +427,8 @@ proc writeVal { l text val } {
   $l configure -text "$text $val"
 }
 
+#Launchs Color chooser and set color to window
+#Returns hex color
 proc setWmColor { rgb window { title "Choose color"} } {
   #Call color chooser and store value to set canvas color and get rgb values
   set choosercolor [tk_chooseColor -title $title -initialcolor $rgb -parent .]
@@ -482,7 +438,7 @@ proc setWmColor { rgb window { title "Choose color"} } {
   }
   return $rgb
 }
-
+#Updates color value of w widget with color val
 proc colorBind { w var {color false} title } {
   global $var
   if {![string is boolean $color]} {
@@ -514,7 +470,6 @@ proc setSelectOnEntry { indx r g } {
     .$r.label configure -text "Output: [getOutputName]"
   }
 }
-
 
 #Set slider value to 75
 #The second funciton i made, probably its a good idea to strip it
@@ -581,7 +536,7 @@ proc collage { olist path } {
     }
     return $rangelists
   }
-
+  #Check if range is selected to produce a list of lists
   if { [string length $mrange] > 0 } {
     set clist [range $olist $mrange]
   } else {
@@ -592,6 +547,7 @@ proc collage { olist path } {
   if {![string is boolean $tileval]} {
     set tileval "-tile $tileval"
   }
+  #check if user set something to label collage
   set label ""
   if {![string is boolean $mlabel]} {
     set label "-label \"$mlabel\""
