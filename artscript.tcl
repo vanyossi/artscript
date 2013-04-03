@@ -13,18 +13,18 @@
 #
 
 #--====User variables, date preferences, watermarks, sizes, default values
-set now [exec date +%F]
+set ::now [exec date +%F]
 #Get a different number each run
-set raninter [exec date +%N]
-set autor "Your Name Here"
-set watermarks [list \
+set ::raninter [exec date +%N]
+set ::autor "Your Name Here"
+set ::watermarks [list \
   "Copyright (c) $autor" \
   "Copyright (c) $autor / $now" \
   "http://www.yourwebsite.com" \
   "Artwork: $autor" \
   "$now" \
 ]
-set sizes [list \
+set ::sizes [list \
   "1920x1920" \
   "1650x1650" \
   "1280x1280" \
@@ -34,45 +34,46 @@ set sizes [list \
   "100x100" \
   "50%" \
 ]
-set suffixes [list \
+set ::suffixes [list \
   "net" \
   "archive" \
   "by-[string map -nocase {{ } -} $autor]" \
   "my-cool-suffix" \
 ]
-set sizext "200x200"
-set opacity 0.8
-set wmsize 10
-set rgb "#ffffff"
+set ::sizext "200x200"
+set ::opacity 0.8
+set ::wmsize 10
+set ::rgb "#ffffff"
 set ::wmswatch "black gray white"
 set ::wmpos "SouthEast"
 #Image quality
-set sliderval 92
+set ::sliderval 92
 #Extension & output
 set ::outextension "jpg"
 #Color:
 set ::bgcolor "#ffffff"
 set ::bgop 1
-set ::bgswatch "black gray white"
-set ::bordercol "#aaaaaa"
+set ::bgswatch "grey10 grey grey96"
+set ::bordercol "grey94"
 set ::brop .8
-set ::brswatch "black gray white"
+set ::brswatch "black grey66 white"
 set ::tfill "#ffffff"
 set ::tfop .8
-set ::tswatch "black gray white"
+set ::tswatch "grey16 gray88 white"
 #Montage:
 # mborder Adds a grey border around each image. set 0 disable
 # mspace Adds space between images. set 0 no gap
 set ::mborder 5
 set ::mspace 3
 set ::mrange {}
+set ::mlabel {}
 # moutput Montage filename output
 set ::mname "collage-$raninter"
 #--=====
 
 #Las message variable
-set lstmsg ""
-set suffix ""
+set ::lstmsg ""
+set ::suffix ""
 
 #Validation Functions
 #Finds program in path using which, return 0 if program missing
@@ -307,10 +308,13 @@ bind .size.tile <KeyRelease> { checkstate $tileval .opt.tile }
 entry .size.range -textvariable mrange -width 4 -validate key \
    -vcmd { regexp {^(\s*|[0-9])+$} %P }
 bind .size.range <KeyRelease> { checkstate $mrange .opt.tile }
+entry .size.entrylabel -textvariable mlabel -validate key \
+   -vcmd { string is ascii %P }
 
 label .size.label -text "Size:"
 label .size.txtile -text "Layout:"
 label .size.lblrange -text "Range:"
+label .size.lbllabel -text "Label:"
 
 grid .size.listbox -row 1 -column 1 -sticky nwse
 grid .size.scroll -row 1 -column 1 -sticky ens
@@ -319,8 +323,10 @@ grid .size.label -row 3 -column 1 -sticky wns
 grid .size.exp -row 1 -column 2 -columnspan 4 -sticky nsew
 grid .size.txtile -row 2 -column 2 -sticky e
 grid .size.tile -row 2 -column 3  -sticky ws
-grid .size.range -row 2 -column 5 -sticky ws
+grid .size.range -row 2 -column 5 -sticky wse
 grid .size.lblrange -row 2 -column 4 -sticky e
+grid .size.lbllabel -row 3 -column 2 -sticky e
+grid .size.entrylabel -row 3 -column 3 -columnspan 3 -sticky we
 grid rowconfigure .size 1 -weight 3
 grid rowconfigure .size 2 -weight 1
 grid columnconfigure .size 1 -weight 1
@@ -557,7 +563,7 @@ proc watermark {} {
 #Image magick processes
 #Collage mode
 proc collage { olist path } {
-  global tileval mborder mspace mname mrange sizext
+  global tileval mborder mspace mname mrange mlabel sizext
   #colors
   global bgcolor bgop bordercol brop tfill tfop
   set sizeval [string trim $sizext]
@@ -586,6 +592,10 @@ proc collage { olist path } {
   if {![string is boolean $tileval]} {
     set tileval "-tile $tileval"
   }
+  set label ""
+  if {![string is boolean $mlabel]} {
+    set label "-label \"$mlabel\""
+  }
   #We have to substract the margin from the tile value, in this way the user gets
   # the results is expecting (200px tile 2x2 = 400px)
   if {![string match -nocase {*[0-9]\%} $sizeval]} {
@@ -604,7 +614,7 @@ proc collage { olist path } {
   foreach i $clist {
     set tmpvar ""
     set name [ append tmpvar "/tmp/" $count "_" $mname ".artscript_temppng" ]
-    eval exec montage -quiet $i -geometry "$sizeval+$mspace+$mspace" -border $mborder -background [lindex $rgbout 0] -bordercolor [lindex $rgbout 1] $tileval -fill [lindex $rgbout 2]  "png:$name"
+    eval exec montage -quiet $label $i -geometry "$sizeval+$mspace+$mspace" -border $mborder -background [lindex $rgbout 0] -bordercolor [lindex $rgbout 1] $tileval -fill [lindex $rgbout 2]  "png:$name"
     dict set paths $name $path
     incr count
   }
