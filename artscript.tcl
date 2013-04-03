@@ -550,7 +550,14 @@ proc collage { olist path } {
   #check if user set something to label collage
   set label ""
   if {![string is boolean $mlabel]} {
-    set label "-label \"$mlabel\""
+    set label {-label "$mlabel"}
+    #puts $label; exit
+  }
+  proc getWidthHeight { geometry } {
+    set xpos [string last "x" $geometry]
+    set width [string range $geometry 0 $xpos-1]
+    set height [string range $geometry $xpos+1 end]
+    return [lappend width $height]
   }
   #We have to substract the margin from the tile value, in this way the user gets
   # the results is expecting (200px tile 2x2 = 400px)
@@ -558,8 +565,16 @@ proc collage { olist path } {
     set mgap [expr [expr $mborder + $mspace ] *2 ]
     set xpos [string last "x" $sizeval]
     set sizelast [expr [string range $sizeval $xpos+1 end]-$mgap]
-    set sizeval [expr [string range $sizeval 0 $xpos-1]-$mgap]
-    set sizeval "$sizeval\x$sizelast\\>"
+    set sizefirst [expr [string range $sizeval 0 $xpos-1]-$mgap]
+    set sizeval "$sizefirst\x$sizelast\\>"
+  }
+  proc getReadSize { w h dw dh } {
+    if { $w > $h } {
+      set dh [ expr $h*$dw/$w ]
+    } else {
+      set dw [ expr $w*$dh/$h ]
+    }
+    return "\[$dw\x$dh\]"
   }
   #color transforms
   set rgbout [setRGBColor $bgcolor $bgop]
@@ -568,6 +583,13 @@ proc collage { olist path } {
   #Run montage
   set count 0
   foreach i $clist {
+    set index 0
+    foreach j $i {
+      set imagesize [getWidthHeight [exec identify -quiet -format "%wx%h" $j] ]
+      set inputsize [getReadSize [lindex $imagesize 0] [lindex $imagesize 1] $sizefirst $sizelast]
+      lset i $index [concat $j$inputsize]
+      incr index
+    }
     set tmpvar ""
     set name [ append tmpvar "/tmp/" $count "_" $mname ".artscript_temppng" ]
     eval exec montage -quiet $label $i -geometry "$sizeval+$mspace+$mspace" -border $mborder -background [lindex $rgbout 0] -bordercolor [lindex $rgbout 1] $tileval -fill [lindex $rgbout 2]  "png:$name"
