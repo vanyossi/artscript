@@ -56,7 +56,7 @@ set ::bgop 1
 set ::bgswatch "grey10 grey grey96"
 set ::bordercol "grey94"
 set ::brop .8
-set ::brswatch "black grey66 white"
+set ::brswatch "grey27 grey66 white"
 set ::tfill "#ffffff"
 set ::tfop .8
 set ::tswatch "grey16 gray88 white"
