@@ -211,7 +211,7 @@ proc colorSelector { frame suffix colorvar op title colors {row 0} } {
 
   label $frame.${suffix}lopacity -text "Opacity:"
   scale $frame.${suffix}opacity -orient horizontal -from .1 -to 1.0 -resolution 0.1 -relief flat -bd 0  \
-  -variable $op -showvalue 0 -width 8 -command "writeVal $frame.${suffix}lopacity {Opacity:}"
+  -variable $op -showvalue 0 -width 8 -command [list writeVal $frame.${suffix}lopacity {Opacity:}]
 
   bind $frame.${suffix}viewcol <Button> [ list colorBind $frame.${suffix}viewcol $colorvar 0 $title ]
   #Make color swatches depending on number of colors selected.
