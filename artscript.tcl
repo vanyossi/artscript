@@ -578,7 +578,7 @@ proc convert {} {
         set origin [lindex $io 1]
       }
       set outputfile [append origin "/" $outname]
-      puts $outputfile
+      puts "outputs $outputfile"
       #If output is ora we have to use calligraconverter
       if { [regexp {ora|kra|xcf} $outextension] } {
         if {!$keep } {
@@ -588,7 +588,7 @@ proc convert {} {
     #Get color space to avoid color shift
     set colorspace [lindex [split [ exec identify -quiet -format %r $i ] ] 1 ]
     #Run command
-        eval exec convert -quiet $i $alpha -colorspace $colorspace $resizeval $watval -quality $sliderval $outputfile
+        eval exec convert -quiet {$i} $alpha -colorspace $colorspace $resizeval $watval -quality $sliderval {$outputfile}
         #Add messages to lastmessage
         #append lstmsg "$i converted to $io\n"
       }
@@ -643,7 +643,8 @@ proc setOutputName { fname fext { opreffix false } { orename false } {tmpdir fal
     set fname [string map -nocase "$ext $finalname" $fname ]
   }
   #If file is called from tmpdir we return a tupple with the original file location
-  return [lappend fname $origpath]
+  set olist ""
+  return [lappend olist $fname $origpath]
 }
 proc getOutputName { {indx 0} } {
   global outextension prefixsel argv calligralist inkscapelist
