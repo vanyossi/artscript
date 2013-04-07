@@ -617,14 +617,16 @@ proc convert {} {
     if [llength $calligralist] {
       foreach i $calligralist {
         keepExtension $i
-        set io [setOutputName $i $outextension $prefixsel $renamesel]
+        set oname [setOutputName $i $outextension $prefixsel $renamesel]
+        set io [file join [lindex $oname 1] [lindex $oname 0] ]
         file rename $i $io
       }
     }
     if [llength $argv] {
       foreach i $argv {
         keepExtension $i
-        set io [setOutputName $i $outextension $prefixsel $renamesel]
+        set oname [setOutputName $i $outextension $prefixsel $renamesel]
+        set io [file join [lindex $oname 1] [lindex $oname 0] ]
         file rename $i $io
       }
     }
@@ -748,50 +750,28 @@ proc convert {} {
 }
 #Prepares output name adding Suffix or Prefix
 #Checks if destination file exists and adds a standard suffix
-proc setOutputName { fname fext { opreffix false } { orename false } {tmpdir false} } {
+proc setOutputName { oname fext { opreffix false } { orename false } {tmpdir false} } {
   global suffix
   set tmpsuffix $suffix
-  set ext [file extension $fname]
-  set finalname ""
-  #Checks if path is defined as absolute path, like when we create a file in /tmp directory
-  #Strips directory leaving file in current directory
-  #if { [file pathtype $fname] == "absolute" } {
-    #get filepath origin path
-    set origpath [file dirname $fname]
-    set fname [lindex [file split $fname] end]
-  #}
-  #Append suffix if user wrote something in entryfield
-  if { [catch $tmpsuffix] && !$tmpdir} {
-    if {$opreffix && $orename} {
-    #Makes preffix instead of suffix
-      set fname [append tmpsuffix _$fname]
-    } elseif {$orename} {
-    #Makes suffix but rename
-      set fname [string map -nocase "$ext _$tmpsuffix$ext" $fname ]
-    } elseif {$opreffix} {
-      set newnam [string map -nocase "$ext .$fext" $fname ]
-      set fname [append tmpsuffix _$newnam]
-    } else { 
-    append finalname _$tmpsuffix
-    }
+  set tmppreffix ""
+  set dir [file dirname $oname]
+  set name [file rootname [file tail $oname]]
+  set ext [file extension $oname]
+  set safe ""
+  if {$opreffix} {
+    set tmppreffix $tmpsuffix
+    set tmpsuffix ""
   }
-  if {$orename} { return $fname }
-  #If file exists we add string to avoid overwrites
-  if { [file exists [string map -nocase "$ext $finalname.$fext" $fname ] ] } {
-    append finalname "_artkFile_"
+  set newname [concat $tmppreffix [list $name] $tmpsuffix]
+  set newname [join $newname "_"]
+  if { [file exists [file join $dir "$newname.$fext"] ] } {
+    set safe "_atk"
   }
-  append finalname ".$fext"
-
-  #If no extension we add the extension
-  if { $ext == "" } {
-    set fname [append fname $finalname]
-  } else {
-    #we search for the extension string and replace it with (suffix and/or date) and extension
-    set fname [string map -nocase "$ext $finalname" $fname ]
-  }
-  #If file is called from tmpdir we return a tupple with the original file location
+  append cname $newname $safe "." $fext
+  #set fname [file join $dir $cname]
+  
   set olist ""
-  return [lappend olist $fname $origpath]
+  return [lappend olist $cname $dir]
 }
 proc getOutputName { {indx 0} } {
   global outextension prefixsel argv calligralist inkscapelist
