@@ -731,7 +731,8 @@ proc convert {} {
         }
       } else {
     #Get color space to avoid color shift
-    set colorspace [lindex [split [ exec identify -quiet -format %r $i ] ] 1 ]
+    #set colorspace [lindex [split [ exec identify -quiet -format %r $i ] ] 1 ]
+    set colorspace "sRGB"
     #Run command
         eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $sliderval {$outputfile}
         #Add messages to lastmessage
