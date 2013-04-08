@@ -75,6 +75,12 @@ set ::mname "collage-$raninter"
 set ::lstmsg ""
 set ::suffix ""
 
+#Don't modify below this line
+#Function to send message boxes
+proc alert {type icon title msg} {
+    tk_messageBox -type $type -icon $icon -title $title \
+    -message $msg
+}
 #Validation Functions
 #Finds program in path using which, return 0 if program missing
 proc validate {program} {
@@ -88,11 +94,6 @@ set hasinkscape [validate "inkscape"]
 #calligraconvert path, if true converts using calligra to /tmp/*.png
 set hascalligra [validate "calligraconverter"]
 
-#Function to send message boxes
-proc alert {type icon title msg} {
-    tk_messageBox -type $type -icon $icon -title $title \
-    -message $msg
-}
 #Check if we have files to work on, if not, finish program.
 if {[catch $argv] == 0 } { 
   alert ok info "Operation Done" "No files selected Exiting"
