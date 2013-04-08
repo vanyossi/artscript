@@ -13,6 +13,9 @@
 #
 
 #--====User variables, date preferences, watermarks, sizes, default values
+#Extension, define what file tipes artscript should read.
+set ::ext ".bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
+#set date
 set ::now [exec date +%F]
 #Get a different number each run
 set ::raninter [exec date +%N]
@@ -103,38 +106,52 @@ if {[catch $argv] == 0 } {
 # Validates arguments input mimetypes, keeps images strip the rest
 # Creates a separate list for .kra, .xcf, .psd and .ora to process separatedly
 proc listValidate {} {
-  global argv calligralist inkscapelist lfiles fc hasinkscape hascalligra
+  global argv ext hasinkscape hascalligra
+  global calligralist inkscapelist lfiles fc
+  
   set lfiles "Files to be processed\n"
-  set fc 0
-  set calligralist [list]
-  set inkscapelist ""
+  set calligralist {}
+  set inkscapelist {}
   #We validate list elements
-  foreach el $argv {
-    #puts [exec file $el]
-    #Append to new list if mime is from type.
-    if { [ regexp {application/x-krita|image/openraster|GIMP XCF image data|Adobe Photoshop Image} [exec file $el] ] && $hascalligra } {
-      lappend calligralist $el
-      append lfiles "$fc Cal: $el\n"
-      set argv [lsearch -all -inline -not -exact $argv $el]
-      incr fc
-      continue
-    }
-    #Append to inkscapelist
-    if { [regexp {SVG Scalable Vector Graphics image} [exec file $el]] && $hasinkscape } {
-      lappend inkscapelist $el
-      append lfiles "$fc Ink: $el\n"
-      set argv [lsearch -all -inline -not -exact $argv $el]
-      incr fc
-      continue
-    }
-    #Remove from list elements not supported by convert
-    if { [catch { exec identify -quiet $el } msg] } {
-      set argv [lsearch -all -inline -not -exact $argv $el]
-    } else {
-      append lfiles "$fc Img: $el\n"
-      incr fc
-    }
+  
+  set identify "identify -quiet -format {%w\|%h\|%m\|%M}"
+  set options true
+  set lops 1
+  foreach i $argv {
+	incr c
+	if { [string index $i 0] == ":" && $options} {
+		dict set ops $i [lindex $argv $c]
+		set lops [expr [llength $ops]+1]
+		continue
+	} elseif { $options && $lops == $c } {
+		set options false
+	}
+	set filext [string tolower [file extension $i] ]
+	if {[lsearch $ext $filext ] >= 0 } {
+		incr fc
+		if { [regexp {.kra|.ora|.psd|.xcf} $filext ] && $hascalligra } {
+			lappend calligralist $i
+			append lfiles "$fc Cal: $i\n"
+			continue
+		} elseif { [regexp {.svg} $filext ] && $hasinkscape } {
+			lappend inkscapelist $i
+			append lfiles "$fc Ink: $i\n"
+			continue
+		} else {
+			lappend imlist $i
+			append lfiles "$fc Mag: $i\n"
+		}
+	} elseif { [string is boolean [file extension $i]] && !$options } {
+		if { [catch { set f [exec {*}[split $identify " "] $i ] } msg ] } {
+			puts $msg
+		} else {
+			incr m
+			lappend imlist $i
+			append lfiles "$fc Mag: $i\n"
+		}
+	}
   }
+  set argv $imlist
   #Check if resulting lists have elements
   if {[llength $argv] + [llength $calligralist] + [llength $inkscapelist] == 0} {
     alert ok info "Operation Done" "No image files selected Exiting"
