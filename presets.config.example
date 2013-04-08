@@ -1,0 +1,7 @@
+#Artscript config file
+
+preset=size40
+sizext={40%}
+sizes={1900x1080 40% 364x250}
+watermarks={"http://colorathis.wordpress.com" "ghevan@gmail.com" "$autor"}
+

@@ -11,7 +11,6 @@
 #   You can modify any variable between "#--=====" markers
 #
 #
-
 #--====User variables, date preferences, watermarks, sizes, default values
 #Extension, define what file tipes artscript should read.
 set ::ext ".bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
@@ -20,6 +19,9 @@ set ::now [exec date +%F]
 #Get a different number each run
 set ::raninter [exec date +%N]
 set ::autor "Your Name Here"
+#Initialize variables for presets
+#Watermark options
+set ::watxt {}
 set ::watermarks [list \
   "Copyright (c) $autor" \
   "Copyright (c) $autor / $now" \
@@ -27,6 +29,22 @@ set ::watermarks [list \
   "Artwork: $autor" \
   "$now" \
 ]
+set ::wmsize 10
+set ::wmpos "SouthEast"
+#Color options:
+set ::rgb "#ffffff"
+set ::opacity 0.8
+set ::wmswatch "black gray white"
+set ::bgcolor "#ffffff"
+set ::bgop 1
+set ::bgswatch "grey10 grey grey96"
+set ::bordercol "grey94"
+set ::brop .8
+set ::brswatch "grey27 grey66 white"
+set ::tfill "#ffffff"
+set ::tfop .8
+set ::tswatch "grey16 gray88 white"
+#Size and Montage:
 set ::sizes [list \
   "1920x1920" \
   "1650x1650" \
@@ -37,48 +55,37 @@ set ::sizes [list \
   "100x100" \
   "50%" \
 ]
+set ::sizext "200x200"
+# mborder Adds a grey border around each image. set 0 disable
+# mspace Adds space between images. set 0 no gap
+set ::mborder 5
+set ::mspace 3
+set ::tileval {}
+set ::mrange {}
+set ::mlabel {}
+# moutput Montage filename output
+set ::mname "collage-$raninter"
+#Extension & output
+set ::outextension "jpg"
+#Image quality
+set ::iquality 92
+#suffix options
 set ::suffixes [list \
   "net" \
   "archive" \
   "by-[string map -nocase {{ } -} $autor]" \
   "my-cool-suffix" \
 ]
-set ::sizext "200x200"
-set ::opacity 0.8
-set ::wmsize 10
-set ::rgb "#ffffff"
-set ::wmswatch "black gray white"
-set ::wmpos "SouthEast"
-#Image quality
-set ::sliderval 92
-#Extension & output
-set ::outextension "jpg"
-#Color:
-set ::bgcolor "#ffffff"
-set ::bgop 1
-set ::bgswatch "grey10 grey grey96"
-set ::bordercol "grey94"
-set ::brop .8
-set ::brswatch "grey27 grey66 white"
-set ::tfill "#ffffff"
-set ::tfop .8
-set ::tswatch "grey16 gray88 white"
-#Montage:
-# mborder Adds a grey border around each image. set 0 disable
-# mspace Adds space between images. set 0 no gap
-set ::mborder 5
-set ::mspace 3
-set ::mrange {}
-set ::mlabel {}
-# moutput Montage filename output
-set ::mname "collage-$raninter"
-#--=====
-
-#Las message variable
-set ::lstmsg ""
 set ::suffix ""
+#Selected operations, default none.
+set ::wmtsel 0
+set ::tilesel 0
+set ::sizesel 0
 
+#--=====
 #Don't modify below this line
+set ::lstmsg ""
+set ::gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_pkgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
 #Function to send message boxes
 proc alert {type icon title msg} {
     tk_messageBox -type $type -icon $icon -title $title \
@@ -107,7 +114,7 @@ if {[catch $argv] == 0 } {
 # Creates a separate list for .kra, .xcf, .psd and .ora to process separatedly
 proc listValidate {} {
   global argv ext hasinkscape hascalligra
-  global calligralist inkscapelist lfiles fc
+  global calligralist inkscapelist lfiles ops fc
   
   set lfiles "Files to be processed\n"
   set calligralist {}
@@ -115,6 +122,7 @@ proc listValidate {} {
   #We validate list elements
   
   set identify "identify -quiet -format {%w\|%h\|%m\|%M}"
+  set ops [dict create]
   set options true
   set lops 1
   foreach i $argv {
@@ -145,7 +153,7 @@ proc listValidate {} {
 		if { [catch { set f [exec {*}[split $identify " "] $i ] } msg ] } {
 			puts $msg
 		} else {
-			incr m
+			incr fc
 			lappend imlist $i
 			append lfiles "$fc Mag: $i\n"
 		}
@@ -160,6 +168,45 @@ proc listValidate {} {
 }
 #We run function to validate input mimetypes
 listValidate
+
+if {[dict exists $ops ":preset"]} {
+  set ::preset [dict get $ops ":preset"]
+  set configfile "presets.config"
+  set configfile [file join [file dirname [info script]] $configfile]
+  puts "config file found in: $configfile"
+
+  if { [file exists $configfile] } {
+    set File [open $configfile]
+
+    foreach {i} [split [read $File] \n] {
+      set firstc [string index $i 0]
+      if { $firstc != "#" && ![string is space $firstc] } {
+        lappend lista [split $i "="]
+        #lappend ListofResult [lindex [split $i ,] 1]
+      }
+    }
+    close $File
+
+    #iterate list and populate dictionary with values
+    foreach i $lista {
+      if { [lindex $i 0] == "preset" } {
+       set condict [lindex $i 1]
+       dict set presets $condict [dict create]
+       continue
+      }
+      dict set presets $condict [lindex $i 0] [lindex $i 1]
+    }
+
+    #set values according to preset
+    if {[dict exists $presets $preset]} {
+      dict for {key value} [dict get $presets $preset] {
+        if {[info exists $key] != [regexp $gvars $key ] } {
+        set ::$key [string trim $value "{}"]
+        }
+      }
+    }
+  }
+}
 
 #For future theming
 #tk_setPalette background black foreground white highlightbackground blue activebackground gray70 activeforeground black
@@ -340,12 +387,12 @@ checkbutton .ex.keep -text "Keep extension" \
 #--- Image quality options
 
 scale .ex.scl -orient horizontal -from 10 -to 100 -tickinterval 25 -width 12 \
-    -label "" -length 150 -variable sliderval -showvalue 1
+    -label "" -length 150 -variable iquality -showvalue 1
 #    -highlightbackground "#666" -highlightcolor "#333" -troughcolor "#888" -fg "#aaa" -bg "#333" -relief flat
 label .ex.qlbl -text "Quality:"
 button .ex.good -pady 1 -padx 8 -text "Good" -command resetSlider; #-relief flat -bg "#888"
-button .ex.best -pady 1 -padx 8 -text "Best" -command {set sliderval 100}
-button .ex.poor -pady 1 -padx 8 -text "Poor" -command {set sliderval 30}
+button .ex.best -pady 1 -padx 8 -text "Best" -command {set iquality 100}
+button .ex.poor -pady 1 -padx 8 -text "Poor" -command {set iquality 30}
 
 grid .ex.jpg .ex.png .ex.gif .ex.ora .ex.rname .ex.keep -column 1 -columnspan 2 -sticky w
 grid .ex.jpg -row 1
@@ -492,8 +539,8 @@ proc setSelectOnEntry { indx r g } {
 #Set slider value to 75
 #The second funciton i made, probably its a good idea to strip it
 proc resetSlider {} {
-  global sliderval
-  set sliderval 92
+  global iquality
+  set iquality 92
 }
 
 #Function that controls suffix date construction
@@ -620,7 +667,7 @@ proc collage { olist path } {
 
 #Run Converter
 proc convert {} {
-  global outextension sliderval sizesel sizext tilesel now argv calligralist inkscapelist
+  global outextension iquality sizesel sizext tilesel now argv calligralist inkscapelist
   global renamesel prefixsel tileval keep mborder mspace mname bgcolor
   set sizeval $sizext
   # For extension with no alpha channel we have to add this lines so the user gets the results
@@ -754,7 +801,7 @@ proc convert {} {
     #set colorspace [lindex [split [ exec identify -quiet -format %r $i ] ] 1 ]
     set colorspace "sRGB"
     #Run command
-        eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $sliderval {$outputfile}
+        eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
         #Add messages to lastmessage
         #append lstmsg "$i converted to $io\n"
       }
