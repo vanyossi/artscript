@@ -1,7 +1,116 @@
-#Artscript config file
+######==============#######
+## Artscript config file ##
+######==============#######
+#
+# Use this file load diferent settings that default base on your preferences.
 
-preset=size40
-sizext={40%}
-sizes={1900x1080 40% 364x250}
-watermarks={"http://colorathis.wordpress.com" "ghevan@gmail.com" "$autor"}
+#Example preset, un comment and call with the next argument ":preset resize50
+#preset=resize50
+#sizext={50%}
+#sizes={1900x1080 40% 364x250}
+#watermarks={"http://example.wordpress.com" "example@gmail.com"}
+
+# Preset name, put next to the equal simbol, no quoting. Follow example
+# To call :preset redwatermark place preset name like this "preset=redwatermark"
+#preset=
+
+#-====Watermark options
+# watermark default text.
+#watxt=""
+
+# watermark default list, follow example to add your own
+#watermarks={"http://example.com" "example@gmail.com"}
+
+# watermark text size in points
+#wmsize=10
+
+# Text watermark position "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"
+#wmpos=
+
+#-====Color options:
+# watermark text color in hex value (#fff, #ffffff) or tk colors http://www.tcl.tk/man/tcl8.4/TkCmd/colors.htm (white)
+#rgb="#ffffff"
+
+# watermark opacity. 0.0 invisible, 1.0 opaque
+#opacity=0.8
+
+# watermark swatches. colors as hex or tk, follow example
+#wmswatch="#000 gray #fff"
+
+# Background detault color (Collage)
+#bgcolor="#ffffff"
+
+# Background opacity (Image needs to support alpha channel) (Collage)
+#bgop=1
+
+# background swatches. colors as hex or tk, follow example
+#bgswatch="grey10 grey grey96"
+
+# Border default color (Collage)
+#bordercol="grey94"
+
+# Border opacity (colllage)
+brop=.8
+# border color swatches. colors as hex or tk, follow example
+# brswatch="grey27 grey66 white"
+
+# Label default color (Collage)
+#tfill="#ffffff"
+
+# Label default opacity
+#tfop=.8
+
+# fill color swatches. colors as hex or tk, follow example
+#tswatch="grey16 gray88 white"
+
+#-====Size and Montage:
+# Sizes available in size listbox,
+#sizes={1900x1080 40% 364x250}
+
+# Size default value
+#sizext=200x200
+
+# Control border around each image in Collage. set 0 disable
+#mborder=5
+
+# Control image spacing in Collage. set 0 no gap
+#mspace=3
+
+# Default layout mode. 1x (1 column), 2x2 (2 Col by 2row), x2 (2 rows) (Collage)
+#tileval=
+
+# Number of images for each collage
+#mrange=
+
+# Default label value, Collage
+# possible values http://www.imagemagick.org/script/escape.php
+#mlabel=
+
+# Defautl suffix name for Collage
+#mname=
+
+#-====Extension & output
+# Default output extension
+#outextension=
+
+# Image quality
+#iquality=
+
+#-====Suffix options
+# Suffix list options
+#suffixes={"net" "comic"}
+
+#Default selected suffix
+#suffix=
+
+#-====Selected operations, default none. 0 = off 1 = on
+# Controls watermark insert. set to 1 to add watermark
+#wmtsel=0
+
+# Controls Collage mode, set to 1 to make a collage
+#tilesel=0
+
+# Controls Resizing options, set to 1 to do resize operations
+#sizesel=0
+
 
