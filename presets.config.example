@@ -3,83 +3,93 @@
 ######==============#######
 #
 # Use this file load diferent settings that default base on your preferences.
+# To use rename to presets.config (remove the "example")
+# Default variables, only autor available (for now)
+autor=Your name
 
-#Example preset, un comment and call with the next argument ":preset resize50
-#preset=resize50
-#sizext={50%}
-#sizes={1900x1080 40% 364x250}
-#watermarks={"http://example.wordpress.com" "example@gmail.com"}
+# Use above variables. ex. autor > $autor
+# Other variables available: $now (current date).
+# ex (watxt=$autor $now)
+# Filling listboxes
+# ex (watermarks="http://example.wordpress.com" "example@example.com")
+
+# Presets
+# Example preset, un comment and call with the next argument ":preset resize50"
+# If no preset value defined all values will be loaded by default.
 
 # Preset name, put next to the equal simbol, no quoting. Follow example
-# To call :preset redwatermark place preset name like this "preset=redwatermark"
+# Anything below "preset=" will be loaded when artscript is called with argument ":preset"
+# ex ( $sh ~ artscript :preset collage file1.jpg file2.png file3.kra )
+# example above loads anything below "preset=collage"
 #preset=
 
 #-====Watermark options
 # watermark default text.
 #watxt=""
 
-# watermark default list, follow example to add your own
-#watermarks={"http://example.com" "example@gmail.com"}
+# watermark default list, follow example to add your own [listbox]
+#watermarks="http://example.com" "example@gmail.com"
 
 # watermark text size in points
 #wmsize=10
 
 # Text watermark position "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"
-#wmpos=
+#wmpos=South
 
 #-====Color options:
 # watermark text color in hex value (#fff, #ffffff) or tk colors http://www.tcl.tk/man/tcl8.4/TkCmd/colors.htm (white)
-#rgb="#ffffff"
+#rgb=#fafafa
 
 # watermark opacity. 0.0 invisible, 1.0 opaque
-#opacity=0.8
+#opacity=0.7
 
 # watermark swatches. colors as hex or tk, follow example
-#wmswatch="#000 gray #fff"
+#wmswatch=#000 gray #fff
 
 # Background detault color (Collage)
-#bgcolor="#ffffff"
+#bgcolor=#444444
 
 # Background opacity (Image needs to support alpha channel) (Collage)
-#bgop=1
+#bgop=.2
 
 # background swatches. colors as hex or tk, follow example
-#bgswatch="grey10 grey grey96"
+#bgswatch=grey10 grey grey96
 
 # Border default color (Collage)
-#bordercol="grey94"
+#bordercol=grey94
 
 # Border opacity (colllage)
-brop=.8
+#brop=.8
+
 # border color swatches. colors as hex or tk, follow example
-# brswatch="grey27 grey66 white"
+#brswatch=grey27 grey66 white
 
 # Label default color (Collage)
-#tfill="#ffffff"
+#tfill=#ffffff
 
 # Label default opacity
 #tfop=.8
 
 # fill color swatches. colors as hex or tk, follow example
-#tswatch="grey16 gray88 white"
+#tswatch=grey16 gray88 white
 
 #-====Size and Montage:
-# Sizes available in size listbox,
-#sizes={1900x1080 40% 364x250}
+# Sizes available in size listbox, Space separated values [listbox]
+#sizes=1900x1080 40% 364x250
 
 # Size default value
-#sizext=200x200
+#sizext=300x300
 
-# Control border around each image in Collage. set 0 disable
+# Control border around each image in Collage. set 0 disable.
 #mborder=5
 
-# Control image spacing in Collage. set 0 no gap
+# Control image spacing in Collage. set 0 no gap.
 #mspace=3
 
 # Default layout mode. 1x (1 column), 2x2 (2 Col by 2row), x2 (2 rows) (Collage)
 #tileval=
 
-# Number of images for each collage
+# Number of images for each collage.
 #mrange=
 
 # Default label value, Collage
@@ -91,26 +101,29 @@ brop=.8
 
 #-====Extension & output
 # Default output extension
-#outextension=
+#outextension=jpg
 
 # Image quality
-#iquality=
+#iquality=80
 
 #-====Suffix options
-# Suffix list options
-#suffixes={"net" "comic"}
+# Suffix list options [listbox]
+#suffixes="net" "$now\_comic"
 
 #Default selected suffix
-#suffix=
+#suffix=net
 
-#-====Selected operations, default none. 0 = off 1 = on
-# Controls watermark insert. set to 1 to add watermark
-#wmtsel=0
+#-====Selected operations, default false
+# Controls watermark insert. (true/false) add watermark
+#wmtsel=false
 
-# Controls Collage mode, set to 1 to make a collage
-#tilesel=0
+# Controls Collage mode, (true/false) make a collage
+#tilesel=false
 
-# Controls Resizing options, set to 1 to do resize operations
-#sizesel=0
+# Controls Resizing options, (true/false) resize
+#sizesel=false
+
+# Controls add preffix instead of suffix, (true/false) preffix
+#prefixsel=false
 
 
