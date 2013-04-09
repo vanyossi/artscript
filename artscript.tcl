@@ -119,6 +119,7 @@ proc listValidate {} {
   set lfiles "Files to be processed\n"
   set calligralist {}
   set inkscapelist {}
+  set imlist {}
   #We validate list elements
   
   set identify "identify -quiet -format {%w\|%h\|%m\|%M}"
