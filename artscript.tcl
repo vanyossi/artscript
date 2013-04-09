@@ -78,9 +78,10 @@ set ::suffixes [list \
 ]
 set ::suffix ""
 #Selected operations, default none.
-set ::wmtsel 0
-set ::tilesel 0
-set ::sizesel 0
+set ::wmtsel false
+set ::tilesel false
+set ::sizesel false
+set ::prefixsel false
 
 #--=====
 #Don't modify below this line
@@ -170,16 +171,16 @@ proc listValidate {} {
 #We run function to validate input mimetypes
 listValidate
 
-if {[dict exists $ops ":preset"]} {
-  set ::preset [dict get $ops ":preset"]
-  set configfile "presets.config"
-  set configfile [file join [file dirname [info script]] $configfile]
+set configfile "presets.config"
+set configfile [file join [file dirname [info script]] $configfile]
+
+if { [file exists $configfile] } {
+  
   puts "config file found in: $configfile"
 
-  if { [file exists $configfile] } {
-    set File [open $configfile]
+  set File [open $configfile]
 
-    foreach {i} [split [read $File] \n] {
+  foreach {i} [split [read $File] \n] {
       set firstc [string index $i 0]
       if { $firstc != "#" && ![string is space $firstc] } {
         lappend lista [split $i "="]
@@ -188,12 +189,23 @@ if {[dict exists $ops ":preset"]} {
     }
     close $File
 
+   if {[dict exists $ops ":preset"]} {
+     set ::preset [dict get $ops ":preset"]
+   } else {
+     set ::preset "default"
+   }
+
     #iterate list and populate dictionary with values
+    set default true
     foreach i $lista {
       if { [lindex $i 0] == "preset" } {
        set condict [lindex $i 1]
        dict set presets $condict [dict create]
+       set datos false
        continue
+      }
+      if {![info exists condict]} {
+       set condict "default"
       }
       dict set presets $condict [lindex $i 0] [lindex $i 1]
     }
@@ -202,12 +214,13 @@ if {[dict exists $ops ":preset"]} {
     if {[dict exists $presets $preset]} {
       dict for {key value} [dict get $presets $preset] {
         if {[info exists $key] != [regexp $gvars $key ] } {
-        set ::$key [string trim $value "{}"]
+        set ::$key [eval concat [string trim $value "{}"]]
+        #puts [eval list [set $key] ]
+        #set ::$key [eval concat $tmpkey]
         }
       }
     }
   }
-}
 
 #For future theming
 #tk_setPalette background black foreground white highlightbackground blue activebackground gray70 activeforeground black
@@ -373,7 +386,7 @@ radiobutton .ex.jpg -value "jpg" -text "JPG" -variable outextension
 radiobutton .ex.png -value "png" -text "PNG" -variable outextension
 radiobutton .ex.gif -value "gif" -text "GIF" -variable outextension
 radiobutton .ex.ora -value "ora" -text "ORA(No post)" -variable outextension
-.ex.jpg select
+#.ex.jpg select
 label .ex.lbl -text "Other"
 entry .ex.sel -text "custom" -textvariable outextension -width 4
 text .ex.txt -height 3 -width 4
