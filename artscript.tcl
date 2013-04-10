@@ -757,7 +757,7 @@ proc convert [list [list argv $argv] ] {
       puts "errc: $errc \n\n"
       #puts "erri: $erri"
       if {$errc != "NONE"} {
-        append lstmsg "EE: $i discarted\n"
+        append ::lstmsg "EE: $i discarted\n"
         puts $msg
         continue
       }
@@ -788,7 +788,7 @@ proc convert [list [list argv $argv] ] {
       set origin [lindex $io 1]
       #catch [ exec inkscape $i -z -C $inksize -e /tmp/$outname 2> /dev/null ]
       if { [catch { exec inkscape $i -z -C $inksize -e /tmp/$outname } msg] } {
-        append lstmsg "EE: $i discarted\n"
+        append ::lstmsg "EE: $i discarted\n"
         puts $msg
         continue
       }
@@ -808,7 +808,7 @@ proc convert [list [list argv $argv] ] {
     foreach i $argv {
       if { [catch {set finfo [exec {*}[split $identify " "] $i ] } msg ] } {
         puts $msg
-        append lstmsg "EE: $i discarted\n"
+        append ::lstmsg "EE: $i discarted\n"
         continue
       } else {
         lappend goodargv $i
@@ -840,7 +840,7 @@ proc convert [list [list argv $argv] ] {
       set argv $ckeys
       set tmplist [concat $tmplist $ckeys]
       #Add mesage to lastmessage
-      append lstmsg "Collage done \n"
+      append ::lstmsg "Collage done \n"
       #Set size to empty to avoid resizing
       set resizeval ""
     }
@@ -869,14 +869,14 @@ proc convert [list [list argv $argv] ] {
     #Run command
         eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
         #Add messages to lastmessage
-        #append lstmsg "$i converted to $io\n"
+        #append ::lstmsg "$i converted to $io\n"
       }
     }
     #cleaning tmp files
     foreach tmpf $tmplist {  file delete $tmpf }
-    append lstmsg "$m files converted"
+    append ::lstmsg "$m files converted"
  }
-  alert ok info "Operation Done\n" $lstmsg
+  alert ok info "Operation Done\n" $::lstmsg
   exit
 }
 #Prepares output name adding Suffix or Prefix
