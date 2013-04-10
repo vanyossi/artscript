@@ -1,17 +1,20 @@
 #!/usr/bin/wish
 # Script inspired by David Revoy (www.davidrevoy.com , info@davidrevoy.com )
-# About format based on his Artscript comments.
+#
 #----------------:::: ArtscriptTk ::::----------------------
 # IvanYossi colorathis.wordpress.com ghevan@gmail.com  GPL 3.0
+# Version = 1.5
 #-----------------------------------------------------------
-# Goal : Batch convert any image file supported by imagemagick and calligra.
-# Dependencies (that I know of) : calligraconverter, >=imagemagick-6.7.5,tk 8.5
+# Goal : Batch convert any image file supported by imagemagick, calligra & Inkscape.
+# Dependencies: >=imagemagick-6.7.5, tk 8.5
+# Optional deps: calligraconverter, inkscape
 #
 # __Customize:__
 #   You can modify any variable between "#--=====" markers
+#   Or (recomended) make a config file (rename presets.config.presets to presets.config)
+#   File must be in the same directory as the script.
 #
-#
-#--====User variables, date preferences, watermarks, sizes, default values
+#--====User variables
 #Extension, define what file tipes artscript should read.
 set ::ext ".bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
 #set date values

@@ -2,22 +2,23 @@
 ## Artscript config file ##
 ######==============#######
 #
-# Use this file load diferent settings that default base on your preferences.
+# Use this file load diferent settings at loading.
+# Lines starting with "#" will be ignored
 # To use rename to presets.config (remove the "example")
-# Default variables, only autor available (for now)
-autor=Your name
+# Custom variables (only autor available v1.5)
+#autor=Your name
 
-# Use above variables. ex. autor > $autor
+# Use above variables like the example (ex. autor > $autor)
 # Other variables available: $date (current date), $year, $month, $day.
 # ex (watxt=$autor $now)
 # Filling listboxes
 # ex (watermarks="http://example.wordpress.com" "example@example.com" "copyright (c) $year $autor")
 
 # Presets
-# Example preset, un comment and call with the next argument ":preset resize50"
-# If no preset value defined all values will be loaded by default.
+# If no preset value is defined any uncommented value will be loaded by default.
+# See end of file to view an example
 
-# Preset name, put next to the equal simbol, no quoting. Follow example
+# Preset name, put next to the equal simbol, no quoting. Follow examples
 # Anything below "preset=" will be loaded when artscript is called with argument ":preset"
 # ex ( $sh ~ artscript :preset collage file1.jpg file2.png file3.kra )
 # example above loads anything below "preset=collage"
@@ -126,4 +127,22 @@ autor=Your name
 # Controls add preffix instead of suffix, (true/false) preffix
 #prefixsel=false
 
+
+#Config file example
+#Any value before the first "preset" key will be loaded as artscript default
+#iquality=75
+#wmpos=SouthEast
+
+#preset=bigcollage
+#Any value defined after a preset will be loaded if artscript is called in the following form
+# $sh ~ artscript :preset bigcollage file1.jpg file2.png ...
+#tilesel=true
+#tileval=5x6
+#mlabel=%f
+
+#preset=comicstrip
+# $sh ~ artscript :preset comicstrip file1.jpg file2.png ...
+#tilesel=true
+#tileval=1x
+#bgcolor=black
 
