@@ -115,7 +115,7 @@ if {[catch $argv] == 0 } {
 # Creates a separate list for .kra, .xcf, .psd and .ora to process separatedly
 proc listValidate {} {
   global argv ext hasinkscape hascalligra
-  global calligralist inkscapelist lfiles ops fc
+  global calligralist inkscapelist identify lfiles ops fc
   
   set lfiles "Files to be processed\n"
   set calligralist {}
@@ -681,7 +681,7 @@ proc collage { olist path } {
 
 #Run Converter
 proc convert {} {
-  global outextension iquality sizesel sizext tilesel now argv calligralist inkscapelist
+  global outextension iquality sizesel sizext tilesel now argv calligralist inkscapelist identify
   global renamesel prefixsel tileval keep mborder mspace mname bgcolor
   set sizeval $sizext
   # For extension with no alpha channel we have to add this lines so the user gets the results
@@ -736,11 +736,22 @@ proc convert {} {
       set io [setOutputName $i "artscript_temppng" 0 0 1]
       set outname [lindex $io 0]
       set origin [lindex $io 1]
-      catch [ exec calligraconverter --batch $i -mimetype image/png /tmp/$outname 2> /dev/null ]
+      #We dont wrap calligraconverter on if else state because it reports all msg to stderror
+      catch { exec calligraconverter --batch --mimetype image/png -- $i /tmp/$outname } msg
+      set errc $::errorCode;
+      set erri $::errorInfo
+      puts "errc: $errc \n\n"
+      #puts "erri: $erri"
+      if {$errc != "NONE"} {
+        append lstmsg "EE: $i discarted\n"
+        puts $msg
+        continue
+      }
       #Add png to argv file list on /tmp dir and originalpath to dict
-      dict set paths /tmp/$outname $origin
-      lappend argv /tmp/$outname
-      lappend tmplist /tmp/$outname
+      set tmpname /tmp/$outname
+      dict set paths $tmpname $origin
+      lappend argv $tmpname
+      lappend tmplist $tmpname
     }
   }
   if [llength $inkscapelist] {
@@ -748,7 +759,7 @@ proc convert {} {
       set inksize ""
       if {$sizesel || $tilesel } {
         if {![string match -nocase {*[0-9]\%} $sizeval]} {
-          set mgap [expr [expr $mborder + $mspace ] *2 ]
+          #set mgap [expr [expr $mborder + $mspace ] *2 ]
           set inksize [string range $sizeval 0 [string last "x" $sizeval]-1]
           set inksize "-w $inksize"
         } else {
@@ -761,22 +772,44 @@ proc convert {} {
       set io [setOutputName $i "artscript_temppng" 0 0 1]
       set outname [lindex $io 0]
       set origin [lindex $io 1]
-      catch [ exec inkscape $i -z -C $inksize -e /tmp/$outname 2> /dev/null ]
+      #catch [ exec inkscape $i -z -C $inksize -e /tmp/$outname 2> /dev/null ]
+      if { [catch { exec inkscape $i -z -C $inksize -e /tmp/$outname } msg] } {
+        append lstmsg "EE: $i discarted\n"
+        puts $msg
+        continue
+      }
       #Add png to argv file list on /tmp dir and originalpath to dict
-      dict set paths /tmp/$outname $origin
-      lappend argv /tmp/$outname
-      lappend tmplist /tmp/$outname
+      set tmpname /tmp/$outname
+      dict set paths $tmpname $origin
+      lappend argv $tmpname
+      lappend tmplist $tmpname
     }
   }
   if [llength $argv] {
-    if {$tilesel} {
+    set m 0
+    # Real data validation
+    # missing: this operation should populate the dict with image width and height.
+    #   to run identify only once in the script and gain speed.
+    set goodargv {}
+    foreach i $argv {
+      if { [catch { set a [exec {*}[split $identify " "] $i ] } msg ] } {
+        puts $msg
+        append lstmsg "EE: $i discarted\n"
+        continue
+      }
+      lappend goodargv $i
+    }
+    set argv $goodargv
 
+    if {$tilesel && [llength $argv] > 0 } {
       #If paths comes empty we get last file path as output directory
       # else we use the last processed tmp file original path
       if {[string is false $paths]} {
         set path [file dirname [lindex $argv end] ]
+
       } else {
-        set path [dict get $paths /tmp/$outname]
+        set path [dict get $paths $tmpname]
+
       }
 
       #Run command return list with file paths
@@ -824,7 +857,7 @@ proc convert {} {
     foreach tmpf $tmplist {  file delete $tmpf }
     append lstmsg "$m files converted"
  }
-  alert ok info "Operation Done" $lstmsg
+  alert ok info "Operation Done\n" $lstmsg
   exit
 }
 #Prepares output name adding Suffix or Prefix
