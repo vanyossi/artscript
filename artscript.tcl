@@ -704,8 +704,38 @@ proc collage { olist path imcat} {
 }
 
 #Run Converters
-
-
+#Inkscape converter
+proc processInkscape [list [list olist $inkscapelist] ] {
+  set sizeval [getSizeSel]
+  if [llength $olist] {
+    foreach i $olist {
+      set inksize ""
+      if {$::sizesel || $::tilesel } {
+        if {![string match -nocase {*[0-9]\%} $sizeval]} {
+          set inksize [string range $sizeval 0 [string last "x" $sizeval]-1]
+          set inksize "-w $inksize"
+        } else {
+          set inksize [expr 90 * [ expr 50 / 100.0 ] ]
+          set inksize "-d $inksize"
+        }
+      }
+      #Make png to feed convert, we try catch, inkscape cant be quiet
+      #Sends file input for processing, stripping input directory
+      set io [setOutputName $i "artscript_temppng" 0 0 1]
+      set outname [lindex $io 0]
+      set origin [lindex $io 1]
+      #catch [ exec inkscape $i -z -C $inksize -e /tmp/$outname 2> /dev/null ]
+      if { [catch { exec inkscape $i -z -C $inksize -e /tmp/$outname } msg] } {
+        append lstmsg "EE: $i discarted\n"
+        puts $msg
+        continue
+      }
+    #Add png to argv file list on /tmp dir and originalpath to dict
+      dict set ifiles /tmp/$outname $origin
+    }
+  }
+  return $ifiles
+}
 proc convert [list [list argv $argv] ] {
   global outextension iquality sizext calligralist inkscapelist identify
   global sizesel tilesel renamesel prefixsel keep bgcolor
@@ -760,36 +790,11 @@ proc convert [list [list argv $argv] ] {
       lappend tmplist $tmpname
     }
   }
-  if [llength $inkscapelist] {
-    set sizeval [getSizeSel]
-    foreach i $inkscapelist {
-      set inksize ""
-      if {$sizesel || $tilesel } {
-        if {![string match -nocase {*[0-9]\%} $sizeval]} {
-          set inksize [string range $sizeval 0 [string last "x" $sizeval]-1]
-          set inksize "-w $inksize"
-        } else {
-          set inksize [expr 90 * [ expr 50 / 100.0 ] ]
-          set inksize "-d $inksize"
-        }
-      }
-      #Make png to feed convert, we try catch, inkscape cant be quiet
-      #Sends file input for processing, stripping input directory
-      set io [setOutputName $i "artscript_temppng" 0 0 1]
-      set outname [lindex $io 0]
-      set origin [lindex $io 1]
-      #catch [ exec inkscape $i -z -C $inksize -e /tmp/$outname 2> /dev/null ]
-      if { [catch { exec inkscape $i -z -C $inksize -e /tmp/$outname } msg] } {
-        append ::lstmsg "EE: $i discarted\n"
-        puts $msg
-        continue
-      }
-      #Add png to argv file list on /tmp dir and originalpath to dict
-      set tmpname /tmp/$outname
+  set tmpfiles [processInkscape]
+  dict for {tmpname origin} $tmpfiles {
       dict set paths $tmpname $origin
       lappend argv $tmpname
       lappend tmplist $tmpname
-    }
   }
   if [llength $argv] {
     set m 0
