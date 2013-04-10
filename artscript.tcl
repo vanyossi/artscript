@@ -722,7 +722,7 @@ proc processInkscape [list [list olist $inkscapelist] ] {
       }
       #Make png to feed convert, we try catch, inkscape cant be quiet
       #Sends file input for processing, stripping input directory
-      set io [setOutputName $i "artscript_temppng" 0 0 1]
+      set io [setOutputName $i "artscript_temppng" 0 0 0 1]
       set outname [lindex $io 0]
       set origin [lindex $io 1]
       #catch [ exec inkscape $i -z -C $inksize -e /tmp/$outname 2> /dev/null ]
@@ -746,7 +746,7 @@ proc processCalligra [list [list olist $calligralist] ] {
       # the process over warnings, and exec inside a try/catch event as the program send
       # a lot of errors on some of my files breaking the loop
       #Sends file input for processing, stripping input directory
-      set io [setOutputName $i "artscript_temppng" 0 0 1]
+      set io [setOutputName $i "artscript_temppng" 0 0 0 1]
       set outname [lindex $io 0]
       set origin [lindex $io 1]
       #We dont wrap calligraconverter on if else state because it reports all msg to stderror
@@ -863,15 +863,16 @@ proc convert [list [list argv $argv] ] {
       incr m
       #Get outputname with suffix and extension
       if { $keep } { keepExtension $i }
-      set io [setOutputName $i $outextension $prefixsel]
-      set outname [lindex $io 0]
+
       #Check if there is entry in tmp file dict to use original path
-      if {[dict exists $paths $i]} {
-        set origin [dict get $paths $i]
-      } else {
-        set origin [lindex $io 1]
+      if { [catch { set ordir [dict get $paths $i]} msg ] } {
+        set ordir ""
       }
-      set outputfile [append origin "/" $outname]
+      set io [setOutputName $i $outextension $prefixsel 0 $ordir]
+      set outname [lindex $io 0]
+      set origin [lindex $io 1]
+
+      set outputfile [file join $origin $outname]
       puts "outputs $outputfile"
       #If output is ora we have to use calligraconverter
       if { [regexp {ora|kra|xcf} $outextension] } {
@@ -893,19 +894,23 @@ proc convert [list [list argv $argv] ] {
 }
 #Prepares output name adding Suffix or Prefix
 #Checks if destination file exists and adds a standard suffix
-proc setOutputName { oname fext { opreffix false } { orename false } {tmpdir false} } {
-  global suffix
-  set tmpsuffix $suffix
-  set tmppreffix ""
-  set dir [file dirname $oname]
+proc setOutputName { oname fext { oprefix false } { orename false } {ordir false} {tmprun false} } {
+  set tmpprefix ""
+  if {$tmprun} { set tmpsuffix "" } else { set tmpsuffix $::suffix }
+  if {[string is boolean $ordir]} {
+    set dir [file dirname $oname]
+  } else {
+    set dir $ordir
+  }
   set name [file rootname [file tail $oname]]
   set ext [file extension $oname]
   set safe ""
-  if {$opreffix} {
-    set tmppreffix $tmpsuffix
+  if {$oprefix} {
+    set tmpprefix $tmpsuffix
     set tmpsuffix ""
   }
-  set newname [concat $tmppreffix [list $name] $tmpsuffix]
+
+  set newname [concat $tmpprefix [list $name] $tmpsuffix]
   set newname [join $newname "_"]
   if { [file exists [file join $dir "$newname.$fext"] ] } {
     set safe "_atk"
