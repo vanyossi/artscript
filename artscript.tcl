@@ -14,8 +14,12 @@
 #--====User variables, date preferences, watermarks, sizes, default values
 #Extension, define what file tipes artscript should read.
 set ::ext ".bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
-#set date
-set ::now [exec date +%F]
+#set date values
+set ::now [split [exec date +%Y/%m/%d/%u] "/"]
+set ::year [lindex $now 0]
+set ::month [lindex $now 1]
+set ::day [lindex $now 2]
+set ::date [join [list $year $month $day] "-"]
 #Get a different number each run
 set ::raninter [exec date +%N]
 set ::autor "Your Name Here"
@@ -24,10 +28,10 @@ set ::autor "Your Name Here"
 set ::watxt {}
 set ::watermarks [list \
   "Copyright (c) $autor" \
-  "Copyright (c) $autor / $now" \
+  "Copyright (c) $autor / $date" \
   "http://www.yourwebsite.com" \
   "Artwork: $autor" \
-  "$now" \
+  "$date" \
 ]
 set ::wmsize 10
 set ::wmpos "SouthEast"
@@ -214,7 +218,15 @@ if { [file exists $configfile] } {
     if {[dict exists $presets $preset]} {
       dict for {key value} [dict get $presets $preset] {
         if {[info exists $key] != [regexp $gvars $key ] } {
-        set ::$key [eval concat [string trim $value "{}"]]
+          if { [catch {set keyval [eval list [string trim $value]] } msg] } {
+            puts $msg
+          } else {
+            if {[llength $keyval] > 1} { 
+              set ::$key $keyval
+            } else {
+              set ::$key [string trim $keyval "{}"]
+            }
+          }
         #puts [eval list [set $key] ]
         #set ::$key [eval concat $tmpkey]
         }
@@ -559,19 +571,19 @@ proc resetSlider {} {
 
 #Function that controls suffix date construction
 proc setdateCmd {} {
-  global datesel now suffix
+  global datesel date suffix
   #We add the date string if checkbox On
   if {$datesel} {
-    uplevel append suffix $now
+    uplevel append suffix $date
     .suffix.label configure -text "Output: [getOutputName]"
   } else {
   #If user checkbox to off
   #We erase it when suffix is same as date
-    if { $suffix == "$now" } {
+    if { $suffix == "$date" } {
       uplevel set suffix "{}"
     } else {
   #Search date string to erase from suffix
-      uplevel set suffix [string map -nocase "$now { }" $suffix ]
+      uplevel set suffix [string map -nocase "$date { }" $suffix ]
     }
   }
 }

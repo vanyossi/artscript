@@ -8,10 +8,10 @@
 autor=Your name
 
 # Use above variables. ex. autor > $autor
-# Other variables available: $now (current date).
+# Other variables available: $date (current date), $year, $month, $day.
 # ex (watxt=$autor $now)
 # Filling listboxes
-# ex (watermarks="http://example.wordpress.com" "example@example.com")
+# ex (watermarks="http://example.wordpress.com" "example@example.com" "copyright (c) $year $autor")
 
 # Presets
 # Example preset, un comment and call with the next argument ":preset resize50"
@@ -28,7 +28,7 @@ autor=Your name
 #watxt=""
 
 # watermark default list, follow example to add your own [listbox]
-#watermarks="http://example.com" "example@gmail.com"
+#watermarks="http://example.wordpress.com" "example@example.com" "copyright (c) $year $autor"
 
 # watermark text size in points
 #wmsize=10
@@ -108,7 +108,7 @@ autor=Your name
 
 #-====Suffix options
 # Suffix list options [listbox]
-#suffixes="net" "$now\_comic"
+#suffixes="net" "$date\_comic"
 
 #Default selected suffix
 #suffix=net
