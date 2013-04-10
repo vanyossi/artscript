@@ -123,7 +123,7 @@ proc listValidate {} {
   set imlist {}
   #We validate list elements
   
-  set identify "identify -quiet -format {%w\|%h\|%m\|%M}"
+  set identify "identify -quiet -format {%wx%h\|%m\|%M}"
   set ops [dict create]
   set options true
   set lops 1
@@ -596,7 +596,7 @@ proc watermark {} {
 }
 #Image magick processes
 #Collage mode
-proc collage { olist path } {
+proc collage { olist path imcat} {
   global tileval mborder mspace mname mrange mlabel sizext
   #colors
   global bgcolor bgop bordercol brop tfill tfop
@@ -664,7 +664,7 @@ proc collage { olist path } {
   foreach i $clist {
     set index 0
     foreach j $i {
-      set imagesize [getWidthHeight [exec identify -quiet -format "%wx%h" $j] ]
+      set imagesize [getWidthHeight [dict get $imcat $j geometry] ]
       set inputsize [getReadSize [lindex $imagesize 0] [lindex $imagesize 1] $sizefirst $sizelast]
       lset i $index [concat $j$inputsize]
       incr index
@@ -788,16 +788,23 @@ proc convert {} {
   if [llength $argv] {
     set m 0
     # Real data validation
-    # missing: this operation should populate the dict with image width and height.
-    #   to run identify only once in the script and gain speed.
+    # this operation populate a dict with image width and height.
+    # so we only run identify once in the script to gain speed.
     set goodargv {}
     foreach i $argv {
-      if { [catch { set a [exec {*}[split $identify " "] $i ] } msg ] } {
+      if { [catch {set finfo [exec {*}[split $identify " "] $i ] } msg ] } {
         puts $msg
         append lstmsg "EE: $i discarted\n"
         continue
+      } else {
+        lappend goodargv $i
+        set iminfo [split [string trim $finfo "{}"] "|"]
+        foreach { dm f n } $iminfo {
+           dict set collist $i geometry $dm
+           dict set collist $i iformat $f
+           dict set collist $i magicknam $n
+        }
       }
-      lappend goodargv $i
     }
     set argv $goodargv
 
@@ -806,14 +813,12 @@ proc convert {} {
       # else we use the last processed tmp file original path
       if {[string is false $paths]} {
         set path [file dirname [lindex $argv end] ]
-
       } else {
         set path [dict get $paths $tmpname]
-
       }
 
       #Run command return list with file paths
-      set clist [collage $argv $path]
+      set clist [collage $argv $path $collist]
       set ckeys [lindex $clist 0]
 
       set paths [dict merge $paths [lindex $clist 1]]
