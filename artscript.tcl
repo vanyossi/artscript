@@ -594,6 +594,18 @@ proc watermark {} {
   }
   return $watval
 }
+#Rename files only
+proc renameFile { olist } {
+  global prefixsel
+  if [llength $olist] {
+    foreach i $olist {
+      keepExtension $i
+      set oname [setOutputName $i $outextension $prefixsel 1]
+      set io [file join [lindex $oname 1] [lindex $oname 0] ]
+      file rename $i $io
+    }
+  }
+}
 #Image magick processes
 #Collage mode
 proc collage { olist path imcat} {
@@ -693,22 +705,7 @@ proc convert [list [list argv $argv] ] {
   }
   #Before checking all see if user only wants to rename
   if {$renamesel} {
-    if [llength $calligralist] {
-      foreach i $calligralist {
-        keepExtension $i
-        set oname [setOutputName $i $outextension $prefixsel $renamesel]
-        set io [file join [lindex $oname 1] [lindex $oname 0] ]
-        file rename $i $io
-      }
-    }
-    if [llength $argv] {
-      foreach i $argv {
-        keepExtension $i
-        set oname [setOutputName $i $outextension $prefixsel $renamesel]
-        set io [file join [lindex $oname 1] [lindex $oname 0] ]
-        file rename $i $io
-      }
-    }
+    renameFile [concat $calligralist $inkscapelist $argv]
     exit
   }
   #Run watermark preprocess
