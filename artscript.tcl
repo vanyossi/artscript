@@ -606,6 +606,18 @@ proc renameFile { olist } {
     }
   }
 }
+#Resize return the validated entry as wxh or true -resize wxh
+proc getSizeSel { {raw true} } {
+  set sizeval [string trim $::sizext] 
+  #We check if user wants resize and $sizeval not empty
+  if {$raw} {
+  } elseif {!$::sizesel || [string is boolean $sizeval] || $sizeval == "x" } {
+    set sizeval ""
+  } else {
+    set sizeval "-resize $sizeval\\>"
+  }
+    return $sizeval
+}
 #Image magick processes
 #Collage mode
 proc collage { olist path imcat} {
@@ -691,11 +703,13 @@ proc collage { olist path imcat} {
   return $rlist
 }
 
-#Run Converter
+#Run Converters
+
+
 proc convert [list [list argv $argv] ] {
   global outextension iquality sizext calligralist inkscapelist identify
   global sizesel tilesel renamesel prefixsel keep bgcolor
-  set sizeval $sizext
+
   # For extension with no alpha channel we have to add this lines so the user gets the results
   # he is expecting
   if { $outextension == "jpg" } {
@@ -710,16 +724,19 @@ proc convert [list [list argv $argv] ] {
   }
   #Run watermark preprocess
   set watval [watermark]
+
   #Size, checbox = True set size command
-  #We have to trim spaces?
-  set sizeval [string trim $sizeval]
+  #set resizeval [getSizeSel]
+  #We have to trim spaces
+  #set sizeval [string trim $sizext]
   #We check if user wants resize and $sizeval not empty
-  if {!$sizesel || [string is boolean $sizeval] || $sizeval == "x" } {
-    set sizeval ""
-    set resizeval ""
-  } else {
-    set resizeval "-resize $sizeval\\>"
-  }
+  #if {!$sizesel || [string is boolean $sizeval] || $sizeval == "x" } {
+  #  set sizeval ""
+  #  set resizeval ""
+  #} else {
+  #  set resizeval "-resize $sizeval\\>"
+  #}
+  set resizeval [getSizeSel 0]
   #Declare a empty list to fill with tmp files for deletion
   set tmplist ""
   #Declare empty dict to fill original path location
@@ -752,6 +769,7 @@ proc convert [list [list argv $argv] ] {
     }
   }
   if [llength $inkscapelist] {
+    set sizeval [getSizeSel]
     foreach i $inkscapelist {
       set inksize ""
       if {$sizesel || $tilesel } {
