@@ -768,8 +768,8 @@ proc processCalligra [list [list olist $calligralist] ] {
 }
 #Run convert
 proc convert [list [list argv $argv] ] {
-  global outextension iquality sizext calligralist inkscapelist identify
-  global sizesel tilesel renamesel prefixsel keep bgcolor
+  global outextension iquality identify
+  global renamesel prefixsel keep bgcolor
 
   # For extension with no alpha channel we have to add this lines so the user gets the results
   # he is expecting
@@ -780,7 +780,7 @@ proc convert [list [list argv $argv] ] {
   }
   #Before checking all see if user only wants to rename
   if {$renamesel} {
-    renameFile [concat $calligralist $inkscapelist $argv]
+    renameFile [concat $::calligralist $::inkscapelist $argv]
     exit
   }
   #Run watermark preprocess
@@ -837,7 +837,7 @@ proc convert [list [list argv $argv] ] {
     }
     set argv $goodargv
 
-    if {$tilesel && [llength $argv] > 0 } {
+    if {$::tilesel && [llength $argv] > 0 } {
       #If paths comes empty we get last file path as output directory
       # else we use the last processed tmp file original path
       if {[string is false $paths]} {
@@ -865,6 +865,7 @@ proc convert [list [list argv $argv] ] {
       if { $keep } { keepExtension $i }
       set io [setOutputName $i $outextension $prefixsel]
       set outname [lindex $io 0]
+      #Check if there is entry in tmp file dict to use original path
       if {[dict exists $paths $i]} {
         set origin [dict get $paths $i]
       } else {
@@ -878,13 +879,9 @@ proc convert [list [list argv $argv] ] {
           eval exec calligraconverter --batch $i $outputfile 2> /dev/null
         }
       } else {
-    #Get color space to avoid color shift
-    #set colorspace [lindex [split [ exec identify -quiet -format %r $i ] ] 1 ]
     set colorspace "sRGB"
     #Run command
         eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
-        #Add messages to lastmessage
-        #append ::lstmsg "$i converted to $io\n"
       }
     }
     #cleaning tmp files
@@ -919,10 +916,10 @@ proc setOutputName { oname fext { opreffix false } { orename false } {tmpdir fal
   set olist ""
   return [lappend olist $cname $dir]
 }
+#Return output name to use in GUI
 proc getOutputName { {indx 0} } {
-  global outextension prefixsel argv calligralist inkscapelist
   #Concatenate both lists to always have an output example name
-  set i [lindex [concat $argv $calligralist $inkscapelist] $indx]
-  return [lindex [setOutputName $i $outextension $prefixsel] 0]
+  set i [lindex [concat $::argv $::calligralist $::inkscapelist] $indx]
+  return [lindex [setOutputName $i $::outextension $::prefixsel] 0]
 }
 
