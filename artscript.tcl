@@ -706,6 +706,7 @@ proc collage { olist path imcat} {
 #Run Converters
 #Inkscape converter
 proc processInkscape [list [list olist $inkscapelist] ] {
+  set ifiles ""
   set sizeval [getSizeSel]
   if [llength $olist] {
     foreach i $olist {
@@ -736,6 +737,36 @@ proc processInkscape [list [list olist $inkscapelist] ] {
   }
   return $ifiles
 }
+#Calligra converter
+proc processCalligra [list [list olist $calligralist] ] {
+  set ifiles ""
+  if [llength $olist] {
+    foreach i $olist {
+      #Make png to feed convert, we feed errors to dev/null to stop calligra killing
+      # the process over warnings, and exec inside a try/catch event as the program send
+      # a lot of errors on some of my files breaking the loop
+      #Sends file input for processing, stripping input directory
+      set io [setOutputName $i "artscript_temppng" 0 0 1]
+      set outname [lindex $io 0]
+      set origin [lindex $io 1]
+      #We dont wrap calligraconverter on if else state because it reports all msg to stderror
+      catch { exec calligraconverter --batch --mimetype image/png -- $i /tmp/$outname } msg
+      set errc $::errorCode;
+      set erri $::errorInfo
+      puts "errc: $errc \n\n"
+      #puts "erri: $erri"
+      if {$errc != "NONE"} {
+        append ::lstmsg "EE: $i discarted\n"
+        puts $msg
+        continue
+      }
+      #Add png to argv file list on /tmp dir and originalpath to dict
+      dict set ifiles /tmp/$outname $origin
+    }
+  }
+  return $ifiles
+}
+#Run convert
 proc convert [list [list argv $argv] ] {
   global outextension iquality sizext calligralist inkscapelist identify
   global sizesel tilesel renamesel prefixsel keep bgcolor
@@ -760,37 +791,24 @@ proc convert [list [list argv $argv] ] {
 
   #Declare a empty list to fill with tmp files for deletion
   set tmplist ""
+
   #Declare empty dict to fill original path location
   set paths [dict create]
 
-  if [llength $calligralist] {
-    foreach i $calligralist {
-      #Make png to feed convert, we feed errors to dev/null to stop calligra killing
-      # the process over warnings, and exec inside a try/catch event as the program send
-      # a lot of errors on some of my files breaking the loop
-      #Sends file input for processing, stripping input directory
-      set io [setOutputName $i "artscript_temppng" 0 0 1]
-      set outname [lindex $io 0]
-      set origin [lindex $io 1]
-      #We dont wrap calligraconverter on if else state because it reports all msg to stderror
-      catch { exec calligraconverter --batch --mimetype image/png -- $i /tmp/$outname } msg
-      set errc $::errorCode;
-      set erri $::errorInfo
-      puts "errc: $errc \n\n"
-      #puts "erri: $erri"
-      if {$errc != "NONE"} {
-        append ::lstmsg "EE: $i discarted\n"
-        puts $msg
-        continue
-      }
-      #Add png to argv file list on /tmp dir and originalpath to dict
-      set tmpname /tmp/$outname
-      dict set paths $tmpname $origin
-      lappend argv $tmpname
-      lappend tmplist $tmpname
-    }
-  }
-  set tmpfiles [processInkscape]
+  #Call calligra convert and return tmp files location
+  set calfiles [processCalligra]
+
+  #Call inkscape convert and return tmp files location
+  set inkfiles [processInkscape]
+
+  #Generate one dict to rule them all
+  set tmpfiles [dict merge $calfiles $inkfiles]
+
+  #Unset unused vars
+  unset calfiles inkfiles
+
+  #populate argv to convert and tmplist to remove at the end.
+  #missing, used dict values to convert and erase
   dict for {tmpname origin} $tmpfiles {
       dict set paths $tmpname $origin
       lappend argv $tmpname
