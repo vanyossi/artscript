@@ -725,22 +725,14 @@ proc convert [list [list argv $argv] ] {
   #Run watermark preprocess
   set watval [watermark]
 
-  #Size, checbox = True set size command
-  #set resizeval [getSizeSel]
-  #We have to trim spaces
-  #set sizeval [string trim $sizext]
   #We check if user wants resize and $sizeval not empty
-  #if {!$sizesel || [string is boolean $sizeval] || $sizeval == "x" } {
-  #  set sizeval ""
-  #  set resizeval ""
-  #} else {
-  #  set resizeval "-resize $sizeval\\>"
-  #}
   set resizeval [getSizeSel 0]
+
   #Declare a empty list to fill with tmp files for deletion
   set tmplist ""
   #Declare empty dict to fill original path location
   set paths [dict create]
+
   if [llength $calligralist] {
     foreach i $calligralist {
       #Make png to feed convert, we feed errors to dev/null to stop calligra killing
