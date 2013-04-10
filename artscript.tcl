@@ -680,9 +680,9 @@ proc collage { olist path imcat} {
 }
 
 #Run Converter
-proc convert {} {
-  global outextension iquality sizesel sizext tilesel now argv calligralist inkscapelist identify
-  global renamesel prefixsel tileval keep mborder mspace mname bgcolor
+proc convert [list [list argv $argv] ] {
+  global outextension iquality sizext calligralist inkscapelist identify
+  global sizesel tilesel renamesel prefixsel keep bgcolor
   set sizeval $sizext
   # For extension with no alpha channel we have to add this lines so the user gets the results
   # he is expecting
@@ -759,7 +759,6 @@ proc convert {} {
       set inksize ""
       if {$sizesel || $tilesel } {
         if {![string match -nocase {*[0-9]\%} $sizeval]} {
-          #set mgap [expr [expr $mborder + $mspace ] *2 ]
           set inksize [string range $sizeval 0 [string last "x" $sizeval]-1]
           set inksize "-w $inksize"
         } else {
