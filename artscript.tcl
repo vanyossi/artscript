@@ -248,7 +248,7 @@ pack .wm -side top -fill x
 
 label .wm.txtlabel -text "Watermark presets"
 label .wm.poslabel -text "Position"
-listbox .wm.listbox -selectmode single -height 6
+listbox .wm.listbox -selectmode single -height 5
 foreach i $watermarks { .wm.listbox insert end $i }
 bind .wm.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "wm" "watxt"}
 entry .wm.entry -text "Custom" -textvariable watxt
@@ -281,7 +281,7 @@ grid .wm.poslabel -row 1 -column 3 -columnspan 2 -sticky w
 set m 0
 for {set i 2} { $i < 7 } { incr i 2 } {
   for {set j 3} { $j < 6 } { incr j } {
-     grid .wm.pos[lindex $wmpos_index $m] -row $i -column $j -columnspan 2 -sticky w
+     grid .wm.pos[lindex $wmpos_index $m] -row $i -column $j -columnspan 1 -sticky w
      incr m
   }
 }
@@ -356,10 +356,10 @@ bind .size.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "size"
 scrollbar .size.scroll -command {showargs .size.listbox yview} -orient vert
 .size.listbox conf -yscrollcommand {showargs .size.scroll set}
 
-message .size.exp -width 220 -justify center -text "\
- Size format can be expresed as: \nW x H or 40%, 50% \n\
- In Collage mode size refers to tile size\n\
- Size 200x200 + Layout 2x2 = w400xh400"
+message .size.exp -width 210 -justify center -text "\
+ Size: W x H, 40% \n\
+ In Collage size is tile size\n\
+ Size 20x20 + Layout 2x2 = w40xh40"
 
 #size and tile entry boxes and validation
 entry .size.entry -textvariable sizext -validate key \
@@ -409,19 +409,18 @@ text .ex.txt -height 3 -width 4
 .ex.txt insert end $lfiles
 
 #-- Select only rename no output transform
-checkbutton .ex.rname -text "Only rename" \
+checkbutton .ex.rname -text "Rename Only" \
     -onvalue true -offvalue false -variable renamesel
 #-- Ignore output, use input extension as output.
-checkbutton .ex.keep -text "Keep extension" \
+checkbutton .ex.keep -text "Keep format" \
     -onvalue true -offvalue false -variable keep
 #--- Image quality options
 
 scale .ex.scl -orient horizontal -from 10 -to 100 -tickinterval 25 -width 12 \
-    -label "" -length 150 -variable iquality -showvalue 1
+    -label "" -length 110 -variable iquality -showvalue 1
 #    -highlightbackground "#666" -highlightcolor "#333" -troughcolor "#888" -fg "#aaa" -bg "#333" -relief flat
 label .ex.qlbl -text "Quality:"
 button .ex.good -pady 1 -padx 8 -text "Good" -command resetSlider; #-relief flat -bg "#888"
-button .ex.best -pady 1 -padx 8 -text "Best" -command {set iquality 100}
 button .ex.poor -pady 1 -padx 8 -text "Poor" -command {set iquality 30}
 
 grid .ex.jpg .ex.png .ex.gif .ex.ora .ex.rname .ex.keep -column 1 -columnspan 2 -sticky w
@@ -433,15 +432,14 @@ grid .ex.sel -row 5 -column 2
 grid .ex.lbl -row 5 -column 1
 grid .ex.keep -row 6
 grid .ex.rname -row 7	
-grid .ex.txt -column 3 -row 1 -columnspan 5 -rowspan 4 -sticky nesw
-grid .ex.qlbl .ex.poor .ex.good .ex.scl .ex.best -row 6 -rowspan 2 -sticky we
+grid .ex.txt -column 3 -row 1 -columnspan 4 -rowspan 5 -sticky nesw
+grid .ex.qlbl .ex.poor .ex.good .ex.scl -row 6 -rowspan 2 -sticky we
 grid .ex.qlbl -column 3
 grid .ex.poor -column 4
-grid .ex.good -column 5
-grid .ex.scl  -column 6
-grid .ex.best -column 7
+grid .ex.good -column 6
+grid .ex.scl  -column 5
 grid columnconfigure .ex {1} -weight 0
-grid columnconfigure .ex {6} -weight 1
+grid columnconfigure .ex {5} -weight 1
 
 #--- Suffix options
 labelframe .suffix -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Suffix"  -relief ridge
@@ -450,18 +448,18 @@ pack .suffix -side top -fill x
 listbox .suffix.listbox -selectmode single -height 4
 foreach i $suffixes { .suffix.listbox insert end $i }
 bind .suffix.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "suffix" "suffix"}
-label .suffix.label -text "Selected:"
+label .suffix.label -text "->:"
 
 entry .suffix.entry -textvariable suffix -validate key \
    -vcmd { string is graph %P }
 bind .suffix.entry <KeyRelease> { setSelectOnEntry false "suffix" "suffix" }
-checkbutton .suffix.date -text "Add Date Suffix" \
+checkbutton .suffix.date -text "Add Date" \
     -onvalue true -offvalue false -variable datesel -command setdateCmd
 checkbutton .suffix.prefix -text "Prefix" \
     -onvalue true -offvalue false -variable prefixsel -command { setSelectOnEntry false "suffix" "suffix" }
 
 grid .suffix.listbox -column 1 -rowspan 4 -sticky nsew
-grid .suffix.label -row 1 -column 2 -columnspan 3 -sticky nsew
+grid .suffix.label -row 1 -column 2 -columnspan 3 -sticky nsw
 grid .suffix.entry -row 2 -column 2 -columnspan 3 -sticky ew
 grid .suffix.date -row 3 -column 2 -sticky w
 grid .suffix.prefix -row 3 -column 4 -sticky w
@@ -562,7 +560,7 @@ proc setSelectOnEntry { indx r g } {
     .opt.$g select
   #Else $g is "suffix" 
   } else {
-    .$r.label configure -text "Output: [getOutputName]"
+    .$r.label configure -text "->: [getOutputName]"
   }
 }
 
