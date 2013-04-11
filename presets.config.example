@@ -116,7 +116,7 @@
 
 #-====Selected operations, default false
 # Controls watermark insert. (true/false) add watermark
-#wmtsel=false
+#watsel=false
 
 # Controls Collage mode, (true/false) make a collage
 #tilesel=false

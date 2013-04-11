@@ -85,7 +85,7 @@ set ::suffixes [list \
 ]
 set ::suffix ""
 #Selected operations, default none.
-set ::wmtsel false
+set ::watsel false
 set ::tilesel false
 set ::sizesel false
 set ::prefixsel false
