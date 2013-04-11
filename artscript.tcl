@@ -709,9 +709,10 @@ proc collage { olist path imcat} {
       incr index
     }
     set tmpvar ""
-    set name [ append tmpvar "/tmp/" $count "_" $mname ".artscript_temppng" ]
-    eval exec montage -quiet $label $i -geometry "$sizeval+$mspace+$mspace" -border $mborder -background [lindex $rgbout 0] -bordercolor [lindex $rgbout 1] $tileval -fill [lindex $rgbout 2]  "png:$name"
-    dict set paths $name $path
+    set name [ append tmpvar $mname "_" $count ]
+    set tmpname [file join "/tmp" $name]
+    eval exec montage -quiet $label $i -geometry "$sizeval+$mspace+$mspace" -border $mborder -background [lindex $rgbout 0] -bordercolor [lindex $rgbout 1] $tileval -fill [lindex $rgbout 2]  "png:$tmpname"
+    dict set paths $tmpname [file join $path $name]
     incr count
   }
   lappend rlist [dict keys $paths] $paths
@@ -747,7 +748,7 @@ proc processInkscape [list [list olist $inkscapelist] ] {
         continue
       }
     #Add png to argv file list on /tmp dir and originalpath to dict
-      dict set ifiles /tmp/$outname $origin
+      dict set ifiles [file join "/" "tmp" "$outname"] [file join $origin $i]
     }
   }
   return $ifiles
@@ -776,7 +777,7 @@ proc processCalligra [list [list olist $calligralist] ] {
         continue
       }
       #Add png to argv file list on /tmp dir and originalpath to dict
-      dict set ifiles /tmp/$outname $origin
+      dict set ifiles [file join "/" "tmp" "$outname"] [file join $origin $i]
     }
   }
   return $ifiles
@@ -863,12 +864,11 @@ proc convert [list [list argv $argv] ] {
 
       #Run command return list with file paths
       set clist [collage $argv $path $collist]
-      set ckeys [lindex $clist 0]
 
       set paths [dict merge $paths [lindex $clist 1]]
       #Overwrite image list with tiled image to add watermarks or change format
-      set argv $ckeys
-      set tmplist [concat $tmplist $ckeys]
+      set argv [lindex $clist 0]
+      set tmplist [concat $tmplist $argv]
       #Add mesage to lastmessage
       append ::lstmsg "Collage done \n"
       #Set size to empty to avoid resizing
@@ -883,7 +883,7 @@ proc convert [list [list argv $argv] ] {
       if { [catch { set ordir [dict get $paths $i]} msg ] } {
         set ordir ""
       }
-      set io [setOutputName $i $outextension $prefixsel 0 $ordir]
+      set io [setOutputName $i $outextension $prefixsel 0 $ordir ]
       set outname [lindex $io 0]
       set origin [lindex $io 1]
 
@@ -912,11 +912,10 @@ proc convert [list [list argv $argv] ] {
 proc setOutputName { oname fext { oprefix false } { orename false } {ordir false} {tmprun false} } {
   set tmpprefix ""
   if {$tmprun} { set tmpsuffix "" } else { set tmpsuffix $::suffix }
-  if {[string is boolean $ordir]} {
-    set dir [file dirname $oname]
-  } else {
-    set dir $ordir
+  if {![string is boolean $ordir]} {
+    set oname $ordir
   }
+  set dir [file dirname $oname]
   set name [file rootname [file tail $oname]]
   set ext [file extension $oname]
   set safe ""
@@ -928,7 +927,8 @@ proc setOutputName { oname fext { oprefix false } { orename false } {ordir false
   set newname [concat $tmpprefix [list $name] $tmpsuffix]
   set newname [join $newname "_"]
   if { [file exists [file join $dir "$newname.$fext"] ] } {
-    set safe "_atk"
+    incr s
+    set safe "_atk$s"
   }
   append cname $newname $safe "." $fext
   #set fname [file join $dir $cname]
