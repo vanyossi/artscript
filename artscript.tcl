@@ -195,11 +195,10 @@ if { [file exists $configfile] } {
       }
     }
     close $File
-
+   
+   set ::preset "default"
    if {[dict exists $ops ":preset"]} {
-     set ::preset [dict get $ops ":preset"]
-   } else {
-     set ::preset "default"
+     lappend ::preset [dict get $ops ":preset"]
    }
 
     #iterate list and populate dictionary with values
@@ -218,20 +217,22 @@ if { [file exists $configfile] } {
     }
 
     #set values according to preset
-    if {[dict exists $presets $preset]} {
-      dict for {key value} [dict get $presets $preset] {
-        if {[info exists $key] != [regexp $gvars $key ] } {
-          if { [catch {set keyval [eval list [string trim $value]] } msg] } {
-            puts $msg
-          } else {
-            if {[llength $keyval] > 1} { 
-              set ::$key $keyval
+    foreach i $preset {
+      if {[dict exists $presets $i]} {
+        dict for {key value} [dict get $presets $i] {
+          if {[info exists $key] != [regexp $gvars $key ] } {
+            if { [catch {set keyval [eval list [string trim $value]] } msg] } {
+              puts $msg
             } else {
-              set ::$key [string trim $keyval "{}"]
+              if {[llength $keyval] > 1} { 
+                set ::$key $keyval
+              } else {
+                set ::$key [string trim $keyval "{}"]
+              }
             }
+          #puts [eval list [set $key] ]
+          #set ::$key [eval concat $tmpkey]
           }
-        #puts [eval list [set $key] ]
-        #set ::$key [eval concat $tmpkey]
         }
       }
     }
