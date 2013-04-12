@@ -789,7 +789,7 @@ proc processInkscape [list [list olist $inkscapelist] ] {
   return $ifiles
 }
 #Calligra converter
-proc processCalligra [list [list olist $calligralist] ] {
+proc processCalligra [list {outext "png"} {outdir "/tmp"} [list olist $calligralist] ] {
   set ifiles ""
   if [llength $olist] {
     foreach i $olist {
@@ -797,11 +797,11 @@ proc processCalligra [list [list olist $calligralist] ] {
       # the process over warnings, and exec inside a try/catch event as the program send
       # a lot of errors on some of my files breaking the loop
       #Sends file input for processing, stripping input directory
-      set io [setOutputName $i "artscript_temppng" 0 0 0 1]
-      set outname [lindex $io 0]
+      set io [setOutputName $i $outext 0 0 0 1]
+      set outname [file join $outdir [lindex $io 0]]
       set origin [lindex $io 1]
       #We dont wrap calligraconverter on if else state because it reports all msg to stderror
-      catch { exec calligraconverter --batch --mimetype image/png -- $i /tmp/$outname } msg
+      catch { exec calligraconverter --batch -- $i $outname } msg
       set errc $::errorCode;
       set erri $::errorInfo
       puts "errc: $errc \n\n"
@@ -812,7 +812,7 @@ proc processCalligra [list [list olist $calligralist] ] {
         continue
       }
       #Add png to argv file list on /tmp dir and originalpath to dict
-      dict set ifiles [file join "/" "tmp" "$outname"] [file join $origin $i]
+      dict set ifiles $outname [file join $origin $i]
     }
   }
   return $ifiles
