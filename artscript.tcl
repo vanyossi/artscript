@@ -600,6 +600,25 @@ proc keepExtension { i } {
   global outextension
   uplevel set outextension [ string trimleft [file extension $i] "."]
 }
+#Main Progressbar update control
+proc progressUpdate { { current false } { max false } { create false } } {
+  if {[string is integer $current]} {
+    set ::cur $current
+  }
+  if {$max} {
+    .act.pbar configure -maximum $max
+    update
+    return
+  }
+  if {$create} {
+    #Draw progressbar next to convert button.
+    pack [ ttk::progressbar .act.pbar -maximum [llength [concat $::gimplist $::calligralist $::inkscapelist ] ] -variable ::cur -length "300" ] -side left -fill x -padx 2 -pady 0
+    return
+  }
+  incr ::cur
+  update
+}
+
 #Preproces functions
 #watermark
 proc watermark {} {
@@ -710,6 +729,9 @@ proc collage { olist path imcat} {
   lappend rgbout [setRGBColor $tfill $tfop]
   #Run montage
   set count 0
+  #Set new maximum length to progress bar to total of collage * 2
+  progressUpdate false [expr [llength $clist] * 2]
+
   foreach i $clist {
     set index 0
     foreach j $i {
@@ -724,6 +746,8 @@ proc collage { olist path imcat} {
     eval exec montage -quiet $label $i -geometry "$sizeval+$mspace+$mspace" -border $mborder -background [lindex $rgbout 0] -bordercolor [lindex $rgbout 1] $tileval -fill [lindex $rgbout 2]  "png:$tmpname"
     dict set paths $tmpname [file join $path $name]
     incr count
+    #udpate progressbar
+    progressUpdate
   }
   lappend rlist [dict keys $paths] $paths
   return $rlist
@@ -744,6 +768,9 @@ proc processGimp [list [list olist $gimplist] [list outext $outextension] ] {
       set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"/tmp/$outname\" \"/tmp/$outname\") )(gimp-quit 0)"
       #run gimp command, it depends on extension to do transform.
       catch { exec gimp -i -b $cmd } msg
+      #udpate progressbar
+      progressUpdate
+
       set errc $::errorCode;
       set erri $::errorInfo
       puts "errc: $errc \n\n"
@@ -786,7 +813,9 @@ proc processInkscape [list {outdir "/tmp"} [list olist $inkscapelist] ] {
         puts $msg
         continue
       }
-    #Add png to argv file list on /tmp dir and originalpath to dict
+      #udpate progressbar
+      progressUpdate
+      #Add png to argv file list on /tmp dir and originalpath to dict
       dict set ifiles $outname [file join $origin $i]
     }
   }
@@ -806,6 +835,9 @@ proc processCalligra [list {outext "png"} [list olist $calligralist] {outdir "/t
       set origin [lindex $io 1]
       #We dont wrap calligraconverter on if else state because it reports all msg to stderror
       catch { exec calligraconverter --batch -- $i $outname } msg
+      #udpate progressbar
+      progressUpdate
+
       set errc $::errorCode;
       set erri $::errorInfo
       puts "errc: $errc \n\n"
@@ -821,10 +853,14 @@ proc processCalligra [list {outext "png"} [list olist $calligralist] {outdir "/t
   }
   return $ifiles
 }
+
 #Run convert
 proc convert [list [list argv $argv] ] {
   global outextension iquality identify
   global renamesel prefixsel keep bgcolor
+
+  #Create progress bar
+  progressUpdate 0 0 1
 
   #Before checking all see if user only wants to rename
   if {$renamesel} {
@@ -880,6 +916,7 @@ proc convert [list [list argv $argv] ] {
       lappend argv $tmpname
       lappend tmplist $tmpname
   }
+
   if [llength $argv] {
     set m 0
     # Real data validation
@@ -902,6 +939,9 @@ proc convert [list [list argv $argv] ] {
       }
     }
     set argv $goodargv
+
+    #Set new max value for files to convert, update progressbar
+    progressUpdate 0 [llength $argv]
 
     if {$::tilesel && [llength $argv] > 0 } {
       #If paths comes empty we get last file path as output directory
@@ -943,6 +983,8 @@ proc convert [list [list argv $argv] ] {
       set colorspace "sRGB"
       #Run command
       eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
+      #udpate progressbar
+      progressUpdate
     }
     #cleaning tmp files
     foreach tmpf $tmplist {  file delete $tmpf }
