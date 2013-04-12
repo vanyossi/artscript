@@ -107,6 +107,8 @@ proc validate {program} {
   }
   return 1
 }
+#Gimp path
+set hasgimp [validate "gimp"]
 #Inkscape path, if true converts using inkscape to /tmp/*.png
 set hasinkscape [validate "inkscape"]
 #calligraconvert path, if true converts using calligra to /tmp/*.png
@@ -121,10 +123,11 @@ if {[catch $argv] == 0 } {
 # Validates arguments input mimetypes, keeps images strip the rest
 # Creates a separate list for .kra, .xcf, .psd and .ora to process separatedly
 proc listValidate {} {
-  global argv ext hasinkscape hascalligra
-  global calligralist inkscapelist identify lfiles ops fc
+  global argv ext hasinkscape hascalligra hasgimp
+  global gimplist calligralist inkscapelist identify lfiles ops fc
   
   set lfiles "Files to be processed\n"
+  set gimplist {}
   set calligralist {}
   set inkscapelist {}
   set imlist {}
@@ -146,13 +149,17 @@ proc listValidate {} {
 	set filext [string tolower [file extension $i] ]
 	if {[lsearch $ext $filext ] >= 0 } {
 		incr fc
-		if { [regexp {.kra|.ora|.psd|.xcf} $filext ] && $hascalligra } {
-			lappend calligralist $i
-			append lfiles "$fc Cal: $i\n"
+		if { [regexp {.xcf|.psd} $filext ] && $hasgimp } {
+			lappend gimplist $i
+			append lfiles "$fc Gimp: $i\n"
 			continue
 		} elseif { [regexp {.svg} $filext ] && $hasinkscape } {
 			lappend inkscapelist $i
 			append lfiles "$fc Ink: $i\n"
+			continue
+		} elseif { [regexp {.kra|.ora|.xcf|.psd} $filext ] && $hascalligra } {
+			lappend calligralist $i
+			append lfiles "$fc Cal: $i\n"
 			continue
 		} else {
 			lappend imlist $i
@@ -170,7 +177,7 @@ proc listValidate {} {
   }
   set argv $imlist
   #Check if resulting lists have elements
-  if {[llength $argv] + [llength $calligralist] + [llength $inkscapelist] == 0} {
+  if {[llength $argv] + [llength $gimplist] + [llength $calligralist] + [llength $inkscapelist] == 0} {
     alert ok info "Operation Done" "No image files selected Exiting"
     exit
   }
@@ -593,6 +600,25 @@ proc keepExtension { i } {
   global outextension
   uplevel set outextension [ string trimleft [file extension $i] "."]
 }
+#Main Progressbar update control
+proc progressUpdate { { current false } { max false } { create false } } {
+  if {[string is integer $current]} {
+    set ::cur $current
+  }
+  if {$max} {
+    .act.pbar configure -maximum $max
+    update
+    return
+  }
+  if {$create} {
+    #Draw progressbar next to convert button.
+    pack [ ttk::progressbar .act.pbar -maximum [llength [concat $::gimplist $::calligralist $::inkscapelist ] ] -variable ::cur -length "300" ] -side left -fill x -padx 2 -pady 0
+    return
+  }
+  incr ::cur
+  update
+}
+
 #Preproces functions
 #watermark
 proc watermark {} {
@@ -609,12 +635,16 @@ proc watermark {} {
   return $watval
 }
 #Rename files only
-proc renameFile { olist } {
+proc renameFile { olist {odir false} } {
   global prefixsel
+  set fdir $odir
   if [llength $olist] {
     foreach i $olist {
+      if {![catch {dict get $odir $i} ] } {
+        set fdir [dict get $odir $i]
+      }
       keepExtension $i
-      set oname [setOutputName $i $outextension $prefixsel 1]
+      set oname [setOutputName $i $outextension $prefixsel 0 $fdir]
       set io [file join [lindex $oname 1] [lindex $oname 0] ]
       file rename $i $io
     }
@@ -699,6 +729,9 @@ proc collage { olist path imcat} {
   lappend rgbout [setRGBColor $tfill $tfop]
   #Run montage
   set count 0
+  #Set new maximum length to progress bar to total of collage * 2
+  progressUpdate false [expr [llength $clist] * 2]
+
   foreach i $clist {
     set index 0
     foreach j $i {
@@ -713,14 +746,48 @@ proc collage { olist path imcat} {
     eval exec montage -quiet $label $i -geometry "$sizeval+$mspace+$mspace" -border $mborder -background [lindex $rgbout 0] -bordercolor [lindex $rgbout 1] $tileval -fill [lindex $rgbout 2]  "png:$tmpname"
     dict set paths $tmpname [file join $path $name]
     incr count
+    #udpate progressbar
+    progressUpdate
   }
   lappend rlist [dict keys $paths] $paths
   return $rlist
 }
 
 #Run Converters
+#gimp process
+proc processGimp [list [list olist $gimplist] [list outext $outextension] ] {
+  set ifiles ""
+  if [llength $olist] {
+    foreach i $olist {
+      #Make png to feed convert, we try catch
+      #Sends file input for processing, stripping input directory
+      set io [setOutputName $i "png" 0 0 0 1]
+      set outname [lindex $io 0]
+      set origin [lindex $io 1]
+      #We set the command outisde for latter unfolding or it won't work.
+      set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"/tmp/$outname\" \"/tmp/$outname\") )(gimp-quit 0)"
+      #run gimp command, it depends on extension to do transform.
+      catch { exec gimp -i -b $cmd } msg
+      #udpate progressbar
+      progressUpdate
+
+      set errc $::errorCode;
+      set erri $::errorInfo
+      puts "errc: $errc \n\n"
+      #puts "erri: $erri"
+      if {$errc != "NONE"} {
+        append ::lstmsg "EE: $i discarted\n"
+        puts $msg
+        continue
+      }
+      #Add png to argv file list on /tmp dir and originalpath to dict
+      dict set ifiles [file join "/" "tmp" "$outname"] [file join $origin $i]
+    }
+  }
+  return $ifiles
+}
 #Inkscape converter
-proc processInkscape [list [list olist $inkscapelist] ] {
+proc processInkscape [list {outdir "/tmp"} [list olist $inkscapelist] ] {
   set ifiles ""
   set sizeval [getSizeSel]
   if [llength $olist] {
@@ -737,23 +804,25 @@ proc processInkscape [list [list olist $inkscapelist] ] {
       }
       #Make png to feed convert, we try catch, inkscape cant be quiet
       #Sends file input for processing, stripping input directory
-      set io [setOutputName $i "artscript_temppng" 0 0 0 1]
-      set outname [lindex $io 0]
+      set io [setOutputName $i "png" 0 0 0 1]
+      set outname [file join $outdir [lindex $io 0]]
       set origin [lindex $io 1]
-      #catch [ exec inkscape $i -z -C $inksize -e /tmp/$outname 2> /dev/null ]
-      if { [catch { exec inkscape $i -z -C $inksize -e /tmp/$outname } msg] } {
+      #Inkscape error handling works ok in most situations. errorCode is always reported as NONE so it isn't reliable.
+      if { [catch { exec inkscape $i -z -C $inksize -e $outname } msg] } {
         append lstmsg "EE: $i discarted\n"
         puts $msg
         continue
       }
-    #Add png to argv file list on /tmp dir and originalpath to dict
-      dict set ifiles [file join "/" "tmp" "$outname"] [file join $origin $i]
+      #udpate progressbar
+      progressUpdate
+      #Add png to argv file list on /tmp dir and originalpath to dict
+      dict set ifiles $outname [file join $origin $i]
     }
   }
   return $ifiles
 }
 #Calligra converter
-proc processCalligra [list [list olist $calligralist] ] {
+proc processCalligra [list {outext "png"} [list olist $calligralist] {outdir "/tmp"} ] {
   set ifiles ""
   if [llength $olist] {
     foreach i $olist {
@@ -761,11 +830,14 @@ proc processCalligra [list [list olist $calligralist] ] {
       # the process over warnings, and exec inside a try/catch event as the program send
       # a lot of errors on some of my files breaking the loop
       #Sends file input for processing, stripping input directory
-      set io [setOutputName $i "artscript_temppng" 0 0 0 1]
-      set outname [lindex $io 0]
+      set io [setOutputName $i $outext 0 0 0 1]
+      set outname [file join $outdir [lindex $io 0]]
       set origin [lindex $io 1]
       #We dont wrap calligraconverter on if else state because it reports all msg to stderror
-      catch { exec calligraconverter --batch --mimetype image/png -- $i /tmp/$outname } msg
+      catch { exec calligraconverter --batch -- $i $outname } msg
+      #udpate progressbar
+      progressUpdate
+
       set errc $::errorCode;
       set erri $::errorInfo
       puts "errc: $errc \n\n"
@@ -776,28 +848,40 @@ proc processCalligra [list [list olist $calligralist] ] {
         continue
       }
       #Add png to argv file list on /tmp dir and originalpath to dict
-      dict set ifiles [file join "/" "tmp" "$outname"] [file join $origin $i]
+      dict set ifiles $outname [file join $origin $i]
     }
   }
   return $ifiles
 }
+
 #Run convert
 proc convert [list [list argv $argv] ] {
   global outextension iquality identify
   global renamesel prefixsel keep bgcolor
 
-  # For extension with no alpha channel we have to add this lines so the user gets the results
-  # he is expecting
-  if { $outextension == "jpg" } {
-    set alpha "-background $bgcolor -alpha remove"
-  } else {
-    set alpha ""
-  }
+  #Create progress bar
+  progressUpdate 0 0 1
+
   #Before checking all see if user only wants to rename
   if {$renamesel} {
-    renameFile [concat $::calligralist $::inkscapelist $argv]
+    renameFile [concat $::gimplist $::calligralist $::inkscapelist $argv]
     exit
   }
+  # Chek output extension, if asked for one with layers try to preserve them.
+  if { [regexp {ora|kra} $outextension ] } {
+    set inkfiles [processInkscape "."]
+    set inklist [dict keys $inkfiles]
+    set calfiles [processCalligra $outextension [concat $::gimplist $::calligralist $inklist $argv] ]
+    renameFile [dict keys $calfiles] $calfiles
+    append ::lstmsg "[llength [dict keys $calfiles]] files converted"
+
+  } else {
+    if { $outextension == "jpg" } {
+      set alpha "-background $bgcolor -alpha remove"
+    } else {
+      set alpha ""
+    }
+  
   #Run watermark preprocess
   set watval [watermark]
 
@@ -810,6 +894,9 @@ proc convert [list [list argv $argv] ] {
   #Declare empty dict to fill original path location
   set paths [dict create]
 
+  #Call gimp batchmode and return tmp files location
+  set gimfiles [processGimp]
+
   #Call calligra convert and return tmp files location
   set calfiles [processCalligra]
 
@@ -817,10 +904,10 @@ proc convert [list [list argv $argv] ] {
   set inkfiles [processInkscape]
 
   #Generate one dict to rule them all
-  set tmpfiles [dict merge $calfiles $inkfiles]
+  set tmpfiles [dict merge $gimfiles $calfiles $inkfiles]
 
   #Unset unused vars
-  unset calfiles inkfiles
+  unset gimfiles calfiles inkfiles
 
   #populate argv to convert and tmplist to remove at the end.
   #missing, used dict values to convert and erase
@@ -829,6 +916,7 @@ proc convert [list [list argv $argv] ] {
       lappend argv $tmpname
       lappend tmplist $tmpname
   }
+
   if [llength $argv] {
     set m 0
     # Real data validation
@@ -851,6 +939,9 @@ proc convert [list [list argv $argv] ] {
       }
     }
     set argv $goodargv
+
+    #Set new max value for files to convert, update progressbar
+    progressUpdate 0 [llength $argv]
 
     if {$::tilesel && [llength $argv] > 0 } {
       #If paths comes empty we get last file path as output directory
@@ -889,20 +980,17 @@ proc convert [list [list argv $argv] ] {
       set outputfile [file join $origin $outname]
       puts "outputs $outputfile"
       #If output is ora we have to use calligraconverter
-      if { [regexp {ora|kra|xcf} $outextension] } {
-        if {!$keep } {
-          eval exec calligraconverter --batch $i $outputfile 2> /dev/null
-        }
-      } else {
-    set colorspace "sRGB"
-    #Run command
-        eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
-      }
+      set colorspace "sRGB"
+      #Run command
+      eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
+      #udpate progressbar
+      progressUpdate
     }
     #cleaning tmp files
     foreach tmpf $tmplist {  file delete $tmpf }
     append ::lstmsg "$m files converted"
- }
+  }
+ } ; #else outputextension
   alert ok info "Operation Done\n" $::lstmsg
   exit
 }
@@ -938,7 +1026,7 @@ proc setOutputName { oname fext { oprefix false } { orename false } {ordir false
 #Return output name to use in GUI
 proc getOutputName { {indx 0} } {
   #Concatenate both lists to always have an output example name
-  set i [lindex [concat $::argv $::calligralist $::inkscapelist] $indx]
+  set i [lindex [concat $::argv $::gimplist $::calligralist $::inkscapelist] $indx]
   return [lindex [setOutputName $i $::outextension $::prefixsel] 0]
 }
 
