@@ -858,7 +858,7 @@ proc convert [list [list argv $argv] ] {
       if {[string is false $paths]} {
         set path [file dirname [lindex $argv end] ]
       } else {
-        set path [dict get $paths $tmpname]
+        set path [file dirname [dict get $paths $tmpname] ]
       }
 
       #Run command return list with file paths
