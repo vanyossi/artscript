@@ -107,6 +107,8 @@ proc validate {program} {
   }
   return 1
 }
+#Gimp path
+set hasgimp [validate "gimp"]
 #Inkscape path, if true converts using inkscape to /tmp/*.png
 set hasinkscape [validate "inkscape"]
 #calligraconvert path, if true converts using calligra to /tmp/*.png
@@ -121,10 +123,11 @@ if {[catch $argv] == 0 } {
 # Validates arguments input mimetypes, keeps images strip the rest
 # Creates a separate list for .kra, .xcf, .psd and .ora to process separatedly
 proc listValidate {} {
-  global argv ext hasinkscape hascalligra
-  global calligralist inkscapelist identify lfiles ops fc
+  global argv ext hasinkscape hascalligra hasgimp
+  global gimplist calligralist inkscapelist identify lfiles ops fc
   
   set lfiles "Files to be processed\n"
+  set gimplist {}
   set calligralist {}
   set inkscapelist {}
   set imlist {}
@@ -146,13 +149,17 @@ proc listValidate {} {
 	set filext [string tolower [file extension $i] ]
 	if {[lsearch $ext $filext ] >= 0 } {
 		incr fc
-		if { [regexp {.kra|.ora|.psd|.xcf} $filext ] && $hascalligra } {
-			lappend calligralist $i
-			append lfiles "$fc Cal: $i\n"
+		if { [regexp {.xcf|.psd} $filext ] && $hasgimp } {
+			lappend gimplist $i
+			append lfiles "$fc Gimp: $i\n"
 			continue
 		} elseif { [regexp {.svg} $filext ] && $hasinkscape } {
 			lappend inkscapelist $i
 			append lfiles "$fc Ink: $i\n"
+			continue
+		} elseif { [regexp {.kra|.ora|.xcf|.psd} $filext ] && $hascalligra } {
+			lappend calligralist $i
+			append lfiles "$fc Cal: $i\n"
 			continue
 		} else {
 			lappend imlist $i
@@ -170,7 +177,7 @@ proc listValidate {} {
   }
   set argv $imlist
   #Check if resulting lists have elements
-  if {[llength $argv] + [llength $calligralist] + [llength $inkscapelist] == 0} {
+  if {[llength $argv] + [llength $gimplist] + [llength $calligralist] + [llength $inkscapelist] == 0} {
     alert ok info "Operation Done" "No image files selected Exiting"
     exit
   }
@@ -719,6 +726,30 @@ proc collage { olist path imcat} {
 }
 
 #Run Converters
+#gimp process
+proc processGimp [list [list olist $gimplist] [list outext $outextension] ] {
+  set ifiles ""
+  if [llength $olist] {
+    foreach i $olist {
+      #Make png to feed convert, we try catch
+      #Sends file input for processing, stripping input directory
+      set io [setOutputName $i "png" 0 0 0 1]
+      set outname [lindex $io 0]
+      set origin [lindex $io 1]
+      #We set the command outisde for latter unfolding or it won't work.
+      set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-get-active-drawable image))) ) (gimp-file-save 1 image drawable \"/tmp/$outname\" \"/tmp/$outname\") )(gimp-quit 0)"
+      #run gimp command, it depends on extension to do transform.
+      if { [catch { exec gimp -i -b $cmd } msg] } {
+        append lstmsg "EE: $i discarted\n"
+        puts $msg
+        continue
+      }
+      #Add png to argv file list on /tmp dir and originalpath to dict
+      dict set ifiles [file join "/" "tmp" "$outname"] [file join $origin $i]
+    }
+  }
+  return $ifiles
+}
 #Inkscape converter
 proc processInkscape [list [list olist $inkscapelist] ] {
   set ifiles ""
@@ -795,7 +826,7 @@ proc convert [list [list argv $argv] ] {
   }
   #Before checking all see if user only wants to rename
   if {$renamesel} {
-    renameFile [concat $::calligralist $::inkscapelist $argv]
+    renameFile [concat $::gimplist $::calligralist $::inkscapelist $argv]
     exit
   }
   #Run watermark preprocess
@@ -810,6 +841,9 @@ proc convert [list [list argv $argv] ] {
   #Declare empty dict to fill original path location
   set paths [dict create]
 
+  #Call gimp batchmode and return tmp files location
+  set gimfiles [processGimp]
+
   #Call calligra convert and return tmp files location
   set calfiles [processCalligra]
 
@@ -817,10 +851,10 @@ proc convert [list [list argv $argv] ] {
   set inkfiles [processInkscape]
 
   #Generate one dict to rule them all
-  set tmpfiles [dict merge $calfiles $inkfiles]
+  set tmpfiles [dict merge $gimfiles $calfiles $inkfiles]
 
   #Unset unused vars
-  unset calfiles inkfiles
+  unset gimfiles calfiles inkfiles
 
   #populate argv to convert and tmplist to remove at the end.
   #missing, used dict values to convert and erase
@@ -938,7 +972,7 @@ proc setOutputName { oname fext { oprefix false } { orename false } {ordir false
 #Return output name to use in GUI
 proc getOutputName { {indx 0} } {
   #Concatenate both lists to always have an output example name
-  set i [lindex [concat $::argv $::calligralist $::inkscapelist] $indx]
+  set i [lindex [concat $::argv $::gimplist $::calligralist $::inkscapelist] $indx]
   return [lindex [setOutputName $i $::outextension $::prefixsel] 0]
 }
 
