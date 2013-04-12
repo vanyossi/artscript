@@ -616,12 +616,16 @@ proc watermark {} {
   return $watval
 }
 #Rename files only
-proc renameFile { olist } {
+proc renameFile { olist {odir false} } {
   global prefixsel
+  set fdir $odir
   if [llength $olist] {
     foreach i $olist {
+      if {![catch {dict get $odir $i} ] } {
+        set fdir [dict get $odir $i]
+      }
       keepExtension $i
-      set oname [setOutputName $i $outextension $prefixsel 1]
+      set oname [setOutputName $i $outextension $prefixsel 0 $fdir]
       set io [file join [lindex $oname 1] [lindex $oname 0] ]
       file rename $i $io
     }
@@ -756,7 +760,7 @@ proc processGimp [list [list olist $gimplist] [list outext $outextension] ] {
   return $ifiles
 }
 #Inkscape converter
-proc processInkscape [list [list olist $inkscapelist] ] {
+proc processInkscape [list {outdir "/tmp"} [list olist $inkscapelist] ] {
   set ifiles ""
   set sizeval [getSizeSel]
   if [llength $olist] {
@@ -773,23 +777,28 @@ proc processInkscape [list [list olist $inkscapelist] ] {
       }
       #Make png to feed convert, we try catch, inkscape cant be quiet
       #Sends file input for processing, stripping input directory
-      set io [setOutputName $i "artscript_temppng" 0 0 0 1]
-      set outname [lindex $io 0]
+      set io [setOutputName $i "png" 0 0 0 1]
+      set outname [file join $outdir [lindex $io 0]]
       set origin [lindex $io 1]
       #catch [ exec inkscape $i -z -C $inksize -e /tmp/$outname 2> /dev/null ]
-      if { [catch { exec inkscape $i -z -C $inksize -e /tmp/$outname } msg] } {
-        append lstmsg "EE: $i discarted\n"
+      catch { exec inkscape $i -z -C $inksize -e $outname } msg
+      set errc $::errorCode;
+      set erri $::errorInfo
+      puts "errc: $errc \n\n"
+      #puts "erri: $erri"
+      if {$errc != "NONE"} {
+        append ::lstmsg "EE: $i discarted\n"
         puts $msg
         continue
       }
     #Add png to argv file list on /tmp dir and originalpath to dict
-      dict set ifiles [file join "/" "tmp" "$outname"] [file join $origin $i]
+      dict set ifiles $outname [file join $origin $i]
     }
   }
   return $ifiles
 }
 #Calligra converter
-proc processCalligra [list {outext "png"} {outdir "/tmp"} [list olist $calligralist] ] {
+proc processCalligra [list {outext "png"} [list olist $calligralist] {outdir "/tmp"} ] {
   set ifiles ""
   if [llength $olist] {
     foreach i $olist {
@@ -822,18 +831,26 @@ proc convert [list [list argv $argv] ] {
   global outextension iquality identify
   global renamesel prefixsel keep bgcolor
 
-  # For extension with no alpha channel we have to add this lines so the user gets the results
-  # he is expecting
-  if { $outextension == "jpg" } {
-    set alpha "-background $bgcolor -alpha remove"
-  } else {
-    set alpha ""
-  }
   #Before checking all see if user only wants to rename
   if {$renamesel} {
     renameFile [concat $::gimplist $::calligralist $::inkscapelist $argv]
     exit
   }
+  # Chek output extension, if asked for one with layers try to preserve them.
+  if { [regexp {ora|kra} $outextension ] } {
+    set inkfiles [processInkscape "."]
+    set inklist [dict keys $inkfiles]
+    set calfiles [processCalligra $outextension [concat $::gimplist $::calligralist $inklist $argv] ]
+    renameFile [dict keys $calfiles] $calfiles
+    append ::lstmsg "[llength [dict keys $calfiles]] files converted"
+
+  } else {
+    if { $outextension == "jpg" } {
+      set alpha "-background $bgcolor -alpha remove"
+    } else {
+      set alpha ""
+    }
+  
   #Run watermark preprocess
   set watval [watermark]
 
@@ -928,20 +945,15 @@ proc convert [list [list argv $argv] ] {
       set outputfile [file join $origin $outname]
       puts "outputs $outputfile"
       #If output is ora we have to use calligraconverter
-      if { [regexp {ora|kra|xcf} $outextension] } {
-        if {!$keep } {
-          eval exec calligraconverter --batch $i $outputfile 2> /dev/null
-        }
-      } else {
-    set colorspace "sRGB"
-    #Run command
-        eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
-      }
+      set colorspace "sRGB"
+      #Run command
+      eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
     }
     #cleaning tmp files
     foreach tmpf $tmplist {  file delete $tmpf }
     append ::lstmsg "$m files converted"
- }
+  }
+ } ; #else outputextension
   alert ok info "Operation Done\n" $::lstmsg
   exit
 }
