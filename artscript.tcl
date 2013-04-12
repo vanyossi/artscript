@@ -737,10 +737,15 @@ proc processGimp [list [list olist $gimplist] [list outext $outextension] ] {
       set outname [lindex $io 0]
       set origin [lindex $io 1]
       #We set the command outisde for latter unfolding or it won't work.
-      set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-get-active-drawable image))) ) (gimp-file-save 1 image drawable \"/tmp/$outname\" \"/tmp/$outname\") )(gimp-quit 0)"
+      set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"/tmp/$outname\" \"/tmp/$outname\") )(gimp-quit 0)"
       #run gimp command, it depends on extension to do transform.
-      if { [catch { exec gimp -i -b $cmd } msg] } {
-        append lstmsg "EE: $i discarted\n"
+      catch { exec gimp -i -b $cmd } msg
+      set errc $::errorCode;
+      set erri $::errorInfo
+      puts "errc: $errc \n\n"
+      #puts "erri: $erri"
+      if {$errc != "NONE"} {
+        append ::lstmsg "EE: $i discarted\n"
         puts $msg
         continue
       }
