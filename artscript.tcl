@@ -780,14 +780,9 @@ proc processInkscape [list {outdir "/tmp"} [list olist $inkscapelist] ] {
       set io [setOutputName $i "png" 0 0 0 1]
       set outname [file join $outdir [lindex $io 0]]
       set origin [lindex $io 1]
-      #catch [ exec inkscape $i -z -C $inksize -e /tmp/$outname 2> /dev/null ]
-      catch { exec inkscape $i -z -C $inksize -e $outname } msg
-      set errc $::errorCode;
-      set erri $::errorInfo
-      puts "errc: $errc \n\n"
-      #puts "erri: $erri"
-      if {$errc != "NONE"} {
-        append ::lstmsg "EE: $i discarted\n"
+      #Inkscape error handling works ok in most situations. errorCode is always reported as NONE so it isn't reliable.
+      if { [catch { exec inkscape $i -z -C $inksize -e $outname } msg] } {
+        append lstmsg "EE: $i discarted\n"
         puts $msg
         continue
       }
