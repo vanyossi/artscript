@@ -16,7 +16,7 @@
 #
 #--====User variables
 #Extension, define what file tipes artscript should read.
-set ::ext ".bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
+set ::ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
 #set date values
 set ::now [split [exec date +%Y/%m/%d/%u] "/"]
 set ::year [lindex $now 0]
@@ -153,7 +153,7 @@ proc listValidate {} {
 			lappend gimplist $i
 			append lfiles "$fc Gimp: $i\n"
 			continue
-		} elseif { [regexp {.svg} $filext ] && $hasinkscape } {
+		} elseif { [regexp {.svg|.ai} $filext ] && $hasinkscape } {
 			lappend inkscapelist $i
 			append lfiles "$fc Ink: $i\n"
 			continue
@@ -798,7 +798,8 @@ proc processInkscape [list {outdir "/tmp"} [list olist $inkscapelist] ] {
           set inksize [string range $sizeval 0 [string last "x" $sizeval]-1]
           set inksize "-w $inksize"
         } else {
-          set inksize [expr 90 * [ expr 50 / 100.0 ] ]
+          set inksize [string range $sizeval 0 [string last "%" $sizeval]-1]
+          set inksize [expr 90 * [ expr $inksize / 100.0 ] ]
           set inksize "-d $inksize"
         }
       }
@@ -906,6 +907,9 @@ proc convert [list [list argv $argv] ] {
   #Generate one dict to rule them all
   set tmpfiles [dict merge $gimfiles $calfiles $inkfiles]
 
+  #Store total vector transformed files to later skip from resize.
+  set tmpcount [ expr [llength $inkfiles] /2]
+
   #Unset unused vars
   unset gimfiles calfiles inkfiles
 
@@ -939,7 +943,8 @@ proc convert [list [list argv $argv] ] {
       }
     }
     set argv $goodargv
-
+    #Get total files from raster formats
+    set tmpcount [expr [llength $goodargv] - $tmpcount]
     #Set new max value for files to convert, update progressbar
     progressUpdate 0 [llength $argv]
 
@@ -965,6 +970,8 @@ proc convert [list [list argv $argv] ] {
       set resizeval ""
     }
     foreach i $argv {
+      #Set resize to none when index reachs first vector image.
+      if {$tmpcount == $m} { set resizeval {} }
       incr m
       #Get outputname with suffix and extension
       if { $keep } { keepExtension $i }
