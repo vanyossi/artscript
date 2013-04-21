@@ -613,6 +613,7 @@ proc progressUpdate { { current false } { max false } { create false } } {
   if {$create} {
     #Draw progressbar next to convert button.
     pack [ ttk::progressbar .act.pbar -maximum [llength [concat $::gimplist $::calligralist $::inkscapelist ] ] -variable ::cur -length "300" ] -side left -fill x -padx 2 -pady 0
+    update
     return
   }
   incr ::cur
@@ -651,24 +652,47 @@ proc renameFile { olist {odir false} } {
   }
 }
 #Resize return the validated entry as wxh or true -resize wxh
-proc getSizeSel { {raw true} } {
+proc getSizeSel { {collage false} {ready false}} {
   set sizeval [string trim $::sizext] 
   #We check if user wants resize and $sizeval not empty
-  if {$raw} {
-  } elseif {!$::sizesel || [string is boolean $sizeval] || $sizeval == "x" } {
-    set sizeval ""
+  if {$collage} {
+    #We have to substract the margin from the tile value, in this way the user gets
+    # the results is expecting (200px tile 2x2 = 400px)
+    if { $sizeval == "x" } {
+      #turns concat mode on
+      return "{ } 0 0"
+    } elseif {![string match -nocase {*[0-9]\%} $sizeval] && ![string is boolean $sizeval] } {
+      set mgap [expr [expr $::mborder + $::mspace ] *2 ]
+      set xpos [string last "x" $sizeval]
+      set sizelast [expr [string range $sizeval $xpos+1 end]-$mgap]
+      set sizefirst [expr [string range $sizeval 0 $xpos-1]-$mgap]
+      set sizeval "$sizefirst\x$sizelast\\>"
+      return [lappend sizeval $sizefirst $sizelast]
+    } else {
+      set tmpl ""
+      return [lappend tmpl [string trim $sizeval "\%"] "0" "0"]
+    }
   } else {
-    set sizeval "-resize $sizeval\\>"
+    if {!$::sizesel || [string is boolean $sizeval] || $sizeval == "x" } {
+      set sizeval ""
+    }
+    if {$ready && ![string is boolean $sizeval] } {
+      set sizeval "-resize $sizeval\\>"
+    }
   }
     return $sizeval
 }
-#Image magick processes
+#Image magick processes	
 #Collage mode
 proc collage { olist path imcat} {
   global tileval mborder mspace mname mrange mlabel sizext
   #colors
   global bgcolor bgop bordercol brop tfill tfop
-  set sizeval [string trim $sizext]
+  set sizevals [getSizeSel 1]
+  set sizeval [lindex $sizevals 0]
+  set sizefirst [lindex $sizevals 1]
+  set sizelast [lindex $sizevals 2]
+
   set clist ""
 
   proc range { ilist range } {
@@ -708,13 +732,13 @@ proc collage { olist path imcat} {
   }
   #We have to substract the margin from the tile value, in this way the user gets
   # the results is expecting (200px tile 2x2 = 400px)
-  if {![string match -nocase {*[0-9]\%} $sizeval]} {
-    set mgap [expr [expr $mborder + $mspace ] *2 ]
-    set xpos [string last "x" $sizeval]
-    set sizelast [expr [string range $sizeval $xpos+1 end]-$mgap]
-    set sizefirst [expr [string range $sizeval 0 $xpos-1]-$mgap]
-    set sizeval "$sizefirst\x$sizelast\\>"
-  }
+  #if {![string match -nocase {*[0-9]\%} $sizeval]} {
+  #  set mgap [expr [expr $mborder + $mspace ] *2 ]
+  #  set xpos [string last "x" $sizeval]
+  #  set sizelast [expr [string range $sizeval $xpos+1 end]-$mgap]
+  #  set sizefirst [expr [string range $sizeval 0 $xpos-1]-$mgap]
+  #  set sizeval "$sizefirst\x$sizelast\\>"
+  #}
   proc getReadSize { w h dw dh } {
     if { $w > $h } {
       set dh [ expr $h*$dw/$w ]
@@ -732,10 +756,25 @@ proc collage { olist path imcat} {
   #Set new maximum length to progress bar to total of collage * 2
   progressUpdate false [expr [llength $clist] * 2]
 
+
+  #pass value to divider to keep getting percentage sizes
+  if {[string is integer $sizeval]} {
+    set divider $sizeval
+    set sizeval ""
+  }
+
   foreach i $clist {
     set index 0
     foreach j $i {
       set imagesize [getWidthHeight [dict get $imcat $j geometry] ]
+      if { $sizefirst == "0"} {
+        set sizefirst [lindex $imagesize 0]
+        set sizelast [lindex $imagesize 1]
+      }
+      if { $sizefirst == "0" && [string is integer $divider] } {
+        set sizefirst [expr int($sizefirst * .$divider) ]
+        set sizelast [expr int($sizelast * .$divider) ]
+      }
       set inputsize [getReadSize [lindex $imagesize 0] [lindex $imagesize 1] $sizefirst $sizelast]
       lset i $index [concat $j$inputsize]
       incr index
@@ -887,7 +926,7 @@ proc convert [list [list argv $argv] ] {
   set watval [watermark]
 
   #We check if user wants resize and $sizeval not empty
-  set resizeval [getSizeSel 0]
+  set resizeval [getSizeSel 0 1]
 
   #Declare a empty list to fill with tmp files for deletion
   set tmplist ""
