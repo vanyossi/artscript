@@ -7,7 +7,7 @@
 #-----------------------------------------------------------
 # Goal : Batch convert any image file supported by imagemagick, calligra & Inkscape.
 # Dependencies: >=imagemagick-6.7.5, tk 8.5
-# Optional deps: calligraconverter, inkscape
+# Optional deps: calligraconverter, inkscape, gimp
 #
 # __Customize:__
 #   You can modify any variable between "#--=====" markers
@@ -122,7 +122,7 @@ if {[catch $argv] == 0 } {
 }
 # listValidate:
 # Validates arguments input mimetypes, keeps images strip the rest
-# Creates a separate list for .kra, .xcf, .psd and .ora to process separatedly
+# Creates a separate list for .kra, .xcf, .psd, .svg and .ora to process separatedly
 proc listValidate {} {
 	global argv ext hasinkscape hascalligra hasgimp
 	global gimplist calligralist inkscapelist identify lfiles ops fc
@@ -132,12 +132,12 @@ proc listValidate {} {
 	set calligralist {}
 	set inkscapelist {}
 	set imlist {}
-	#We validate list elements
 	
 	set identify "identify -quiet -format {%wx%h\|%m\|%M}"
 	set ops [dict create]
 	set options true
 	set lops 1
+	#We validate sort arguments into options and filelists
 	foreach i $argv {
 		incr c
 		if { [string index $i 0] == ":" && $options} {
@@ -186,15 +186,15 @@ proc listValidate {} {
 #We run function to validate input mimetypes
 listValidate
 
+#configuration an presets
 set configfile "presets.config"
 set configfile [file join [file dirname [info script]] $configfile]
 
 if { [file exists $configfile] } {
-	
 	puts "config file found in: $configfile"
 
 	set File [open $configfile]
-
+	#read each line of File and store "key=value"
 	foreach {i} [split [read $File] \n] {
 			set firstc [string index $i 0]
 			if { $firstc != "#" && ![string is space $firstc] } {
@@ -203,48 +203,46 @@ if { [file exists $configfile] } {
 			}
 		}
 		close $File
-	 
+	#declare default dictionary to add defaut config values
 	 set ::preset "default"
 	 if {[dict exists $ops ":preset"]} {
-		 lappend ::preset [dict get $ops ":preset"]
+		lappend ::preset [dict get $ops ":preset"]
 	 }
-
-		#iterate list and populate dictionary with values
-		set default true
-		foreach i $lista {
-			if { [lindex $i 0] == "preset" } {
-			 set condict [lindex $i 1]
-			 dict set presets $condict [dict create]
-			 set datos false
-			 continue
-			}
-			if {![info exists condict]} {
-			 set condict "default"
-			}
-			dict set presets $condict [lindex $i 0] [lindex $i 1]
+	#iterate list and populate dictionary with values
+	set default true
+	foreach i $lista {
+		if { [lindex $i 0] == "preset" } {
+			set condict [lindex $i 1]
+			dict set presets $condict [dict create]
+			set datos false
+			continue
 		}
-
-		#set values according to preset
-		foreach i $preset {
-			if {[dict exists $presets $i]} {
-				dict for {key value} [dict get $presets $i] {
-					if {[info exists $key] != [regexp $gvars $key ] } {
-						if { [catch {set keyval [eval list [string trim $value]] } msg] } {
-							puts $msg
+		if {![info exists condict]} {
+			set condict "default"
+		}
+		dict set presets $condict [lindex $i 0] [lindex $i 1]
+	}
+	#set values according to preset
+	foreach i $preset {
+		if {[dict exists $presets $i]} {
+			dict for {key value} [dict get $presets $i] {
+				if {[info exists $key] != [regexp $gvars $key ] } {
+					if { [catch {set keyval [eval list [string trim $value]] } msg] } {
+						puts $msg
+					} else {
+						if {[llength $keyval] > 1} { 
+							set ::$key $keyval
 						} else {
-							if {[llength $keyval] > 1} { 
-								set ::$key $keyval
-							} else {
-								set ::$key [string trim $keyval "{}"]
-							}
+							set ::$key [string trim $keyval "{}"]
 						}
-					#puts [eval list [set $key] ]
-					#set ::$key [eval concat $tmpkey]
 					}
+				#puts [eval list [set $key] ]
+				#set ::$key [eval concat $tmpkey]
 				}
 			}
 		}
 	}
+}
 
 #For future theming
 #tk_setPalette background black foreground white highlightbackground blue activebackground gray70 activeforeground black
@@ -265,7 +263,7 @@ label .wm.label -text "Selected:"
 
 label .wm.lwmsize -text "Size:"
 entry .wm.wmsizentry -textvariable wmsize -width 3 -validate key \
-	 -vcmd { regexp {^(\s?|[1-9]|[1-4][0-8])$} %P }
+	-vcmd { regexp {^(\s?|[1-9]|[1-4][0-8])$} %P }
 scale .wm.wmsize -orient vertical -from 48 -to 1 \
 	-variable wmsize -showvalue 0
 
@@ -274,7 +272,6 @@ foreach i $wmpos_index {
 	radiobutton .wm.pos$i -value $i -variable wmpos -command { writeVal .wm.posresult "" $wmpos }
 }
 label .wm.posresult
-
 
 grid .wm.txtlabel -row 1 -column 1 -sticky w
 grid .wm.listbox -row 2 -rowspan 5 -column 1 -sticky nesw
@@ -289,8 +286,8 @@ grid .wm.poslabel -row 1 -column 3 -columnspan 2 -sticky w
 set m 0
 for {set i 2} { $i < 7 } { incr i 2 } {
 	for {set j 3} { $j < 6 } { incr j } {
-		 grid .wm.pos[lindex $wmpos_index $m] -row $i -column $j -columnspan 1 -sticky w
-		 incr m
+		grid .wm.pos[lindex $wmpos_index $m] -row $i -column $j -columnspan 1 -sticky w
+		incr m
 	}
 }
 grid .wm.posresult -row 8 -column 3 -columnspan 3 -sticky sw
@@ -300,7 +297,6 @@ grid columnconfigure .wm {1} -weight 16
 grid columnconfigure .wm {2} -weight 0
 grid columnconfigure .wm {3 4 5} -weight 1
 
-
 #--- Color options
 proc colorSelector { frame suffix colorvar op title colors {row 0} } {
 	global $colorvar
@@ -309,7 +305,6 @@ proc colorSelector { frame suffix colorvar op title colors {row 0} } {
 
 	canvas $frame.${suffix}viewcol -bg [set $colorvar] -width 60 -height 30
 	$frame.${suffix}viewcol create text 30 16 -text "click me"
-
 	canvas $frame.${suffix}margin -height 2m -width 60
 
 	label $frame.${suffix}lopacity -text "Opacity:"
@@ -354,7 +349,6 @@ labelframe .size -bd 2 -padx 2m -pady 2m -font {-size 12 -weight bold} -text "Si
 pack .size -side top -fill x
 #scrollbar binding function
 proc showargs {args} {
-	#puts $args;
 	eval $args
 }
 #Size menu options
@@ -363,7 +357,6 @@ foreach i $sizes { .size.listbox insert end $i }
 bind .size.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "size" "sizext"}
 scrollbar .size.scroll -command {showargs .size.listbox yview} -orient vert
 .size.listbox conf -yscrollcommand {showargs .size.scroll set}
-
 message .size.exp -width 210 -justify center -text "\
  Size: W x H, 40% \n\
  In Collage size is tile size\n\
@@ -371,16 +364,16 @@ message .size.exp -width 210 -justify center -text "\
 
 #size and tile entry boxes and validation
 entry .size.entry -textvariable sizext -validate key \
-	 -vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
+	-vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
 bind .size.entry <KeyRelease> { setSelectOnEntry false "size" "sizext" }
 entry .size.tile -textvariable tileval -width 6  -validate key \
-	 -vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
+	-vcmd { regexp {^(\s*|[0-9])+(\s?|x|%%)(\s?|[0-9])+$} %P }
 bind .size.tile <KeyRelease> { checkstate $tileval .opt.tile }
 entry .size.range -textvariable mrange -width 4 -validate key \
-	 -vcmd { regexp {^(\s*|[0-9])+$} %P }
+	-vcmd { regexp {^(\s*|[0-9])+$} %P }
 bind .size.range <KeyRelease> { checkstate $mrange .opt.tile }
 entry .size.entrylabel -textvariable mlabel -validate key \
-	 -vcmd { string is ascii %P }
+	-vcmd { string is ascii %P }
 
 label .size.label -text "Size:"
 label .size.txtile -text "Layout:"
@@ -459,7 +452,7 @@ bind .suffix.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "suf
 label .suffix.label -text "->:"
 
 entry .suffix.entry -textvariable suffix -validate key \
-	 -vcmd { string is graph %P }
+	-vcmd { string is graph %P }
 bind .suffix.entry <KeyRelease> { setSelectOnEntry false "suffix" "suffix" }
 checkbutton .suffix.date -text "Add Date" \
 		-onvalue true -offvalue false -variable datesel -command setdateCmd
@@ -473,9 +466,6 @@ grid .suffix.date -row 3 -column 2 -sticky w
 grid .suffix.prefix -row 3 -column 4 -sticky w
 grid columnconfigure .suffix {1} -weight 0
 grid columnconfigure .suffix {2} -weight 1
-
-#pack .suffix.entry -side left -fill x -expand 1
-#pack .suffix.rname .suffix.prefix .suffix.date -side right
 
 #--- On off values for watermark, size, date suffix and tiling options
 frame .opt -borderwidth 2
@@ -495,12 +485,10 @@ pack .act -side right
 button .act.submit -text "Convert" -font {-weight bold} -command convert
 pack .act.submit -side right -padx 0 -pady 0
 
-
 #--- Window options
 wm title . "Artscript $version -- $fc Files selected"
 
 #--- General Functions
-
 proc checkstate { val cb } {
 	if {$val != {} } {
 		$cb select
@@ -523,13 +511,12 @@ proc setRGBColor { rgb {opacity 1.0} } {
 	return $rgbn
 }
 
-#Sets text label to $val This function needs to generalize a lot more.
+#Sets text label of "l" to $val
 proc writeVal { l text val } {
 	$l configure -text "$text $val"
 }
 
-#Launchs Color chooser and set color to window
-#Returns hex color
+#Launchs Color chooser and set color to window: Returns hex color
 proc setWmColor { rgb window { title "Choose color"} } {
 	#Call color chooser and store value to set canvas color and get rgb values
 	set choosercolor [tk_chooseColor -title $title -initialcolor $rgb -parent .]
@@ -550,7 +537,7 @@ proc colorBind { w var {color false} title } {
 	}
 }
 
-#Recieves an indexvalue a rootname and a global variable to call
+#Receives an index value a rootname and a global variable to call
 #Syncs listbox values with other label values and entry values
 proc setSelectOnEntry { indx r g } {
 	global $g
@@ -572,8 +559,8 @@ proc setSelectOnEntry { indx r g } {
 	}
 }
 
-#Set slider value to 75
-#The second funciton i made, probably its a good idea to strip it
+#Set slider value to 92
+# BUG: needs to reset to current preset value
 proc resetSlider {} {
 	global iquality
 	set iquality 92
@@ -652,7 +639,7 @@ proc renameFile { olist {odir false} } {
 		}
 	}
 }
-#Resize return the validated entry as wxh or true -resize wxh
+#Resize: returns the validated entry as wxh or ready true as "-resize wxh\>"
 proc getSizeSel { {collage false} {ready false}} {
 	set sizeval [string trim $::sizext] 
 	#We check if user wants resize and $sizeval not empty
@@ -683,7 +670,7 @@ proc getSizeSel { {collage false} {ready false}} {
 	}
 		return $sizeval
 }
-#Image magick processes	
+#Image magick processes
 #Collage mode
 proc collage { olist path imcat} {
 	global tileval mborder mspace mname mrange mlabel sizext
@@ -695,7 +682,7 @@ proc collage { olist path imcat} {
 	set sizelast [lindex $sizevals 2]
 
 	set clist ""
-
+	#returns multiple lists depending on range value
 	proc range { ilist range } {
 		set rangelists ""
 		set listsize [llength $ilist]
@@ -725,21 +712,14 @@ proc collage { olist path imcat} {
 		set label {-label "$mlabel"}
 		#puts $label; exit
 	}
+	#Returns "width x height" as a list
 	proc getWidthHeight { geometry } {
 		set xpos [string last "x" $geometry]
 		set width [string range $geometry 0 $xpos-1]
 		set height [string range $geometry $xpos+1 end]
 		return [lappend width $height]
 	}
-	#We have to substract the margin from the tile value, in this way the user gets
-	# the results is expecting (200px tile 2x2 = 400px)
-	#if {![string match -nocase {*[0-9]\%} $sizeval]} {
-	#  set mgap [expr [expr $mborder + $mspace ] *2 ]
-	#  set xpos [string last "x" $sizeval]
-	#  set sizelast [expr [string range $sizeval $xpos+1 end]-$mgap]
-	#  set sizefirst [expr [string range $sizeval 0 $xpos-1]-$mgap]
-	#  set sizeval "$sizefirst\x$sizelast\\>"
-	#}
+	#Returns size wxh fitted inside destination tile.
 	proc getReadSize { w h dw dh } {
 		if { $w > $h } {
 			set dh [ expr $h*$dw/$w ]
@@ -757,26 +737,28 @@ proc collage { olist path imcat} {
 	#Set new maximum length to progress bar to total of collage * 2
 	progressUpdate false [expr [llength $clist] * 2]
 
-
 	#pass value to divider to keep getting percentage sizes
 	if {[string is integer $sizeval]} {
 		set divider $sizeval
 		set sizeval ""
 	}
-
+	#Iterate all collage lists
 	foreach i $clist {
 		set index 0
 		foreach j $i {
 			set imagesize [getWidthHeight [dict get $imcat $j geometry] ]
+			#Set target size equal to image size to avoid resize on read
 			if { $sizefirst == "0"} {
 				set sizefirst [lindex $imagesize 0]
 				set sizelast [lindex $imagesize 1]
 			}
+			#Set target to the percentage chosen
 			if { $sizefirst == "0" && [string is integer $divider] } {
 				set sizefirst [expr int($sizefirst * .$divider) ]
 				set sizelast [expr int($sizelast * .$divider) ]
 			}
 			set inputsize [getReadSize [lindex $imagesize 0] [lindex $imagesize 1] $sizefirst $sizelast]
+			#Add size input string to each read in file: image.jpg[200x200]
 			lset i $index [concat $j$inputsize]
 			incr index
 		}
@@ -792,21 +774,20 @@ proc collage { olist path imcat} {
 	lappend rlist [dict keys $paths] $paths
 	return $rlist
 }
-
 #Run Converters
 #gimp process
 proc processGimp [list [list olist $gimplist] [list outext $outextension] ] {
 	set ifiles ""
 	if [llength $olist] {
 		foreach i $olist {
-			#Make png to feed convert, we try catch
 			#Sends file input for processing, stripping input directory
 			set io [setOutputName $i "png" 0 0 0 1]
 			set outname [lindex $io 0]
 			set origin [lindex $io 1]
-			#We set the command outisde for latter unfolding or it won't work.
+			#Make png to feed convert
+			#We set the command outside for later unfolding or it won't work.
 			set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"/tmp/$outname\" \"/tmp/$outname\") )(gimp-quit 0)"
-			#run gimp command, it depends on extension to do transform.
+			#run gimp command, it depends on file extension to do transforms.
 			catch { exec gimp -i -b $cmd } msg
 			#udpate progressbar
 			progressUpdate
@@ -843,11 +824,11 @@ proc processInkscape [list {outdir "/tmp"} [list olist $inkscapelist] ] {
 					set inksize "-d $inksize"
 				}
 			}
-			#Make png to feed convert, we try catch, inkscape cant be quiet
 			#Sends file input for processing, stripping input directory
 			set io [setOutputName $i "png" 0 0 0 1]
 			set outname [file join $outdir [lindex $io 0]]
 			set origin [lindex $io 1]
+			#Make png to feed convert
 			#Inkscape error handling works ok in most situations. errorCode is always reported as NONE so it isn't reliable.
 			if { [catch { exec inkscape $i -z -C $inksize -e $outname } msg] } {
 				append lstmsg "EE: $i discarted\n"
@@ -867,22 +848,20 @@ proc processCalligra [list {outext "png"} [list olist $calligralist] {outdir "/t
 	set ifiles ""
 	if [llength $olist] {
 		foreach i $olist {
-			#Make png to feed convert, we feed errors to dev/null to stop calligra killing
-			# the process over warnings, and exec inside a try/catch event as the program send
-			# a lot of errors on some of my files breaking the loop
 			#Sends file input for processing, stripping input directory
 			set io [setOutputName $i $outext 0 0 0 1]
 			set outname [file join $outdir [lindex $io 0]]
 			set origin [lindex $io 1]
+			#Make png to feed convert
 			#We dont wrap calligraconverter on if else state because it reports all msg to stderror
 			catch { exec calligraconverter --batch -- $i $outname } msg
 			#udpate progressbar
 			progressUpdate
 
+			#Error reporting, if code NONE then png conversion success.
 			set errc $::errorCode;
 			set erri $::errorInfo
 			puts "errc: $errc \n\n"
-			#puts "erri: $erri"
 			if {$errc != "NONE"} {
 				append ::lstmsg "EE: $i discarted\n"
 				puts $msg
@@ -923,121 +902,121 @@ proc convert [list [list argv $argv] ] {
 			set alpha ""
 		}
 	
-	#Run watermark preprocess
-	set watval [watermark]
+		#Run watermark preprocess
+		set watval [watermark]
 
-	#We check if user wants resize and $sizeval not empty
-	set resizeval [getSizeSel 0 1]
+		#We check if user wants resize and $sizeval not empty
+		set resizeval [getSizeSel 0 1]
 
-	#Declare a empty list to fill with tmp files for deletion
-	set tmplist ""
+		#Declare a empty list to fill with tmp files for deletion
+		set tmplist ""
 
-	#Declare empty dict to fill original path location
-	set paths [dict create]
+		#Declare empty dict to fill original path location
+		set paths [dict create]
 
-	#Call gimp batchmode and return tmp files location
-	set gimfiles [processGimp]
+		#Call gimp batchmode and return tmp files location
+		set gimfiles [processGimp]
 
-	#Call calligra convert and return tmp files location
-	set calfiles [processCalligra]
+		#Call calligra convert and return tmp files location
+		set calfiles [processCalligra]
 
-	#Call inkscape convert and return tmp files location
-	set inkfiles [processInkscape]
+		#Call inkscape convert and return tmp files location
+		set inkfiles [processInkscape]
 
-	#Generate one dict to rule them all
-	set tmpfiles [dict merge $gimfiles $calfiles $inkfiles]
+		#Generate one dict to rule them all
+		set tmpfiles [dict merge $gimfiles $calfiles $inkfiles]
 
-	#Store total vector transformed files to later skip from resize.
-	set tmpcount [ expr [llength $inkfiles] /2]
+		#Store total vector transformed files to later skip from resize.
+		set tmpcount [ expr [llength $inkfiles] /2]
 
-	#Unset unused vars
-	unset gimfiles calfiles inkfiles
+		#Unset unused vars
+		unset gimfiles calfiles inkfiles
 
-	#populate argv to convert and tmplist to remove at the end.
-	#missing, used dict values to convert and erase
-	dict for {tmpname origin} $tmpfiles {
-			dict set paths $tmpname $origin
-			lappend argv $tmpname
-			lappend tmplist $tmpname
-	}
+		#populate argv to convert and tmplist to remove at the end.
+		#missing, used dict values to convert and erase
+		dict for {tmpname origin} $tmpfiles {
+				dict set paths $tmpname $origin
+				lappend argv $tmpname
+				lappend tmplist $tmpname
+		}
 
-	if [llength $argv] {
-		set m 0
-		# Real data validation
-		# this operation populate a dict with image width and height.
-		# so we only run identify once in the script to gain speed.
-		set goodargv {}
-		foreach i $argv {
-			if { [catch {set finfo [exec {*}[split $identify " "] $i ] } msg ] } {
-				puts $msg
-				append ::lstmsg "EE: $i discarted\n"
-				continue
-			} else {
-				lappend goodargv $i
-				set iminfo [split [string trim $finfo "{}"] "|"]
-				foreach { dm f n } $iminfo {
-					 dict set collist $i geometry $dm
-					 dict set collist $i iformat $f
-					 dict set collist $i magicknam $n
+		if [llength $argv] {
+			set m 0
+			# Real data validation
+			# this operation populate a dict with image width and height.
+			# so we only run identify once in the script to gain speed.
+			set goodargv {}
+			foreach i $argv {
+				if { [catch {set finfo [exec {*}[split $identify " "] $i ] } msg ] } {
+					puts $msg
+					append ::lstmsg "EE: $i discarted\n"
+					continue
+				} else {
+					lappend goodargv $i
+					set iminfo [split [string trim $finfo "{}"] "|"]
+					foreach { dm f n } $iminfo {
+						 dict set collist $i geometry $dm
+						 dict set collist $i iformat $f
+						 dict set collist $i magicknam $n
+					}
 				}
 			}
-		}
-		set argv $goodargv
-		#Get total files from raster formats
-		set tmpcount [expr [llength $goodargv] - $tmpcount]
-		#Set new max value for files to convert, update progressbar
-		progressUpdate 0 [llength $argv]
+			set argv $goodargv
+			#Get total files from raster formats
+			set tmpcount [expr [llength $goodargv] - $tmpcount]
+			#Set new max value for files to convert, update progressbar
+			progressUpdate 0 [llength $argv]
 
-		if {$::tilesel && [llength $argv] > 0 } {
-			#If paths comes empty we get last file path as output directory
-			# else we use the last processed tmp file original path
-			if {[string is false $paths]} {
-				set path [file dirname [lindex $argv end] ]
-			} else {
-				set path [file dirname [dict get $paths $tmpname] ]
+			if {$::tilesel && [llength $argv] > 0 } {
+				#If paths comes empty we get last file path as output directory
+				# else we use the last processed tmp file original path
+				if {[string is false $paths]} {
+					set path [file dirname [lindex $argv end] ]
+				} else {
+					set path [file dirname [dict get $paths $tmpname] ]
+				}
+
+				#Run command return list with file paths
+				set clist [collage $argv $path $collist]
+
+				set paths [dict merge $paths [lindex $clist 1]]
+				#Overwrite image list with tiled image to add watermarks or change format
+				set argv [lindex $clist 0]
+				set tmplist [concat $tmplist $argv]
+				#Add mesage to lastmessage
+				append ::lstmsg "Collage done \n"
+				#Set size to empty to avoid resizing
+				set resizeval ""
 			}
+			foreach i $argv {
+				#Set resize to none when index reachs first vector image.
+				if {$tmpcount == $m} { set resizeval {} }
+				incr m
+				#Get outputname with suffix and extension
+				if { $keep } { keepExtension $i }
 
-			#Run command return list with file paths
-			set clist [collage $argv $path $collist]
+				#Check if there is entry in tmp file dict to use original path
+				if { [catch { set ordir [dict get $paths $i]} msg ] } {
+					set ordir ""
+				}
+				set io [setOutputName $i $outextension $prefixsel 0 $ordir ]
+				set outname [lindex $io 0]
+				set origin [lindex $io 1]
 
-			set paths [dict merge $paths [lindex $clist 1]]
-			#Overwrite image list with tiled image to add watermarks or change format
-			set argv [lindex $clist 0]
-			set tmplist [concat $tmplist $argv]
-			#Add mesage to lastmessage
-			append ::lstmsg "Collage done \n"
-			#Set size to empty to avoid resizing
-			set resizeval ""
-		}
-		foreach i $argv {
-			#Set resize to none when index reachs first vector image.
-			if {$tmpcount == $m} { set resizeval {} }
-			incr m
-			#Get outputname with suffix and extension
-			if { $keep } { keepExtension $i }
-
-			#Check if there is entry in tmp file dict to use original path
-			if { [catch { set ordir [dict get $paths $i]} msg ] } {
-				set ordir ""
+				set outputfile [file join $origin $outname]
+				puts "outputs $outputfile"
+				#If output is ora we have to use calligraconverter
+				set colorspace "sRGB"
+				#Run command
+				eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
+				#udpate progressbar
+				progressUpdate
 			}
-			set io [setOutputName $i $outextension $prefixsel 0 $ordir ]
-			set outname [lindex $io 0]
-			set origin [lindex $io 1]
-
-			set outputfile [file join $origin $outname]
-			puts "outputs $outputfile"
-			#If output is ora we have to use calligraconverter
-			set colorspace "sRGB"
-			#Run command
-			eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
-			#udpate progressbar
-			progressUpdate
+			#cleaning tmp files
+			foreach tmpf $tmplist {  file delete $tmpf }
+			append ::lstmsg "$m files converted"
 		}
-		#cleaning tmp files
-		foreach tmpf $tmplist {  file delete $tmpf }
-		append ::lstmsg "$m files converted"
 	}
- } ; #else outputextension
 	alert ok info "Operation Done\n" $::lstmsg
 	exit
 }
@@ -1066,7 +1045,7 @@ proc setOutputName { oname fext { oprefix false } { orename false } {ordir false
 	}
 	append cname $newname $safe "." $fext
 	#set fname [file join $dir $cname]
-	
+
 	set olist ""
 	return [lappend olist $cname $dir]
 }
