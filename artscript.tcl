@@ -3,7 +3,7 @@
 #
 #----------------:::: ArtscriptTk ::::----------------------
 # IvanYossi colorathis.wordpress.com ghevan@gmail.com  GPL 3.0
-# Version = 1.5
+# Version = 1.6.3
 #-----------------------------------------------------------
 # Goal : Batch convert any image file supported by imagemagick, calligra & Inkscape.
 # Dependencies: >=imagemagick-6.7.5, tk 8.5
@@ -92,6 +92,7 @@ set ::prefixsel false
 
 #--=====
 #Don't modify below this line
+set ::version "v1.6.3"
 set ::lstmsg ""
 set ::gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_pkgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
 #Function to send message boxes
@@ -496,7 +497,7 @@ pack .act.submit -side right -padx 0 -pady 0
 
 
 #--- Window options
-wm title . "Artscript -- $fc Files selected"
+wm title . "Artscript $version -- $fc Files selected"
 
 #--- General Functions
 
