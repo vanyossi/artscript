@@ -138,42 +138,42 @@ proc listValidate {} {
 	set options true
 	set lops 1
 	foreach i $argv {
-	incr c
-	if { [string index $i 0] == ":" && $options} {
-		dict set ops $i [lindex $argv $c]
-		set lops [expr [llength $ops]+1]
-		continue
-	} elseif { $options && $lops == $c } {
-		set options false
-	}
-	set filext [string tolower [file extension $i] ]
-	if {[lsearch $ext $filext ] >= 0 } {
-		incr fc
-		if { [regexp {.xcf|.psd} $filext ] && $hasgimp } {
-			lappend gimplist $i
-			append lfiles "$fc Gimp: $i\n"
+		incr c
+		if { [string index $i 0] == ":" && $options} {
+			dict set ops $i [lindex $argv $c]
+			set lops [expr [llength $ops]+1]
 			continue
-		} elseif { [regexp {.svg|.ai} $filext ] && $hasinkscape } {
-			lappend inkscapelist $i
-			append lfiles "$fc Ink: $i\n"
-			continue
-		} elseif { [regexp {.kra|.ora|.xcf|.psd} $filext ] && $hascalligra } {
-			lappend calligralist $i
-			append lfiles "$fc Cal: $i\n"
-			continue
-		} else {
-			lappend imlist $i
-			append lfiles "$fc Mag: $i\n"
+		} elseif { $options && $lops == $c } {
+			set options false
 		}
-	} elseif { [string is boolean [file extension $i]] && !$options } {
-		if { [catch { set f [exec {*}[split $identify " "] $i ] } msg ] } {
-			puts $msg
-		} else {
+		set filext [string tolower [file extension $i] ]
+		if {[lsearch $ext $filext ] >= 0 } {
 			incr fc
-			lappend imlist $i
-			append lfiles "$fc Mag: $i\n"
+			if { [regexp {.xcf|.psd} $filext ] && $hasgimp } {
+				lappend gimplist $i
+				append lfiles "$fc Gimp: $i\n"
+				continue
+			} elseif { [regexp {.svg|.ai} $filext ] && $hasinkscape } {
+				lappend inkscapelist $i
+				append lfiles "$fc Ink: $i\n"
+				continue
+			} elseif { [regexp {.kra|.ora|.xcf|.psd} $filext ] && $hascalligra } {
+				lappend calligralist $i
+				append lfiles "$fc Cal: $i\n"
+				continue
+			} else {
+				lappend imlist $i
+				append lfiles "$fc Mag: $i\n"
+			}
+		} elseif { [string is boolean [file extension $i]] && !$options } {
+			if { [catch { set f [exec {*}[split $identify " "] $i ] } msg ] } {
+				puts $msg
+			} else {
+				incr fc
+				lappend imlist $i
+				append lfiles "$fc Mag: $i\n"
+			}
 		}
-	}
 	}
 	set argv $imlist
 	#Check if resulting lists have elements
