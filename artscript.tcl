@@ -1,9 +1,10 @@
 #!/usr/bin/wish
-# Script inspired by David Revoy (www.davidrevoy.com , info@davidrevoy.com )
 #
 #----------------:::: ArtscriptTk ::::----------------------
-# IvanYossi colorathis.wordpress.com ghevan@gmail.com  GPL 3.0
-# Version = 1.6.3
+# Version: 1.6.3
+# Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
+# Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
+# License: GPLv3 
 #-----------------------------------------------------------
 # Goal : Batch convert any image file supported by imagemagick, calligra & Inkscape.
 # Dependencies: >=imagemagick-6.7.5, tk 8.5
