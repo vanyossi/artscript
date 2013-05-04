@@ -814,7 +814,7 @@ proc processInkscape [list {outdir "/tmp"} [list olist $inkscapelist] ] {
 	set sizeval [getSizeSel]
 	if [llength $olist] {
 		foreach i $olist {
-			set inksize "-d 96"
+			set inksize "-d 90"
 			if {$::sizesel || $::tilesel } {
 				if {![string match -nocase {*[0-9]\%} $sizeval]} {
 					set inksize [string range $sizeval 0 [string last "x" $sizeval]-1]
