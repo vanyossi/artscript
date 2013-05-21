@@ -103,11 +103,14 @@ proc alert {type icon title msg} {
 		-message $msg
 }
 #Validation Functions
-#Finds program in path using which, return 0 if program missing
+#Finds program trying to get program version, return 0 if program missing
 proc validate {program} {
-	if { [catch {exec which $program}] } {
-		 return 0
+	catch {set fail [exec -ignorestderr $program --version]} msg
+	if { [catch {set fail}] eq "1"} {
+		puts "$msg"
+		return 0
 	}
+  puts "$program found"
 	return 1
 }
 #Gimp path
