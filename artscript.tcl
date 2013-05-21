@@ -138,7 +138,7 @@ proc listValidate {} {
 	set inkscapelist {}
 	set imlist {}
 	
-	set identify "identify -quiet -format {%wx%h\|%m\|%M}"
+	set identify "identify -quiet -format %wx%h\|%m\|%M\|"
 	set ops [dict create]
 	set options true
 	set lops 1
@@ -653,7 +653,7 @@ proc getSizeSel { {collage false} {ready false}} {
 		# the results is expecting (200px tile 2x2 = 400px)
 		if { $sizeval == "x" } {
 			#turns concat mode on
-			return "{ } 0 0"
+			return "{} 0 0"
 		} elseif {![string match -nocase {*[0-9]\%} $sizeval] && ![string is boolean $sizeval] } {
 			set mgap [expr {($::mborder + $::mspace)*2} ]
 			set xpos [string last "x" $sizeval]
@@ -747,6 +747,12 @@ proc collage { olist path imcat} {
 		set index 0
 		foreach j $i {
 			set imagesize [getWidthHeight [dict get $imcat $j geometry] ]
+			#Set target size equal to image size to avoid resize on read
+			if { $sizeval == ""} {
+				set sizefirst [lindex $imagesize 0]
+				set sizelast [lindex $imagesize 1]
+			}
+      puts "$sizefirst $sizelast $imagesize"
 			set inputsize [getReadSize [lindex $imagesize 0] [lindex $imagesize 1] $sizefirst $sizelast]
 			#Add size input string to each read in file: image.jpg[200x200]
 			lset i $index [concat $j$inputsize]
@@ -943,7 +949,8 @@ proc convert [list [list argv $argv] ] {
 					continue
 				} else {
 					lappend goodargv $i
-					set iminfo [split [string trim $finfo "{}"] "|"]
+					#we set double | to avoid mistakes with files layered or animated(GIF)
+					set iminfo [split [string trim $finfo "|"] "|"]
 					foreach { dm f n } $iminfo {
 						 dict set collist $i geometry $dm
 						 dict set collist $i iformat $f
