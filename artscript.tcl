@@ -143,7 +143,7 @@ proc listValidate {} {
 		incr c
 		if { [string index $i 0] == ":" && $options} {
 			dict set ops $i [lindex $argv $c]
-			set lops [expr [llength $ops]+1]
+			set lops [expr {[llength $ops]+1}]
 			continue
 		} elseif { $options && $lops == $c } {
 			set options false
@@ -315,7 +315,7 @@ proc colorSelector { frame suffix colorvar op title colors {row 0} } {
 	bind $frame.${suffix}viewcol <Button> [ list colorBind $frame.${suffix}viewcol $colorvar 0 $title ]
 	#Make color swatches depending on number of colors selected.
 	foreach i $colors {
-		canvas $frame.${suffix}$i -bg $i -width [expr 60/[llength $colors]] -height 16
+		canvas $frame.${suffix}$i -bg $i -width [expr {60/[llength $colors]}] -height 16
 		bind $frame.${suffix}$i <Button> [ list colorBind $frame.${suffix}viewcol $colorvar $i $title ]
 	}
 	#Add widgets to GUI, row increments to prevent overlaps
@@ -506,7 +506,7 @@ proc setRGBColor { rgb {opacity 1.0} } {
 	foreach i $rgbval {
 		#For each value we divide by 256 to get 8big rgb value (0 to 255)
 		#I set it to 257 to get integer values, need to check this further.
-		append rgbn "[expr $i / 257],"
+		append rgbn "[expr {$i / 257}],"
 	}
 	append rgbn "$opacity)"
 	return $rgbn
@@ -651,10 +651,10 @@ proc getSizeSel { {collage false} {ready false}} {
 			#turns concat mode on
 			return "{ } 0 0"
 		} elseif {![string match -nocase {*[0-9]\%} $sizeval] && ![string is boolean $sizeval] } {
-			set mgap [expr [expr $::mborder + $::mspace ] *2 ]
+			set mgap [expr {($::mborder + $::mspace)*2} ]
 			set xpos [string last "x" $sizeval]
-			set sizelast [expr [string range $sizeval $xpos+1 end]-$mgap]
-			set sizefirst [expr [string range $sizeval 0 $xpos-1]-$mgap]
+			set sizelast [expr {[string range $sizeval $xpos+1 end]-$mgap}]
+			set sizefirst [expr {[string range $sizeval 0 $xpos-1]-$mgap}]
 			set sizeval "$sizefirst\x$sizelast\\>"
 			return [lappend sizeval $sizefirst $sizelast]
 		} else {
@@ -687,11 +687,11 @@ proc collage { olist path imcat} {
 	proc range { ilist range } {
 		set rangelists ""
 		set listsize [llength $ilist]
-		set times [expr [expr $listsize/$range]+[expr bool($listsize % $range) ] ]
+		set times [expr {($listsize/$range)+(bool($listsize % $range))} ]
 
 		for {set i 0} { $i < $times } { incr i } {
-			set val1 [expr $range * $i]
-			set val2 [expr $range * [expr $i+1] - 1 ]
+			set val1 [expr {$range * $i}]
+			set val2 [expr {$range * ($i+1) - 1} ]
 			lappend rangelists [lrange $ilist $val1 $val2]
 		}
 		return $rangelists
@@ -723,9 +723,9 @@ proc collage { olist path imcat} {
 	#Returns size wxh fitted inside destination tile.
 	proc getReadSize { w h dw dh } {
 		if { $w > $h } {
-			set dh [ expr $h*$dw/$w ]
+			set dh [ expr {$h*$dw/$w} ]
 		} else {
-			set dw [ expr $w*$dh/$h ]
+			set dw [ expr {$w*$dh/$h} ]
 		}
 		return "\[$dw\x$dh\]"
 	}
@@ -736,7 +736,7 @@ proc collage { olist path imcat} {
 	#Run montage
 	set count 0
 	#Set new maximum length to progress bar to total of collage * 2
-	progressUpdate false [expr [llength $clist] * 2]
+	progressUpdate false [expr {[llength $clist] * 2}]
 
 	#pass value to divider to keep getting percentage sizes
 	if {[string is integer $sizeval]} {
@@ -755,8 +755,8 @@ proc collage { olist path imcat} {
 			}
 			#Set target to the percentage chosen
 			if { $sizefirst == "0" && [string is integer $divider] } {
-				set sizefirst [expr int($sizefirst * .$divider) ]
-				set sizelast [expr int($sizelast * .$divider) ]
+				set sizefirst [{expr int($sizefirst * .$divider)} ]
+				set sizelast [{expr int($sizelast * .$divider)} ]
 			}
 			set inputsize [getReadSize [lindex $imagesize 0] [lindex $imagesize 1] $sizefirst $sizelast]
 			#Add size input string to each read in file: image.jpg[200x200]
@@ -821,7 +821,7 @@ proc processInkscape [list {outdir "/tmp"} [list olist $inkscapelist] ] {
 					set inksize "-w $inksize"
 				} else {
 					set inksize [string range $sizeval 0 [string last "%" $sizeval]-1]
-					set inksize [expr 90 * [ expr $inksize / 100.0 ] ]
+					set inksize [expr {90 * ($inksize / 100.0)} ]
 					set inksize "-d $inksize"
 				}
 			}
@@ -928,7 +928,7 @@ proc convert [list [list argv $argv] ] {
 		set tmpfiles [dict merge $gimfiles $calfiles $inkfiles]
 
 		#Store total vector transformed files to later skip from resize.
-		set tmpcount [ expr [llength $inkfiles] /2]
+		set tmpcount [ expr {[llength $inkfiles] /2}]
 
 		#Unset unused vars
 		unset gimfiles calfiles inkfiles
@@ -964,7 +964,7 @@ proc convert [list [list argv $argv] ] {
 			}
 			set argv $goodargv
 			#Get total files from raster formats
-			set tmpcount [expr [llength $goodargv] - $tmpcount]
+			set tmpcount [expr {[llength $goodargv] - $tmpcount} ]
 			#Set new max value for files to convert, update progressbar
 			progressUpdate 0 [llength $argv]
 
