@@ -1,7 +1,7 @@
 #!/usr/bin/wish
 #
 #----------------:::: ArtscriptTk ::::----------------------
-# Version: 1.6.3
+# Version: 1.7.1
 # Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 # Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 # License: GPLv3 
@@ -94,7 +94,7 @@ set ::prefixsel false
 
 #--=====
 #Don't modify below this line
-set ::version "v1.6.3"
+set ::version "v1.7.1"
 set ::lstmsg ""
 set ::gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_pkgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
 #Function to send message boxes
