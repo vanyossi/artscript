@@ -19,13 +19,14 @@
 #Extension, define what file tipes artscript should read.
 set ::ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
 #set date values
-set ::now [split [exec date +%Y/%m/%d/%u] "/"]
+#Get a different number each run
+set ::raninter [clock seconds]
+set ::now [split [clock format $raninter -format %Y/%m/%d/%u] "/"]
 set ::year [lindex $now 0]
 set ::month [lindex $now 1]
 set ::day [lindex $now 2]
 set ::date [join [list $year $month $day] "-"]
-#Get a different number each run
-set ::raninter [exec date +%N]
+#set autor name
 set ::autor "Your Name Here"
 #Initialize variables for presets
 #Watermark options
