@@ -742,26 +742,11 @@ proc collage { olist path imcat} {
 	#Set new maximum length to progress bar to total of collage * 2
 	progressUpdate false [expr {[llength $clist] * 2}]
 
-	#pass value to divider to keep getting percentage sizes
-	if {[string is integer $sizeval]} {
-		set divider $sizeval
-		set sizeval ""
-	}
 	#Iterate all collage lists
 	foreach i $clist {
 		set index 0
 		foreach j $i {
 			set imagesize [getWidthHeight [dict get $imcat $j geometry] ]
-			#Set target size equal to image size to avoid resize on read
-			if { $sizefirst == "0"} {
-				set sizefirst [lindex $imagesize 0]
-				set sizelast [lindex $imagesize 1]
-			}
-			#Set target to the percentage chosen
-			if { $sizefirst == "0" && [string is integer $divider] } {
-				set sizefirst [{expr int($sizefirst * .$divider)} ]
-				set sizelast [{expr int($sizelast * .$divider)} ]
-			}
 			set inputsize [getReadSize [lindex $imagesize 0] [lindex $imagesize 1] $sizefirst $sizelast]
 			#Add size input string to each read in file: image.jpg[200x200]
 			lset i $index [concat $j$inputsize]
