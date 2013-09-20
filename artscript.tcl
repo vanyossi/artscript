@@ -1,7 +1,7 @@
 #!/usr/bin/wish
 #
 #----------------:::: ArtscriptTk ::::----------------------
-# Version: 1.7.1
+# Version: 1.8.0
 # Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 # Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 # License: GPLv3 
@@ -94,7 +94,7 @@ set ::prefixsel false
 
 #--=====
 #Don't modify below this line
-set ::version "v1.7.1"
+set ::version "v1.8.0"
 set ::lstmsg ""
 set ::gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_pkgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
 #Function to send message boxes
@@ -357,7 +357,7 @@ proc showargs {args} {
 	eval $args
 }
 #Size menu options
-listbox .size.listbox -selectmode single -relief flat -height 2
+listbox .size.listbox -selectmode extended -relief flat -height 2
 foreach i $sizes { .size.listbox insert end $i }
 bind .size.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "size" "sizext"}
 scrollbar .size.scroll -command {showargs .size.listbox yview} -orient vert
@@ -549,6 +549,10 @@ proc setSelectOnEntry { indx r g } {
 	#Check if variable comes from list, if not then get value from entry text
 	if { [string is integer $indx] } { 
 		set val [.$r.listbox get $indx]
+	} elseif { [string is list $indx] } {
+		foreach sel $indx {
+			lappend val [.$r.listbox get $sel]
+		}
 	} else {
 		set val [.$r.entry get]
 	}
@@ -646,7 +650,11 @@ proc renameFile { olist {odir false} } {
 }
 #Resize: returns the validated entry as wxh or ready true as "-resize wxh\>"
 proc getSizeSel { {collage false} {ready false}} {
-	set sizeval [string trim $::sizext] 
+	if { [string is list $::sizext] } {
+		set sizeval [lindex $::sizext 0]
+	} else {
+		set sizeval [string trim $::sizext]
+	}
 	#We check if user wants resize and $sizeval not empty
 	if {$collage} {
 		#We have to substract the margin from the tile value, in this way the user gets
@@ -902,7 +910,13 @@ proc convert [list [list argv $argv] ] {
 		set watval [watermark]
 
 		#We check if user wants resize and $sizeval not empty
-		set resizeval [getSizeSel 0 1]
+		set resizeval [getSizeSel 0 0]
+		#TODO Integrate to a function and to the whole program
+		if {[string is list $::sizext ]} {
+			set outsizes $::sizext
+		} else {
+			set outsizes [list resizeval]
+		}
 
 		#Declare a empty list to fill with tmp files for deletion
 		set tmplist ""
@@ -996,16 +1010,22 @@ proc convert [list [list argv $argv] ] {
 				if { [catch { set ordir [dict get $paths $i]} msg ] } {
 					set ordir ""
 				}
-				set io [setOutputName $i $outextension $prefixsel 0 $ordir ]
-				set outname [lindex $io 0]
-				set origin [lindex $io 1]
+				foreach resize $outsizes {
+					set io [setOutputName $i $outextension $prefixsel 0 $ordir 0 $resize]
+					set outname [lindex $io 0]
+					set origin [lindex $io 1]
+puts "$outname $origin"
+puts $i
 
-				set outputfile [file join $origin $outname]
-				puts "outputs $outputfile"
-				#If output is ora we have to use calligraconverter
-				set colorspace "sRGB"
-				#Run command
-				eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
+					set outputfile [file join $origin $outname]
+					puts "outputs $outputfile"
+					#If output is ora we have to use calligraconverter
+					set colorspace "sRGB"
+					set resizeval "-resize $resize\\>"
+					#Run command
+				
+					eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
+				}
 				#udpate progressbar
 				progressUpdate
 			}
@@ -1019,7 +1039,10 @@ proc convert [list [list argv $argv] ] {
 }
 #Prepares output name adding Suffix or Prefix
 #Checks if destination file exists and adds a standard suffix
-proc setOutputName { oname fext { oprefix false } { orename false } {ordir false} {tmprun false} } {
+proc setOutputName { oname fext { oprefix false } { orename false } {ordir false} {tmprun false} {size false} } {
+	if { [string is boolean $size] } {
+		set size ""
+	}
 	set tmpprefix ""
 	if {$tmprun} { set tmpsuffix "" } else { set tmpsuffix $::suffix }
 	if {![string is boolean $ordir]} {
@@ -1034,7 +1057,7 @@ proc setOutputName { oname fext { oprefix false } { orename false } {ordir false
 		set tmpsuffix ""
 	}
 
-	set newname [concat $tmpprefix [list $name] $tmpsuffix]
+	set newname [concat $tmpprefix [list $name] $tmpsuffix "$size"]
 	set newname [join $newname "_"]
 	if { [file exists [file join $dir "$newname.$fext"] ] } {
 		incr s
