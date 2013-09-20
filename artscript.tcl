@@ -1014,8 +1014,6 @@ proc convert [list [list argv $argv] ] {
 					set io [setOutputName $i $outextension $prefixsel 0 $ordir 0 $resize]
 					set outname [lindex $io 0]
 					set origin [lindex $io 1]
-puts "$outname $origin"
-puts $i
 
 					set outputfile [file join $origin $outname]
 					puts "outputs $outputfile"
