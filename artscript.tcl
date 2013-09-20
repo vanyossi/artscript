@@ -691,6 +691,7 @@ proc collage { olist path imcat} {
 	global bgcolor bgop bordercol brop tfill tfop
 	set sizevals [getSizeSel 1]
 	set sizeval [lindex $sizevals 0]
+	#TODO size in collage does not accept % values
 	set sizefirst [lindex $sizevals 1]
 	set sizelast [lindex $sizevals 2]
 
@@ -997,7 +998,7 @@ proc convert [list [list argv $argv] ] {
 				#Add mesage to lastmessage
 				append ::lstmsg "Collage done \n"
 				#Set size to empty to avoid resizing
-				set resizeval ""
+				set outsizes "100%"
 			}
 			foreach i $argv {
 				#Set resize to none when index reachs first vector image.
