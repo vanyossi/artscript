@@ -40,6 +40,11 @@ set ::watermarks [list \
 ]
 set ::wmsize 10
 set ::wmpos "SouthEast"
+#Place image watermark URL. /home/user/image
+set ::wmimsrc ""
+set ::wmimsize "90%"
+set ::wmimcomp "Over"
+# "multiply"
 #Color options:
 set ::rgb "#ffffff"
 set ::opacity 0.8
@@ -623,12 +628,16 @@ proc watermark {} {
 	global watxt watsel wmsize wmpos rgb opacity
 
 	set rgbout [setRGBColor $rgb $opacity]
+	set watval ""
 	#Watermarks, we check if checkbox selected to add characters to string
 	if {$watsel} {
-		set watval "-pointsize $wmsize -fill $rgbout -gravity $wmpos -draw \"text 10,10 \'$watxt\'\""
+		set watval "-pointsize $wmsize -fill $rgbout -draw \"gravity $wmpos text 10,10 \'$watxt\'\""
 #png32:- | convert - -pointsize 10 -fill  -gravity SouthEast -annotate +3+3 "
-	} else {
-		set watval ""
+	}
+	if { ![string is boolean $::wmimsrc] } {
+		if { [file exists $::wmimsrc] } {
+			set watval [concat $watval "-gravity Center -draw \"image Over 0,0 0,0 '$::wmimsrc' \""]
+		}
 	}
 	return $watval
 }
