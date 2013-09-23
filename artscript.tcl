@@ -359,7 +359,7 @@ proc showargs {args} {
 #Size menu options
 listbox .size.listbox -selectmode extended -relief flat -height 2
 foreach i $sizes { .size.listbox insert end $i }
-bind .size.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "size" "sizext"}
+bind .size.listbox <<ListboxSelect>> { setSelectOnEntry [%W curselection] "size" "sizext" 1}
 scrollbar .size.scroll -command {showargs .size.listbox yview} -orient vert
 .size.listbox conf -yscrollcommand {showargs .size.scroll set}
 message .size.exp -width 210 -justify center -text "\
@@ -544,12 +544,12 @@ proc colorBind { w var {color false} title } {
 
 #Receives an index value a rootname and a global variable to call
 #Syncs listbox values with other label values and entry values
-proc setSelectOnEntry { indx r g } {
+proc setSelectOnEntry { indx r g {listbox 0}} {
 	global $g
 	#Check if variable comes from list, if not then get value from entry text
 	if { [string is integer $indx] } { 
 		set val [.$r.listbox get $indx]
-	} elseif { [string is list $indx] } {
+	} elseif { [string is list $indx] && $listbox} {
 		foreach sel $indx {
 			lappend val [.$r.listbox get $sel]
 		}
@@ -912,11 +912,12 @@ proc convert [list [list argv $argv] ] {
 
 		#We check if user wants resize and $sizeval not empty
 		set resizeval [getSizeSel 0 0]
+
 		#TODO Integrate to a function and to the whole program
-		if {[string is list $::sizext ]} {
+		if {[string is list $::sizext] && $::sizesel} {
 			set outsizes $::sizext
 		} else {
-			set outsizes [list resizeval]
+			set outsizes [list $resizeval]
 		}
 
 		#Declare a empty list to fill with tmp files for deletion
@@ -1020,10 +1021,12 @@ proc convert [list [list argv $argv] ] {
 					puts "outputs $outputfile"
 					#If output is ora we have to use calligraconverter
 					set colorspace "sRGB"
-					set resizeval "-resize $resize\\>"
+					if { ![string is boolean $resize] } {
+						set resize "-resize $resize\\>"
+					}
 					#Run command
 				
-					eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resizeval $watval -quality $iquality {$outputfile}
+					eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resize $watval -quality $iquality {$outputfile}
 				}
 				#udpate progressbar
 				progressUpdate
