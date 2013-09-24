@@ -1,7 +1,7 @@
 #!/usr/bin/wish
 #
 #----------------:::: ArtscriptTk ::::----------------------
-# Version: 1.8.1
+# Version: 1.8.2
 # Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 # Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 # License: GPLv3 
@@ -99,7 +99,7 @@ set ::prefixsel false
 
 #--=====
 #Don't modify below this line
-set ::version "v1.8.1"
+set ::version "v1.8.2"
 set ::lstmsg ""
 set ::gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_pkgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
 #Function to send message boxes
@@ -489,7 +489,14 @@ checkbutton .opt.sizext -text "Resize" \
 checkbutton .opt.tile -text "Make Collage" \
 		-onvalue true -offvalue false -variable tilesel
 
-pack .opt.watxt .opt.waimg .opt.sizext .opt.tile -side left
+#Pack command, we insert image watemark check if the variable is set
+set packcb [list pack .opt.watxt .opt.sizext .opt.tile -side left]
+
+if { ![string is boolean $::wmimsrc] } {
+	set packcb [linsert $packcb 1 .opt.waimg]
+}
+
+{*}$packcb
 
 #--- Submit button
 frame .act -borderwidth 6
