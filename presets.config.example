@@ -37,6 +37,19 @@
 # Text watermark position "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"
 #wmpos=South
 
+#-====image watermark options
+# Image path uri, it has to be an absolute path
+#wmimsrc=""
+
+# Image watermark position. "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"
+#wmimpos="NorthEast"
+
+# Image size relative to image. (Not used v1.8)
+#wmimsize="90%"
+
+# Image blending option. ( "Bumpmap" "Burn" "Color_Burn" "Color_Dodge" "Colorize" "Copy_Black" "Copy_Blue" "Copy_Cyan" "Copy_Green" "Copy_Magenta" "Copy_Opacity" "Copy_Red" "Copy_Yellow" "Darken" "DarkenIntensity" "Difference" "Divide" "Dodge" "Exclusion" "Hard_Light" "Hue" "Light" "Lighten" "LightenIntensity" "Linear_Burn" "Linear_Dodge" "Linear_Light" "Luminize" "Minus" "ModulusAdd" "ModulusSubtract" "Multiply" "Overlay" "Pegtop_Light" "Pin_Light" "Plus" "Saturate" "Screen" "Soft_Light" "Vivid_Light")
+#wmimcomp="Over"
+
 #-====Color options:
 # watermark text color in hex value (#fff, #ffffff) or tk colors http://www.tcl.tk/man/tcl8.4/TkCmd/colors.htm (white)
 #rgb=#fafafa

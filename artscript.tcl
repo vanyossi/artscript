@@ -1,7 +1,7 @@
 #!/usr/bin/wish
 #
 #----------------:::: ArtscriptTk ::::----------------------
-# Version: 1.8.0
+# Version: 1.8.1
 # Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 # Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 # License: GPLv3 
@@ -42,9 +42,9 @@ set ::wmsize 10
 set ::wmpos "SouthEast"
 #Place image watermark URL. /home/user/image
 set ::wmimsrc ""
+set ::wmimpos "Center"
 set ::wmimsize "90%"
 set ::wmimcomp "Over"
-# "multiply"
 #Color options:
 set ::rgb "#ffffff"
 set ::opacity 0.8
@@ -99,7 +99,7 @@ set ::prefixsel false
 
 #--=====
 #Don't modify below this line
-set ::version "v1.8.0"
+set ::version "v1.8.1"
 set ::lstmsg ""
 set ::gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_pkgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
 #Function to send message boxes
@@ -482,12 +482,14 @@ frame .opt -borderwidth 2
 pack .opt
 checkbutton .opt.watxt -text "Watermark" \
 		-onvalue true -offvalue false -variable watsel
+checkbutton .opt.waimg -text "Img Watermark" \
+		-onvalue true -offvalue false -variable wmimsel
 checkbutton .opt.sizext -text "Resize" \
 		-onvalue true -offvalue false -variable sizesel
 checkbutton .opt.tile -text "Make Collage" \
 		-onvalue true -offvalue false -variable tilesel
 
-pack .opt.watxt .opt.sizext .opt.tile -side left
+pack .opt.watxt .opt.waimg .opt.sizext .opt.tile -side left
 
 #--- Submit button
 frame .act -borderwidth 6
@@ -625,20 +627,20 @@ proc progressUpdate { { current false } { max false } { create false } } {
 #Preproces functions
 #watermark
 proc watermark {} {
-	global watxt watsel wmsize wmpos rgb opacity
+	global watxt watsel wmsize wmpos rgb opacity wmimsel
 
 	set rgbout [setRGBColor $rgb $opacity]
 	set watval ""
 	#Watermarks, we check if checkbox selected to add characters to string
 	if {$watsel} {
 		set watval "-pointsize $wmsize -fill $rgbout -draw \"gravity $wmpos text 10,10 \'$watxt\'\""
-#png32:- | convert - -pointsize 10 -fill  -gravity SouthEast -annotate +3+3 "
 	}
-	if { ![string is boolean $::wmimsrc] } {
-		if { [file exists $::wmimsrc] } {
-			set watval [concat $watval "-gravity Center -draw \"image Over 0,0 0,0 '$::wmimsrc' \""]
+	#we check image watermark checkbox to add image wm
+	if { $wmimsel } {
+			if { [file exists $::wmimsrc] } {
+				set watval [concat $watval "-gravity $::wmimpos -draw \"image $::wmimcomp 10,10 0,0 '$::wmimsrc' \""]
+			}
 		}
-	}
 	return $watval
 }
 #Rename files only
