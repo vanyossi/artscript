@@ -1021,8 +1021,11 @@ proc convert [list [list argv $argv] ] {
 				if { [catch { set ordir [dict get $paths $i]} msg ] } {
 					set ordir ""
 				}
+				#Setting this to zero avoids adding a size suffix if only one size selected
+				set sizecounter [expr {[llength $outsizes]-1}]
+
 				foreach resize $outsizes {
-					set io [setOutputName $i $outextension $prefixsel 0 $ordir 0 $resize]
+					set io [setOutputName $i $outextension $prefixsel 0 $ordir 0 $resize $sizecounter]
 					set outname [lindex $io 0]
 					set origin [lindex $io 1]
 
@@ -1050,8 +1053,8 @@ proc convert [list [list argv $argv] ] {
 }
 #Prepares output name adding Suffix or Prefix
 #Checks if destination file exists and adds a standard suffix
-proc setOutputName { oname fext { oprefix false } { orename false } {ordir false} {tmprun false} {size false} } {
-	if { [string is boolean $size] } {
+proc setOutputName { oname fext { oprefix false } { orename false } {ordir false} {tmprun false} {size false} {singleresize 0} } {
+	if { [string is boolean $size] || !$singleresize } {
 		set size ""
 	}
 	set tmpprefix ""
