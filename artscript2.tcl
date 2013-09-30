@@ -160,7 +160,7 @@ proc listValidate {} {
 
 				dict set inputfiles $fc size [lindex $sizel 1]
 				dict set inputfiles $fc mime $mime
-				dict set inputfiles $fc path [file dirname [file normalize $i]]
+				dict set inputfiles $fc path [file normalize $i]
 				dict set handlers $iname "g"
 				#append lfiles "$fc Gimp: $i\n"
 				incr fc
@@ -377,7 +377,7 @@ grid columnconfigure .m1.wm {2} -weight 4
 # .l configure -image $img
 # image delete $img $oldimg
 
-proc showPreview { w f } {
+proc showPreview { w f {tryprev 1}} {
 	global inputfiles env
 
 	proc makeThumb { path tsize } {
@@ -392,9 +392,18 @@ proc showPreview { w f } {
 			catch {exec unzip $path $container -d /tmp/}
 			set tmpfile "/tmp/$container"
 			set path $tmpfile
+
+			# remove gimp and psd thumnail if we cannot figure it out how to keep GUI responsive
+		} elseif {[regexp {.xcf|.psd} $filext ]} {
+			set tmpfile "atk-gimpprev.png"
+			set cmd "(let* ( (image (car (gimp-file-load 1 \"$path\" \"$path\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"/tmp/$tmpfile\" \"/tmp/$tmpfile\") )(gimp-quit 0)"
+			#run gimp command, it depends on file extension to do transforms.
+			catch { exec gimp -i -b $cmd } msg
+			set tmpfile "/tmp/$tmpfile"
+			set path $tmpfile
 		}
 		foreach {size dest} $tsize {
-			catch {exec convert $path -thumbnail [append size x $size] PNG32:$dest}
+			catch {exec convert $path -thumbnail [append size x $size] -flatten PNG32:$dest} msg
 		}
 		catch {file delete $tmpfile}
 	}
@@ -425,7 +434,10 @@ proc showPreview { w f } {
 	} else {
 		makeThumb $path [list 128 $nthumb 256 $lthumb]
 	}
-	showPreview w $f
+
+	if {$tryprev} {
+		showPreview w $f 0
+	}
 }
 
 set fileheaders { id input mime outname size }
@@ -598,6 +610,39 @@ proc getOutputName { {indx 0} } {
 	#Concatenate both lists to always have an output example name
 	set i [lindex [concat $::argv $::gimplist $::calligralist $::inkscapelist] $indx]
 	return [lindex [setOutputName $i $::outextension $::prefixsel] 0]
+}
+
+#gimp process
+proc processGimp [list [list olist $gimplist] ] {
+	set ifiles ""
+	if [llength $olist] {
+		foreach i $olist {
+			#Sends file input for processing, stripping input directory
+			set io [setOutputName $i "png" 0 0 0 1]
+			set outname [lindex $io 0]
+			set origin [lindex $io 1]
+			#Make png to feed convert
+			#We set the command outside for later unfolding or it won't work.
+			set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"/tmp/$outname\" \"/tmp/$outname\") )(gimp-quit 0)"
+			#run gimp command, it depends on file extension to do transforms.
+			catch { exec gimp -i -b $cmd } msg
+			#udpate progressbar
+			progressUpdate
+
+			set errc $::errorCode;
+			set erri $::errorInfo
+			puts "errc: $errc \n\n"
+			#puts "erri: $erri"
+			if {$errc != "NONE"} {
+				append ::lstmsg "EE: $i discarted\n"
+				puts $msg
+				continue
+			}
+			#Add png to argv file list on /tmp dir and originalpath to dict
+			dict set ifiles [file join "/" "tmp" "$outname"] [file join $origin $i]
+		}
+	}
+	return $ifiles
 }
 
 #Inkscape converter
