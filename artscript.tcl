@@ -493,7 +493,7 @@ checkbutton .opt.tile -text "Make Collage" \
 set packcb [list pack .opt.watxt .opt.sizext .opt.tile -side left]
 
 if { ![string is boolean $::wmimsrc] } {
-	set packcb [linsert $packcb 1 .opt.waimg]
+	set packcb [linsert $packcb 2 .opt.waimg]
 }
 
 {*}$packcb
