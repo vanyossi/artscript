@@ -88,21 +88,18 @@ proc alert {type icon title msg} {
 }
 #Validation Functions
 #Finds program trying to get program version, return 0 if program missing
-proc validate {program} {
-	catch {set fail [exec -ignorestderr $program --version]} msg
-	if { [catch {set fail}] eq "1"} {
-		puts "$msg"
-		return 0
-	}
-  puts "$program found"
-	return 1
-}
-# proc validate {program} {
-#	if { [catch {exec which $program}] } {
-#		 return 0
+#proc validate {program} {
+#	catch {set fail [exec -ignorestderr $program --version]} msg
+#	if { [catch {set fail}] eq "1"} {
+#		puts "$msg"
+#		return 0
 #	}
+#  puts "$program found"
 #	return 1
 # }
+proc validate {program} {
+	expr { ![catch {exec which $program}] ? [return 1] : [return 0] }
+}
 #Gimp path
 set hasgimp [validate "gimp"]
 #Inkscape path, if true converts using inkscape to /tmp/*.png
