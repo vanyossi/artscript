@@ -467,7 +467,7 @@ pack .m2.ac.conv.size.sizes -side left -expand 1 -fill x
 pack .m2.ac.conv.size.sizescrl -side left -fill y
 pack .m2.ac -fill x
 
-pack [ttk::frame .m2.lprev -width 256 -height 256] -side top
+pack [ttk::frame .m2.lprev -width 276 -height 276] -side top
 ttk::label .m2.lprev.im
 
 pack .m2.lprev.im
