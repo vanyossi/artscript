@@ -158,7 +158,7 @@ proc listValidate {} {
 				dict set inputfiles $fc oname $iname
 				set sizel [exec identify -format "%wx%h " $i ]
 
-				dict set inputfiles $fc size [lindex $sizel 1]
+				dict set inputfiles $fc size [lindex $sizel 0]
 				dict set inputfiles $fc mime $mime
 				dict set inputfiles $fc path [file normalize $i]
 				dict set handlers $iname "g"
