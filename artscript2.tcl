@@ -146,17 +146,13 @@ proc listValidate {} {
 		if {[lsearch $ext $filext ] >= 0 } {
 			if { [regexp {.xcf|.psd} $filext ] && $hasgimp } {
 				lappend gimplist $i
-				if { $filext == ".xcf" } {
-					set mime "XCF"
-				} else {
-					set mime "PSD"
-				}
+
 				dict set inputfiles $fc name $iname
 				dict set inputfiles $fc oname $iname
 				set sizel [exec identify -format "%wx%h " $i ]
 
 				dict set inputfiles $fc size [lindex $sizel 0]
-				dict set inputfiles $fc mime $mime
+				dict set inputfiles $fc ext [string trim $filext {.}]
 				dict set inputfiles $fc path [file normalize $i]
 				dict set handlers $iname "g"
 				#append lfiles "$fc Gimp: $i\n"
@@ -170,11 +166,7 @@ proc listValidate {} {
 					continue
 				}
 				lappend inkscapelist $i
-				if { $filext == ".svg" } {
-					set mime "SVG"
-				} else {
-					set mime "AI"
-				}
+
 				set svgcon [exec inkscape -S $i | head -n 1]
 				set svgvals [lrange [split $svgcon {,}] end-1 end]
 				set size [expr {round([lindex $svgvals 0])}]
@@ -183,7 +175,7 @@ proc listValidate {} {
 				dict set inputfiles $fc name $iname
 				dict set inputfiles $fc oname $iname
 				dict set inputfiles $fc size $size
-				dict set inputfiles $fc mime $mime
+				dict set inputfiles $fc ext [string trim $filext {.}]
 				dict set inputfiles $fc path [file normalize $i]
 				dict set handlers $iname "i"
 				#append lfiles "$fc Ink: $i\n"
@@ -197,7 +189,6 @@ proc listValidate {} {
 					if { [catch { set zipcon [exec unzip -p $i stack.xml | grep image | head -n 1] } msg] } {
 						continue
 					}
-					set mime "ORA"
 					set zipcon [exec unzip -p $i stack.xml | grep image | head -n 1]
 					set zipkey [lreverse [ string trim $zipcon "image<> " ] ]
 					set size [string trim [lindex [split [lindex $zipkey 0] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 1] "="] 1] {"\""}]
@@ -207,7 +198,6 @@ proc listValidate {} {
 					if { [catch { set zipcon [exec unzip -p $i maindoc.xml | grep -i IMAGE | head -n1] } msg] } {
 						continue
 					}
-						set mime "KRA"
 						set zipcon [exec unzip -p $i maindoc.xml | grep -i IMAGE | head -n1]
 						set zipkey [lsearch -inline -regexp -all $zipcon {^(width|height)} ]
 						set size [string trim [lindex [split [lindex $zipkey 0] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 1] "="] 1] {"\""}]
@@ -217,7 +207,7 @@ proc listValidate {} {
 				dict set inputfiles $fc name $iname
 				dict set inputfiles $fc oname $iname
 				dict set inputfiles $fc size $size
-				dict set inputfiles $fc mime $mime
+				dict set inputfiles $fc ext [string trim $filext {.}]
 				dict set inputfiles $fc path [file normalize $i]
 				dict set handlers $iname "k"
 				incr fc
@@ -235,7 +225,7 @@ proc listValidate {} {
 				dict set inputfiles $fc name [list $iname]
 				dict set inputfiles $fc oname [list $iname]
 				dict set inputfiles $fc size [lindex $iminfo 0]
-				dict set inputfiles $fc mime [lindex $iminfo 1]
+				dict set inputfiles $fc ext [string trim $filext {.}]
 				dict set inputfiles $fc path [file normalize $i]
 				dict set handlers $iname "m"
 				incr fc
@@ -256,7 +246,7 @@ proc listValidate {} {
 				dict set inputfiles $fc name [list $iname]
 				dict set inputfiles $fc oname [list $iname]
 				dict set inputfiles $fc size [lindex $iminfo 0]
-				dict set inputfiles $fc mime [lindex $iminfo 1]
+				dict set inputfiles $fc ext "[string tolower [lindex $iminfo 1]]"
 				dict set inputfiles $fc path [file normalize $i]
 				dict set handlers $iname "m"
 				incr fc
@@ -267,7 +257,7 @@ proc listValidate {} {
 	incr fc -1
 	set argv $imlist
 	#Check if resulting lists have elements
-	if {[llength $argv] + [llength $gimplist] + [llength $calligralist] + [llength $inkscapelist] == 0} {
+	if {[llength [dict keys $inputfiles]] == 0} {
 		alert ok info "Operation Done" "No image files selected Exiting"
 		exit
 	}
@@ -291,7 +281,7 @@ wm title . "Artscript $version -- $fc Files selected"
 #Gui construct
 proc wmproc {value} {
 	if { !$::watsel } {
-		.m1.checkwm invoke
+		.f2.ac.wm.checkwm invoke
 	}
 	puts $value
 }
@@ -310,53 +300,14 @@ pack [ttk::frame .f1] -side top -expand 0 -fill x
 ttk::label .f1.title -text "Artscript 2.0alpha"
 pack .f1.title -side left
 
-pack [ttk::frame .m1] -side left -expand 1 -fill both
+# pack [ttk::frame .m1] -side left -expand 1 -fill both
 
-ttk::checkbutton .m1.checkwm -text "Watermark" -onvalue true -offvalue false -variable watsel
-
-pack [ ttk::labelframe .m1.wm -text "Watermark options" -labelwidget .m1.checkwm -padding 2 ] -side top -expand 0 -fill x
-
-ttk::label .m1.wm.ltext -text "Text"
-ttk::combobox .m1.wm.watermarks -state readonly -textvariable wmtxt -values $watermarks
-.m1.wm.watermarks set [lindex $watermarks 0]
-bind .m1.wm.watermarks <<ComboboxSelected>> { wmproc [%W get] }
-
-ttk::label .m1.wm.lsize -text "Size" -width 4
-set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
-ttk::spinbox .m1.wm.fontsize -width 4 -values $fontsizes -validate key \
-	-validatecommand { string is integer %P }
-.m1.wm.fontsize set $wmsize
-bind .m1.wm.fontsize <ButtonRelease> { wmproc [%W get] }
-bind .m1.wm.fontsize <KeyRelease> { wmproc [%W get] }
-
-ttk::label .m1.wm.lpos -text "Position" -width 10
-ttk::combobox .m1.wm.position -state readonly -textvariable wmpossel -values $wmpositions -width 10
-.m1.wm.position set $wmpos
-bind .m1.wm.position <<ComboboxSelected>> { wmproc [%W get] }
-
-ttk::label .m1.wm.limg -text "Image"
-ttk::combobox .m1.wm.iwatermarks -state readonly -textvariable wmimsrc -values $iwatermarks
-.m1.wm.iwatermarks set [lindex $iwatermarks 0]
-bind .m1.wm.iwatermarks <<ComboboxSelected>> { wmproc [%W get] }
-
-ttk::spinbox .m1.wm.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
-	-validatecommand { string is integer %P }
-.m1.wm.imgsize set $wmimsize
-bind .m1.wm.imgsize <ButtonRelease> { wmproc [%W get] }
-bind .m1.wm.imgsize <KeyRelease> { wmproc [%W get] }
-
-ttk::combobox .m1.wm.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
-.m1.wm.position set $wmpos
-bind .m1.wm.iposition <<ComboboxSelected>> { wmproc [%W get] }
-
-grid .m1.wm.lsize .m1.wm.lpos -row 1 -sticky w
-grid .m1.wm.ltext .m1.wm.watermarks .m1.wm.fontsize .m1.wm.position -row 2 -sticky we
-grid .m1.wm.limg .m1.wm.iwatermarks .m1.wm.imgsize .m1.wm.iposition -row 3 -sticky we
-grid .m1.wm.ltext .m1.wm.limg -column 1
-grid .m1.wm.watermarks .m1.wm.iwatermarks -column 2
-grid .m1.wm.lsize .m1.wm.fontsize .m1.wm.imgsize -column 3
-grid .m1.wm.lpos .m1.wm.position .m1.wm.iposition -column 4
-grid columnconfigure .m1.wm {2} -weight 4
+# Paned view
+ttk::panedwindow .f2 -orient vertical
+ttk::frame .f2.fb
+ttk::notebook .f2.ac
+.f2 add .f2.fb
+.f2 add .f2.ac
 
 # krita-thumbnailer %f /home/tara/.thumbnails/normal/$(echo -n file://%f | md5sum | cut -d ' ' -f 1).png 128
 # set path [file normalize $afile]
@@ -420,7 +371,7 @@ proc showPreview { w f {tryprev 1}} {
 		catch {set oldimg $img}
 		set img [image create photo -file /tmp/atkpreview.gif ]
 
-		.m2.lprev.im configure -image $img
+		.f2.fb.lprev.im configure -image $img
 		catch {image delete $oldimg}
 
 		catch {file delete $prevgif}
@@ -437,49 +388,102 @@ proc showPreview { w f {tryprev 1}} {
 	}
 }
 
-set fileheaders { id input mime outname size }
-ttk::treeview .m1.flist -columns $fileheaders -show headings
+set fileheaders { id input ext size outname }
+ttk::treeview .f2.fb.flist -columns $fileheaders -show headings
 foreach col $fileheaders {
 	set name [string totitle $col]
-	.m1.flist heading $col -text $name -command [list treeSort .m1.flist $col 0 ]
+	.f2.fb.flist heading $col -text $name -command [list treeSort .f2.fb.flist $col 0 ]
 }
-#.m1.flist heading input -text "File" -command { treeSort .m1.flist input 0 }
-#.m1.flist heading output -text "Output Name" -command { treeSort .m1.flist output 0 } 
-#.m1.flist heading size -text "Size" -command { treeSort .m1.flist size 0 } 
-.m1.flist column id -width 48 -stretch 0
-.m1.flist column size -width 86 -stretch 0
+#.f2.fb.flist heading input -text "File" -command { treeSort .f2.fb.flist input 0 }
+#.f2.fb.flist heading output -text "Output Name" -command { treeSort .f2.fb.flist output 0 } 
+#.f2.fb.flist heading size -text "Size" -command { treeSort .f2.fb.flist size 0 } 
+.f2.fb.flist column id -width 48 -stretch 0
+.f2.fb.flist column ext -width 48 -stretch 0
+.f2.fb.flist column size -width 86 -stretch 0
 
 dict for {inputfile datas} $inputfiles {
    dict with datas {
-			set imgid$inputfile [.m1.flist insert {} end  -values "{$inputfile} {$name} {$mime} {$oname} {$size}"]
+			set imgid$inputfile [.f2.fb.flist insert {} end  -values "{$inputfile} {$name} {$ext} {$size} {$oname}"]
    }
 }
 
-bind .m1.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [lindex [%W item [%W selection] -values] 0] }
-pack .m1.flist -before .m1.wm -side top -expand 1 -fill both
+bind .f2.fb.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [lindex [%W item [%W selection] -values] 0] }
+
+ttk::labelframe .f2.fb.lprev -width 276 -height 276 -padding 6 -labelanchor n -text "Thumbnail"
+# -labelwidget .f2.ac.checkwm
+ttk::label .f2.fb.lprev.im -anchor center -text "No preview"
+
+pack .f2.fb.flist -side left -expand 1 -fill both
+pack .f2.fb.lprev -side left -expand 0 -fill both
+pack propagate .f2.fb.lprev 0
+pack .f2.fb.lprev.im -expand 1 -fill both
 
 
-pack [ttk::frame .m2] -side left -expand 1 -fill both
+# ttk::checkbutton .f2.ac.checkwm -text "Watermark" -onvalue true -offvalue false -variable watsel
 
-ttk::notebook .m2.ac
-ttk::frame .m2.ac.conv
-.m2.ac add .m2.ac.conv -text "Convert"
+ttk::frame .f2.ac.wm
 
-pack [ttk::labelframe .m2.ac.conv.size -text "Ouput Size" -padding 2 ] -side top -expand 0 -fill x
-ttk::treeview .m2.ac.conv.size.sizes -selectmode extended -show tree -yscrollcommand ".m2.ac.conv.size.sizescrl set" -height 4
+ttk::label .f2.ac.wm.ltext -text "Text"
+ttk::combobox .f2.ac.wm.watermarks -state readonly -textvariable wmtxt -values $watermarks
+.f2.ac.wm.watermarks set [lindex $watermarks 0]
+bind .f2.ac.wm.watermarks <<ComboboxSelected>> { wmproc [%W get] }
+
+ttk::label .f2.ac.wm.lsize -text "Size" -width 4
+set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
+ttk::spinbox .f2.ac.wm.fontsize -width 4 -values $fontsizes -validate key \
+	-validatecommand { string is integer %P }
+.f2.ac.wm.fontsize set $wmsize
+bind .f2.ac.wm.fontsize <ButtonRelease> { wmproc [%W get] }
+bind .f2.ac.wm.fontsize <KeyRelease> { wmproc [%W get] }
+
+ttk::label .f2.ac.wm.lpos -text "Position" -width 10
+ttk::combobox .f2.ac.wm.position -state readonly -textvariable wmpossel -values $wmpositions -width 10
+.f2.ac.wm.position set $wmpos
+bind .f2.ac.wm.position <<ComboboxSelected>> { wmproc [%W get] }
+
+ttk::label .f2.ac.wm.limg -text "Image"
+ttk::combobox .f2.ac.wm.iwatermarks -state readonly -textvariable wmimsrc -values $iwatermarks
+.f2.ac.wm.iwatermarks set [lindex $iwatermarks 0]
+bind .f2.ac.wm.iwatermarks <<ComboboxSelected>> { wmproc [%W get] }
+
+ttk::spinbox .f2.ac.wm.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
+	-validatecommand { string is integer %P }
+.f2.ac.wm.imgsize set $wmimsize
+bind .f2.ac.wm.imgsize <ButtonRelease> { wmproc [%W get] }
+bind .f2.ac.wm.imgsize <KeyRelease> { wmproc [%W get] }
+
+ttk::combobox .f2.ac.wm.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
+.f2.ac.wm.position set $wmpos
+bind .f2.ac.wm.iposition <<ComboboxSelected>> { wmproc [%W get] }
+
+grid .f2.ac.wm.lsize .f2.ac.wm.lpos -row 1 -sticky w
+grid .f2.ac.wm.ltext .f2.ac.wm.watermarks .f2.ac.wm.fontsize .f2.ac.wm.position -row 2 -sticky we
+grid .f2.ac.wm.limg .f2.ac.wm.iwatermarks .f2.ac.wm.imgsize .f2.ac.wm.iposition -row 3 -sticky we
+grid .f2.ac.wm.ltext .f2.ac.wm.limg -column 1
+grid .f2.ac.wm.watermarks .f2.ac.wm.iwatermarks -column 2
+grid .f2.ac.wm.lsize .f2.ac.wm.fontsize .f2.ac.wm.imgsize -column 3
+grid .f2.ac.wm.lpos .f2.ac.wm.position .f2.ac.wm.iposition -column 4
+grid columnconfigure .f2.ac.wm {2} -weight 4
+
+
+.f2.ac add .f2.ac.wm -text "Watermark"
+
+ttk::frame .f2.ac.sz
+
+.f2.ac add .f2.ac.sz -text "Resize"
+
+ttk::treeview .f2.ac.sz.sizes -selectmode extended -show tree -yscrollcommand ".f2.ac.sz.sscrl set" -height 4
 foreach size $sizes {
-	.m2.ac.conv.size.sizes insert {} end -text $size
+	.f2.ac.sz.sizes insert {} end -text $size
 }
-bind .m2.ac.conv.size.sizes <<TreeviewSelect>> { puts [%W selection] }
-ttk::scrollbar .m2.ac.conv.size.sizescrl -orient vertical -command { .m2.ac.conv.size.sizes yview }
-pack .m2.ac.conv.size.sizes -side left -expand 1 -fill x
-pack .m2.ac.conv.size.sizescrl -side left -fill y
-pack .m2.ac -fill x
+bind .f2.ac.sz.sizes <<TreeviewSelect>> { puts [%W selection] }
+ttk::scrollbar .f2.ac.sz.sscrl -orient vertical -command { .f2.ac.sz.sizes yview }
 
-pack [ttk::frame .m2.lprev -width 276 -height 276] -side top
-ttk::label .m2.lprev.im
+pack .f2.ac.sz.sizes -side left -expand 1 -fill both
+pack .f2.ac.sz.sscrl -side left -fill y
 
-pack .m2.lprev.im
+
+pack .f2 -side top -expand 1 -fill both
 
 
 # from http://wiki.tcl.tk/20930
