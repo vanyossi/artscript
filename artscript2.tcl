@@ -397,7 +397,8 @@ foreach col $fileheaders {
 
 dict for {inputfile datas} $inputfiles {
    dict with datas {
-			set imgid$inputfile [.f2.fb.flist insert {} end  -values "$inputfile $name $ext $size $oname"]
+			set values [list $inputfile $name $ext $size $oname]
+			set imgid$inputfile [.f2.fb.flist insert {} end  -values $values]
    }
 }
 
