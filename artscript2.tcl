@@ -47,15 +47,10 @@ set ::wmpos {SouthWest}
 set ::wmpositions [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
 #Place image watermark URL. /home/user/image
 set ::wmimsrc ""
-set ::iwatermarks [list \
-	"Logo" \
-	"Client Watermark" \
-]
-set ::iwatermarkspath [dict create \
+set ::iwatermarks [dict create \
 	"Logo" "/path/to/logo" \
 	"Client Watermark" "/path/to/watermarkimg" \
 ]
-# dict get $dic key
 set ::wmimpos "Center"
 set ::wmimsize "0"
 set ::wmimcomp "Over"
@@ -442,8 +437,10 @@ ttk::combobox .f2.ac.n.wm.position -state readonly -textvariable wmpossel -value
 bind .f2.ac.n.wm.position <<ComboboxSelected>> { wmproc [%W get] }
 
 ttk::label .f2.ac.n.wm.limg -text "Image"
-ttk::combobox .f2.ac.n.wm.iwatermarks -state readonly -textvariable wmimsrc -values $iwatermarks
-.f2.ac.n.wm.iwatermarks set [lindex $iwatermarks 0]
+# dict get $dic key
+set iwatermarksk [dict keys $iwatermarks]
+ttk::combobox .f2.ac.n.wm.iwatermarks -state readonly -textvariable wmimsrc -values $iwatermarksk
+.f2.ac.n.wm.iwatermarks set [lindex $iwatermarksk 0]
 bind .f2.ac.n.wm.iwatermarks <<ComboboxSelected>> { wmproc [%W get] }
 
 ttk::spinbox .f2.ac.n.wm.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
