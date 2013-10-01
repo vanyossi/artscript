@@ -116,26 +116,37 @@ if {[catch $argv] == 0 } {
 	exit
 }
 # listValidate:
+set inputfiles [dict create]
+set handlers [dict create]
 # Validates arguments input mimetypes, keeps images strip the rest
 # Creates a separate list for .kra, .xcf, .psd, .svg and .ora to process separatedly
-proc listValidate {} {
-	global argv ext hasinkscape hascalligra hasgimp
-	global gimplist calligralist inkscapelist identify inputfiles handlers ops fc
-	
-	set inputfiles [dict create]
-	set handlers [dict create]
-	set gimplist {}
-	set calligralist {}
-	set inkscapelist {}
-	set imlist {}
-	set fc 1
+proc listValidate { ltoval {counter 1}} {
+	global ext hasinkscape hascalligra hasgimp
+	global identify ops
+
+	proc setDictEntries { id fpath size ext h} {
+		global inputfiles handlers
+
+		set iname [file tail $fpath]
+		set apath [file normalize $fpath]
+		set ext [string trim $ext {.}]
+		
+		dict set inputfiles $id name $iname
+		dict set inputfiles $id oname $iname
+		dict set inputfiles $id size $size
+		dict set inputfiles $id ext $ext
+		dict set inputfiles $id path $apath
+		dict set handlers $iname $h
+	}
+
+	set fc $counter
 	
 	set identify "identify -quiet -format %wx%h\|%m\|%M\|"
 	set ops [dict create]
 	set options true
 	set lops 1
 	#We validate sort arguments into options and filelists
-	foreach i $argv {
+	foreach i $ltoval {
 		incr c
 		if { [string index $i 0] == ":" && $options} {
 			dict set ops $i [lindex $argv $c]
@@ -144,21 +155,19 @@ proc listValidate {} {
 		} elseif { $options && $lops == $c } {
 			set options false
 		}
+		#from here vars are not options but files
+		if {[file isdirectory $i]} {
+			listValidate [glob -nocomplain -directory $i -type f *] $fc
+			continue
+		}
 		set filext [string tolower [file extension $i] ]
 		set iname [file tail $i]
 		if {[lsearch $ext $filext ] >= 0 } {
 			if { [regexp {.xcf|.psd} $filext ] && $hasgimp } {
-				lappend gimplist $i
 
-				dict set inputfiles $fc name $iname
-				dict set inputfiles $fc oname $iname
-				set sizel [exec identify -format "%wx%h " $i ]
+				set size [lindex [exec identify -format "%wx%h " $i ] 0]
 
-				dict set inputfiles $fc size [lindex $sizel 0]
-				dict set inputfiles $fc ext [string trim $filext {.}]
-				dict set inputfiles $fc path [file normalize $i]
-				dict set handlers $iname "g"
-				#append lfiles "$fc Gimp: $i\n"
+				setDictEntries $fc $i $size $filext "g"
 				incr fc
 				continue
 
@@ -168,25 +177,17 @@ proc listValidate {} {
 					puts $msg
 					continue
 				}
-				lappend inkscapelist $i
 
 				set svgcon [exec inkscape -S $i | head -n 1]
 				set svgvals [lrange [split $svgcon {,}] end-1 end]
 				set size [expr {round([lindex $svgvals 0])}]
 				append size "x" [expr {round([lindex $svgvals 1])}]
 
-				dict set inputfiles $fc name $iname
-				dict set inputfiles $fc oname $iname
-				dict set inputfiles $fc size $size
-				dict set inputfiles $fc ext [string trim $filext {.}]
-				dict set inputfiles $fc path [file normalize $i]
-				dict set handlers $iname "i"
-				#append lfiles "$fc Ink: $i\n"
+				setDictEntries $fc $i $size $filext "i"
 				incr fc
 				continue
 
 			} elseif { [regexp {.kra|.ora|.xcf|.psd} $filext ] && $hascalligra } {
-				lappend calligralist $i
 				set size "N/A"
 				if { $filext == ".ora" } {
 					if { [catch { set zipcon [exec unzip -p $i stack.xml | grep image | head -n 1] } msg] } {
@@ -207,81 +208,71 @@ proc listValidate {} {
 						unset zipcon zipkey
 				}
 
-				dict set inputfiles $fc name $iname
-				dict set inputfiles $fc oname $iname
-				dict set inputfiles $fc size $size
-				dict set inputfiles $fc ext [string trim $filext {.}]
-				dict set inputfiles $fc path [file normalize $i]
-				dict set handlers $iname "k"
+				setDictEntries $fc $i $size $filext "k"
 				incr fc
 				continue
 
 			} else {
-				lappend imlist $i
 				if { [catch {set finfo [exec {*}[split $identify " "] $i ] } msg ] } {
 					puts $msg
 					append ::lstmsg "EE: $i discarted\n"
 					continue
 				} else {
-					set iminfo [split [string trim $finfo "|"] "|"]
+					set size [lindex [split [string trim $finfo "|"] "|"] 0]
 				}
-				dict set inputfiles $fc name [list $iname]
-				dict set inputfiles $fc oname [list $iname]
-				dict set inputfiles $fc size [lindex $iminfo 0]
-				dict set inputfiles $fc ext [string trim $filext {.}]
-				dict set inputfiles $fc path [file normalize $i]
-				dict set handlers $iname "m"
+
+				setDictEntries $fc $i $size $filext "m"
 				incr fc
 			}
 		} elseif { [string is boolean [file extension $i]] && !$options } {
 			if { [catch { set f [exec {*}[split $identify " "] $i ] } msg ] } {
 				puts $msg
 			} else {
-				incr fc
-				lappend imlist $i
 				if { [catch {set finfo [exec {*}[split $identify " "] $i ] } msg ] } {
 					puts $msg
 					append ::lstmsg "EE: $i discarted\n"
 					continue
-				} else {
-					set iminfo [split [string trim $finfo "|"] "|"]
 				}
-				dict set inputfiles $fc name [list $iname]
-				dict set inputfiles $fc oname [list $iname]
-				dict set inputfiles $fc size [lindex $iminfo 0]
-				dict set inputfiles $fc ext "[string tolower [lindex $iminfo 1]]"
-				dict set inputfiles $fc path [file normalize $i]
-				dict set handlers $iname "m"
+
+				set iminfo [split [string trim $finfo "|"] "|"]
+				set size [lindex $iminfo 0]
+				set filext [string tolower [lindex $iminfo 1]]
+
+				setDictEntries $fc $i $size $filext "m"
 				incr fc
-				#append lfiles "$fc Mag: $i\n"
 			}
 		}
 	}
-	incr fc -1
-	set argv $imlist
-	#Check if resulting lists have elements
-	if {[llength [dict keys $inputfiles]] == 0} {
-		alert ok info "Operation Done" "No image files selected Exiting"
-		exit
-	}
-	proc putsHandlers {c} {
-		global handlers
-		set ${c}fdict [dict filter $handlers script {k v} {expr {$v eq $c}}]
-		puts [dict keys [set ${c}fdict]]
-		#or puts [dict keys [subst $${c}fdict]]
-	}
-	putsHandlers "g"
-	putsHandlers "i"
-	putsHandlers "k"
-	putsHandlers "m"
 }
 #We run function to validate input mimetypes
-listValidate
+listValidate $argv
+
+#Check if resulting lists have elements
+proc getFilesTotal {} {
+	global inputfiles
+	return [llength [dict keys $inputfiles]]
+}
+
+if { [getFilesTotal] == 0} {
+	alert ok info "Operation Done" "No image files selected Exiting"
+	exit
+}
+
+proc putsHandlers {c} {
+	global handlers
+	set ${c}fdict [dict filter $handlers script {k v} {expr {$v eq $c}}]
+	puts [dict keys [set ${c}fdict]]
+	#or puts [dict keys [subst $${c}fdict]]
+}
+putsHandlers "g"
+putsHandlers "i"
+putsHandlers "k"
+putsHandlers "m"
 
 #--- Window options
-wm title . "Artscript $version -- $fc Files selected"
+wm title . "Artscript $version -- [getFilesTotal] Files selected"
 
-#Gui construct
+#Gui proc events
 proc wmproc {value} {
 	if { !$::watsel } {
 		.f3.rev.checkwm invoke
@@ -299,35 +290,8 @@ proc changeval {} {
 	}
 }
 
-pack [ttk::frame .f1] -side top -expand 0 -fill x
-ttk::label .f1.title -text "Artscript 2.0alpha"
-pack .f1.title -side left
-
-# pack [ttk::frame .m1] -side left -expand 1 -fill both
-
-# Paned view
-ttk::panedwindow .f2 -orient vertical
-ttk::frame .f2.fb
-ttk::panedwindow .f2.ac -orient horizontal
-.f2 add .f2.fb
-.f2 add .f2.ac
-
-# krita-thumbnailer %f /home/tara/.thumbnails/normal/$(echo -n file://%f | md5sum | cut -d ' ' -f 1).png 128
-# set path [file normalize $afile]
-# set mdfile [exec echo -n file://$path \| md5sum]
-# display $env(HOME)/.thumbnails/large/$mdfile.png
-# exec unzip -p morsa.kra preview.png | convert - GIF:/tmp/preview.gif
-# exec unzip -p mono.ora Thumbnails/thumbnail.png | convert - GIF:/tmp/preview.gif
-# set oldimg $img
-# set img [image create photo -file /tmp/preview.gif ]
-# % set img [image create photo -file /tmp/preview.gif ]
-# image1
-# % ttk::label .l -image $img
-# .l
-# % pack .l
-# .l configure -image $img
-# image delete $img $oldimg
-
+# Attempts to load a thumbnail from thumbnails folder if exists.
+# Creates a thumbnail for files missing Large thumbnail
 proc showPreview { w f {tryprev 1}} {
 	global inputfiles env
 
@@ -381,8 +345,10 @@ proc showPreview { w f {tryprev 1}} {
 		return
 
 	} elseif { [file exists $nthumb] } {
+		puts "$path has normal thumb"
 		makeThumb $path [list 256 $lthumb]
 	} else {
+		puts "$path has no thumb"
 		makeThumb $path [list 128 $nthumb 256 $lthumb]
 	}
 
@@ -391,22 +357,31 @@ proc showPreview { w f {tryprev 1}} {
 	}
 }
 
+#Gui Construct
+pack [ttk::frame .f1] -side top -expand 0 -fill x
+ttk::label .f1.title -text "Artscript 2.0alpha"
+pack .f1.title -side left
+
+# Paned view
+ttk::panedwindow .f2 -orient vertical
+ttk::frame .f2.fb
+ttk::panedwindow .f2.ac -orient horizontal
+.f2 add .f2.fb
+.f2 add .f2.ac
+
 set fileheaders { id input ext size outname }
 ttk::treeview .f2.fb.flist -columns $fileheaders -show headings -yscrollcommand ".f2.fb.sscrl set"
 foreach col $fileheaders {
 	set name [string totitle $col]
 	.f2.fb.flist heading $col -text $name -command [list treeSort .f2.fb.flist $col 0 ]
 }
-#.f2.fb.flist heading input -text "File" -command { treeSort .f2.fb.flist input 0 }
-#.f2.fb.flist heading output -text "Output Name" -command { treeSort .f2.fb.flist output 0 } 
-#.f2.fb.flist heading size -text "Size" -command { treeSort .f2.fb.flist size 0 } 
 .f2.fb.flist column id -width 48 -stretch 0
 .f2.fb.flist column ext -width 48 -stretch 0
 .f2.fb.flist column size -width 86 -stretch 0
 
 dict for {inputfile datas} $inputfiles {
    dict with datas {
-			set imgid$inputfile [.f2.fb.flist insert {} end  -values "{$inputfile} {$name} {$ext} {$size} {$oname}"]
+			set imgid$inputfile [.f2.fb.flist insert {} end  -values "$inputfile $name $ext $size $oname"]
    }
 }
 
@@ -646,7 +621,7 @@ proc getOutputName { {indx 0} } {
 }
 
 #gimp process
-proc processGimp [list [list olist $gimplist] ] {
+proc processGimp { olist } {
 	set ifiles ""
 	if [llength $olist] {
 		foreach i $olist {
@@ -679,7 +654,7 @@ proc processGimp [list [list olist $gimplist] ] {
 }
 
 #Inkscape converter
-proc processInkscape [list {outdir "/tmp"} [list olist $inkscapelist] ] {
+proc processInkscape { {outdir "/tmp"} olist } {
 	set ifiles ""
 	set sizeval [getSizeSel]
 	if [llength $olist] {
