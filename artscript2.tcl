@@ -290,6 +290,27 @@ proc changeval {} {
 	}
 }
 
+# from http://wiki.tcl.tk/20930
+proc treeSort {tree col direction} {
+# Build something we can sort
+    set data {}
+    foreach row [$tree children {}] {
+        lappend data [list [$tree set $row $col] $row]
+    }
+
+    set dir [expr {$direction ? "-decreasing" : "-increasing"}]
+    set r -1
+
+    # Now reshuffle the rows into the sorted order
+    foreach info [lsort -dictionary -index 0 $dir $data] {
+        $tree move [lindex $info 1] {} [incr r]
+    }
+
+    # Switch the heading so that it will sort in the opposite direction
+    set cmd [list treeSort $tree $col [expr {!$direction}]]
+    $tree heading $col -command $cmd
+}
+
 # Attempts to load a thumbnail from thumbnails folder if exists.
 # Creates a thumbnail for files missing Large thumbnail
 proc showPreview { w f {tryprev 1}} {
@@ -493,26 +514,6 @@ pack .f3.rev.checkwm
 
 pack .f3.rev -side left
 
-# from http://wiki.tcl.tk/20930
-proc treeSort {tree col direction} {
-# Build something we can sort
-    set data {}
-    foreach row [$tree children {}] {
-        lappend data [list [$tree set $row $col] $row]
-    }
-
-    set dir [expr {$direction ? "-decreasing" : "-increasing"}]
-    set r -1
-
-    # Now reshuffle the rows into the sorted order
-    foreach info [lsort -dictionary -index 0 $dir $data] {
-        $tree move [lindex $info 1] {} [incr r]
-    }
-
-    # Switch the heading so that it will sort in the opposite direction
-    set cmd [list treeSort $tree $col [expr {!$direction}]]
-    $tree heading $col -command $cmd
-}
 
 #Resize: returns the validated entry as wxh or ready true as "-resize wxh\>"
 proc getSizeSel { {collage false} {ready false}} {
