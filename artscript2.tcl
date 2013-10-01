@@ -46,6 +46,8 @@ set ::watermarks [list \
 	"$date" \
 ]
 set ::wmsize 10
+set ::wmcol "#000000"
+set ::wmop 0.8
 set ::wmpos {SouthWest}
 set ::wmpositions [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
 #Place image watermark URL. /home/user/image
@@ -57,10 +59,9 @@ set ::iwatermarks [dict create \
 set ::wmimpos "Center"
 set ::wmimsize "0"
 set ::wmimcomp "Over"
+set ::wmimop 100
 
 set ::watsel false
-
-set ::wmcol "#000000"
 
 #Sizes
 set ::sizes [list \
@@ -578,6 +579,19 @@ proc setColor { w col {direct 1} { title "Choose color"} } {
 	return $col
 }
 
+proc makeInt { w ft fl } {
+	set ::$w [format $ft $fl]
+}
+
+ttk::frame $wt.sc
+
+ttk::scale $wt.sc.txop -from .1 -to 1.0 -variable wmop -value $wmop -orient horizontal -command { makeInt wmop "%.1f"  }
+ttk::label $wt.sc.tolab -textvariable wmop
+
+ttk::scale $wt.sc.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { makeInt wmimop "%.0f"  }
+ttk::label $wt.sc.iolab -textvariable wmimop
+
+
 #Position widgets on frame using a grid
 grid $wt.lsize $wt.lpos $wt.wcol $wt.bcol -row 1 -sticky ws
 grid $wt.ltext $wt.watermarks $wt.fontsize $wt.position $wt.chos -row 2 -sticky we
@@ -589,15 +603,18 @@ grid $wt.lpos $wt.position $wt.iposition -column 4
 grid $wt.chos $wt.wcol $wt.iblend -column 5
 grid $wt.bcol -column 6
 grid $wt.chos $wt.iblend -columnspan 2
+grid $wt.sc -columnspan 6 -row 4
 grid columnconfigure $wt {2} -weight 3
+
+pack $wt.sc.tolab $wt.sc.txop $wt.sc.iolab $wt.sc.imop -side left
 
 
 .f2.ac.n add $wt -text "Watermark" -underline 0
 
 ttk::frame .f2.ac.n.sz
-
 .f2.ac.n add .f2.ac.n.sz -text "Resize" -underline 0
 
+#Size options
 ttk::treeview .f2.ac.n.sz.sizes -selectmode extended -show tree -yscrollcommand ".f2.ac.n.sz.sscrl set" -height 4
 foreach size $sizes {
 	.f2.ac.n.sz.sizes insert {} end -text $size
@@ -608,9 +625,7 @@ ttk::scrollbar .f2.ac.n.sz.sscrl -orient vertical -command { .f2.ac.n.sz.sizes y
 pack .f2.ac.n.sz.sizes -side left -expand 1 -fill both
 pack .f2.ac.n.sz.sscrl -side left -fill y
 
-
 ttk::frame .f2.ac.onam
-ttk::separator .f2.ac.sep -orient vertical
 
 .f2.ac add .f2.ac.n
 .f2.ac add .f2.ac.onam
