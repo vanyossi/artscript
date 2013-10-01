@@ -76,6 +76,9 @@ set ::sizes [list \
 	"50%" \
 ]
 
+#Extension & output
+set ::outext "jpg"
+
 #--=====
 #Don't modify below this line
 set ::version "v2.0-alpha"
@@ -281,7 +284,7 @@ wm title . "Artscript $version -- $fc Files selected"
 #Gui construct
 proc wmproc {value} {
 	if { !$::watsel } {
-		.f2.ac.wm.checkwm invoke
+		.f3.rev.checkwm invoke
 	}
 	puts $value
 }
@@ -305,7 +308,7 @@ pack .f1.title -side left
 # Paned view
 ttk::panedwindow .f2 -orient vertical
 ttk::frame .f2.fb
-ttk::notebook .f2.ac
+ttk::panedwindow .f2.ac -orient horizontal
 .f2 add .f2.fb
 .f2 add .f2.ac
 
@@ -389,7 +392,7 @@ proc showPreview { w f {tryprev 1}} {
 }
 
 set fileheaders { id input ext size outname }
-ttk::treeview .f2.fb.flist -columns $fileheaders -show headings
+ttk::treeview .f2.fb.flist -columns $fileheaders -show headings -yscrollcommand ".f2.fb.sscrl set"
 foreach col $fileheaders {
 	set name [string totitle $col]
 	.f2.fb.flist heading $col -text $name -command [list treeSort .f2.fb.flist $col 0 ]
@@ -408,83 +411,112 @@ dict for {inputfile datas} $inputfiles {
 }
 
 bind .f2.fb.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [lindex [%W item [%W selection] -values] 0] }
+ttk::scrollbar .f2.fb.sscrl -orient vertical -command { .f2.fb.flist yview }
 
-ttk::labelframe .f2.fb.lprev -width 276 -height 276 -padding 6 -labelanchor n -text "Thumbnail"
+
+ttk::labelframe .f2.fb.lprev -width 276 -height 292 -padding 6 -labelanchor n -text "Thumbnail"
 # -labelwidget .f2.ac.checkwm
 ttk::label .f2.fb.lprev.im -anchor center -text "No preview"
 
 pack .f2.fb.flist -side left -expand 1 -fill both
-pack .f2.fb.lprev -side left -expand 0 -fill both
+pack .f2.fb.sscrl .f2.fb.lprev -side left -expand 0 -fill both
 pack propagate .f2.fb.lprev 0
 pack .f2.fb.lprev.im -expand 1 -fill both
 
 
-# ttk::checkbutton .f2.ac.checkwm -text "Watermark" -onvalue true -offvalue false -variable watsel
+ttk::notebook .f2.ac.n
+ttk::frame .f2.ac.n.wm
 
-ttk::frame .f2.ac.wm
+ttk::label .f2.ac.n.wm.ltext -text "Text"
+ttk::combobox .f2.ac.n.wm.watermarks -state readonly -textvariable wmtxt -values $watermarks -width 32
+.f2.ac.n.wm.watermarks set [lindex $watermarks 0]
+bind .f2.ac.n.wm.watermarks <<ComboboxSelected>> { wmproc [%W get] }
 
-ttk::label .f2.ac.wm.ltext -text "Text"
-ttk::combobox .f2.ac.wm.watermarks -state readonly -textvariable wmtxt -values $watermarks
-.f2.ac.wm.watermarks set [lindex $watermarks 0]
-bind .f2.ac.wm.watermarks <<ComboboxSelected>> { wmproc [%W get] }
-
-ttk::label .f2.ac.wm.lsize -text "Size" -width 4
+ttk::label .f2.ac.n.wm.lsize -text "Size" -width 4
 set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
-ttk::spinbox .f2.ac.wm.fontsize -width 4 -values $fontsizes -validate key \
+ttk::spinbox .f2.ac.n.wm.fontsize -width 4 -values $fontsizes -validate key \
 	-validatecommand { string is integer %P }
-.f2.ac.wm.fontsize set $wmsize
-bind .f2.ac.wm.fontsize <ButtonRelease> { wmproc [%W get] }
-bind .f2.ac.wm.fontsize <KeyRelease> { wmproc [%W get] }
+.f2.ac.n.wm.fontsize set $wmsize
+bind .f2.ac.n.wm.fontsize <ButtonRelease> { wmproc [%W get] }
+bind .f2.ac.n.wm.fontsize <KeyRelease> { wmproc [%W get] }
 
-ttk::label .f2.ac.wm.lpos -text "Position" -width 10
-ttk::combobox .f2.ac.wm.position -state readonly -textvariable wmpossel -values $wmpositions -width 10
-.f2.ac.wm.position set $wmpos
-bind .f2.ac.wm.position <<ComboboxSelected>> { wmproc [%W get] }
+ttk::label .f2.ac.n.wm.lpos -text "Position" -width 10
+ttk::combobox .f2.ac.n.wm.position -state readonly -textvariable wmpossel -values $wmpositions -width 10
+.f2.ac.n.wm.position set $wmpos
+bind .f2.ac.n.wm.position <<ComboboxSelected>> { wmproc [%W get] }
 
-ttk::label .f2.ac.wm.limg -text "Image"
-ttk::combobox .f2.ac.wm.iwatermarks -state readonly -textvariable wmimsrc -values $iwatermarks
-.f2.ac.wm.iwatermarks set [lindex $iwatermarks 0]
-bind .f2.ac.wm.iwatermarks <<ComboboxSelected>> { wmproc [%W get] }
+ttk::label .f2.ac.n.wm.limg -text "Image"
+ttk::combobox .f2.ac.n.wm.iwatermarks -state readonly -textvariable wmimsrc -values $iwatermarks
+.f2.ac.n.wm.iwatermarks set [lindex $iwatermarks 0]
+bind .f2.ac.n.wm.iwatermarks <<ComboboxSelected>> { wmproc [%W get] }
 
-ttk::spinbox .f2.ac.wm.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
+ttk::spinbox .f2.ac.n.wm.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
 	-validatecommand { string is integer %P }
-.f2.ac.wm.imgsize set $wmimsize
-bind .f2.ac.wm.imgsize <ButtonRelease> { wmproc [%W get] }
-bind .f2.ac.wm.imgsize <KeyRelease> { wmproc [%W get] }
+.f2.ac.n.wm.imgsize set $wmimsize
+bind .f2.ac.n.wm.imgsize <ButtonRelease> { wmproc [%W get] }
+bind .f2.ac.n.wm.imgsize <KeyRelease> { wmproc [%W get] }
 
-ttk::combobox .f2.ac.wm.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
-.f2.ac.wm.position set $wmpos
-bind .f2.ac.wm.iposition <<ComboboxSelected>> { wmproc [%W get] }
+ttk::combobox .f2.ac.n.wm.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
+.f2.ac.n.wm.position set $wmpos
+bind .f2.ac.n.wm.iposition <<ComboboxSelected>> { wmproc [%W get] }
 
-grid .f2.ac.wm.lsize .f2.ac.wm.lpos -row 1 -sticky w
-grid .f2.ac.wm.ltext .f2.ac.wm.watermarks .f2.ac.wm.fontsize .f2.ac.wm.position -row 2 -sticky we
-grid .f2.ac.wm.limg .f2.ac.wm.iwatermarks .f2.ac.wm.imgsize .f2.ac.wm.iposition -row 3 -sticky we
-grid .f2.ac.wm.ltext .f2.ac.wm.limg -column 1
-grid .f2.ac.wm.watermarks .f2.ac.wm.iwatermarks -column 2
-grid .f2.ac.wm.lsize .f2.ac.wm.fontsize .f2.ac.wm.imgsize -column 3
-grid .f2.ac.wm.lpos .f2.ac.wm.position .f2.ac.wm.iposition -column 4
-grid columnconfigure .f2.ac.wm {2} -weight 4
+grid .f2.ac.n.wm.lsize .f2.ac.n.wm.lpos -row 1 -sticky w
+grid .f2.ac.n.wm.ltext .f2.ac.n.wm.watermarks .f2.ac.n.wm.fontsize .f2.ac.n.wm.position -row 2 -sticky we
+grid .f2.ac.n.wm.limg .f2.ac.n.wm.iwatermarks .f2.ac.n.wm.imgsize .f2.ac.n.wm.iposition -row 3 -sticky we
+grid .f2.ac.n.wm.ltext .f2.ac.n.wm.limg -column 1
+grid .f2.ac.n.wm.watermarks .f2.ac.n.wm.iwatermarks -column 2
+grid .f2.ac.n.wm.lsize .f2.ac.n.wm.fontsize .f2.ac.n.wm.imgsize -column 3
+grid .f2.ac.n.wm.lpos .f2.ac.n.wm.position .f2.ac.n.wm.iposition -column 4
+grid columnconfigure .f2.ac.n.wm {2} -weight 4
 
 
-.f2.ac add .f2.ac.wm -text "Watermark"
+.f2.ac.n add .f2.ac.n.wm -text "Watermark" -underline 0
 
-ttk::frame .f2.ac.sz
+ttk::frame .f2.ac.n.sz
 
-.f2.ac add .f2.ac.sz -text "Resize"
+.f2.ac.n add .f2.ac.n.sz -text "Resize" -underline 0
 
-ttk::treeview .f2.ac.sz.sizes -selectmode extended -show tree -yscrollcommand ".f2.ac.sz.sscrl set" -height 4
+ttk::treeview .f2.ac.n.sz.sizes -selectmode extended -show tree -yscrollcommand ".f2.ac.n.sz.sscrl set" -height 4
 foreach size $sizes {
-	.f2.ac.sz.sizes insert {} end -text $size
+	.f2.ac.n.sz.sizes insert {} end -text $size
 }
-bind .f2.ac.sz.sizes <<TreeviewSelect>> { puts [%W selection] }
-ttk::scrollbar .f2.ac.sz.sscrl -orient vertical -command { .f2.ac.sz.sizes yview }
+bind .f2.ac.n.sz.sizes <<TreeviewSelect>> { puts [%W selection] }
+ttk::scrollbar .f2.ac.n.sz.sscrl -orient vertical -command { .f2.ac.n.sz.sizes yview }
 
-pack .f2.ac.sz.sizes -side left -expand 1 -fill both
-pack .f2.ac.sz.sscrl -side left -fill y
+pack .f2.ac.n.sz.sizes -side left -expand 1 -fill both
+pack .f2.ac.n.sz.sscrl -side left -fill y
 
 
+ttk::frame .f2.ac.onam
+ttk::separator .f2.ac.sep -orient vertical
+
+.f2.ac add .f2.ac.n
+.f2.ac add .f2.ac.onam
+.f2.ac pane .f2.ac.n -weight 4
+.f2.ac pane .f2.ac.onam -weight 6
+
+# Output Suffix
+set formats [list png jpg gif ora keep]
+ttk::label .f2.ac.onam.ltext -text "Save to"
+ttk::combobox .f2.ac.onam.formats -state readonly -textvariable outext -values $formats
+.f2.ac.onam.formats set [lindex $formats 0]
+bind .f2.ac.onam.formats <<ComboboxSelected>> { puts [%W get] }
+
+pack .f2.ac.onam.formats
+
+
+#pack panned window
 pack .f2 -side top -expand 1 -fill both
 
+pack [ttk::frame .f3] -side top -expand 0 -fill x
+ttk::frame .f3.rev
+ttk::frame .f3.do
+
+ttk::checkbutton .f3.rev.checkwm -text "W" -onvalue true -offvalue false -variable watsel
+
+pack .f3.rev.checkwm
+
+pack .f3.rev -side left
 
 # from http://wiki.tcl.tk/20930
 proc treeSort {tree col direction} {
