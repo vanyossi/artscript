@@ -339,13 +339,13 @@ proc addTreevalues { w fdict } {
 	}
 }
 
+# Deletes the keys from tree(w), and sets deletes value to 1
+# TODO Remove all entries of file type. (filtering)
 proc removeTreeItem { w i } {
 	global inputfiles
 
 	foreach item $i {
-
 		set id [$w set $item id]
-
 		# TODO undo last delete
 		dict set inputfiles $id deleted 1
 		unset ::img::imgid$id
