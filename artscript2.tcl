@@ -463,6 +463,12 @@ proc scrollTabs { w i {dir 1} } {
 		}
 }
 
+proc comboBoxEditEvents { w } {
+	bind $w <<ComboboxSelected>> { wmproc [%W get] }
+	bind $w <Button-3> { %W configure -state normal }
+	bind $w <FocusOut> { %W configure -state readonly }
+}
+
 #Gui Construct
 pack [ttk::frame .f1] -side top -expand 0 -fill x
 ttk::label .f1.title -text "Artscript 2.0alpha"
@@ -519,7 +525,7 @@ ttk::label $wt.lpos -text "Position" -width 10
 ttk::label $wt.ltext -text "Text"
 ttk::combobox $wt.watermarks -state readonly -textvariable wmtxt -values $watermarks -width 28
 $wt.watermarks set [lindex $watermarks 0]
-bind $wt.watermarks <<ComboboxSelected>> { wmproc [%W get] }
+comboBoxEditEvents $wt.watermarks
 
 set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
 ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
