@@ -372,6 +372,19 @@ proc showPreview { w f {tryprev 1}} {
 		showPreview w $f 0
 	}
 }
+#Scroll trough tabs on a notebook.
+proc scrollTabs { w i {dir 1} } {
+		set tlist [llength [$w tabs]]
+		expr { $dir ? [set op ""] : [set op "-"] }
+		incr i [append ${op} 1]
+		if { $i < 0 } {
+			$w select [expr {$tlist-1}]
+		} elseif { $i == $tlist } {
+			$w select 0
+		} else {
+			$w select $i
+		}
+}
 
 #Gui Construct
 pack [ttk::frame .f1] -side top -expand 0 -fill x
@@ -417,8 +430,12 @@ pack .f2.fb.lprev.im -expand 1 -fill both
 
 
 ttk::notebook .f2.ac.n
+ttk::notebook::enableTraversal .f2.ac.n
+bind .f2.ac.n <ButtonPress-4> { scrollTabs %W [%W index current] 1 }
+bind .f2.ac.n <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
+
 set wt {.f2.ac.n.wm}
-ttk::frame $wt
+ttk::frame $wt -padding 6
 
 ttk::label $wt.lsize -text "Size" -width 4
 ttk::label $wt.lpos -text "Position" -width 10
@@ -462,11 +479,11 @@ $wt.iblend set $wmimcomp
 bind $wt.iblend <<ComboboxSelected>> { wmproc [%W get] }
 
 canvas $wt.chos -bg $wmcol -width 48 -height 28
-bind $wt.chos <Button> { set wmcol [setColor %W $wmcol] }
+bind $wt.chos <Button-1> { set wmcol [setColor %W $wmcol] }
 canvas $wt.wcol -bg white -width 24 -height 24
-bind $wt.wcol <Button> { set wmcol [setColor $wt.chos white 0]}
+bind $wt.wcol <Button-1> { set wmcol [setColor $wt.chos white 0]}
 canvas $wt.bcol -bg black -width 24 -height 24
-bind $wt.bcol <Button> { set wmcol [setColor $wt.chos black 0]}
+bind $wt.bcol <Button-1> { set wmcol [setColor $wt.chos black 0]}
 
 proc setColor { w col {direct 1} { title "Choose color"} } {
 	#Call color chooser and store value to set canvas color and get rgb values
