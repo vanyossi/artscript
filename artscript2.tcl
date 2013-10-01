@@ -417,54 +417,83 @@ pack .f2.fb.lprev.im -expand 1 -fill both
 
 
 ttk::notebook .f2.ac.n
-ttk::frame .f2.ac.n.wm
+set wt {.f2.ac.n.wm}
+ttk::frame $wt
 
-ttk::label .f2.ac.n.wm.ltext -text "Text"
-ttk::combobox .f2.ac.n.wm.watermarks -state readonly -textvariable wmtxt -values $watermarks -width 32
-.f2.ac.n.wm.watermarks set [lindex $watermarks 0]
-bind .f2.ac.n.wm.watermarks <<ComboboxSelected>> { wmproc [%W get] }
+ttk::label $wt.lsize -text "Size" -width 4
+ttk::label $wt.lpos -text "Position" -width 10
 
-ttk::label .f2.ac.n.wm.lsize -text "Size" -width 4
+ttk::label $wt.ltext -text "Text"
+ttk::combobox $wt.watermarks -state readonly -textvariable wmtxt -values $watermarks -width 28
+$wt.watermarks set [lindex $watermarks 0]
+bind $wt.watermarks <<ComboboxSelected>> { wmproc [%W get] }
+
 set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
-ttk::spinbox .f2.ac.n.wm.fontsize -width 4 -values $fontsizes -validate key \
+ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
 	-validatecommand { string is integer %P }
-.f2.ac.n.wm.fontsize set $wmsize
-bind .f2.ac.n.wm.fontsize <ButtonRelease> { wmproc [%W get] }
-bind .f2.ac.n.wm.fontsize <KeyRelease> { wmproc [%W get] }
+$wt.fontsize set $wmsize
+bind $wt.fontsize <ButtonRelease> { wmproc [%W get] }
+bind $wt.fontsize <KeyRelease> { wmproc [%W get] }
 
-ttk::label .f2.ac.n.wm.lpos -text "Position" -width 10
-ttk::combobox .f2.ac.n.wm.position -state readonly -textvariable wmpossel -values $wmpositions -width 10
-.f2.ac.n.wm.position set $wmpos
-bind .f2.ac.n.wm.position <<ComboboxSelected>> { wmproc [%W get] }
+ttk::combobox $wt.position -state readonly -textvariable wmpossel -values $wmpositions -width 8
+$wt.position set $wmpos
+bind $wt.position <<ComboboxSelected>> { wmproc [%W get] }
 
-ttk::label .f2.ac.n.wm.limg -text "Image"
+ttk::label $wt.limg -text "Image"
 # dict get $dic key
 set iwatermarksk [dict keys $iwatermarks]
-ttk::combobox .f2.ac.n.wm.iwatermarks -state readonly -textvariable wmimsrc -values $iwatermarksk
-.f2.ac.n.wm.iwatermarks set [lindex $iwatermarksk 0]
-bind .f2.ac.n.wm.iwatermarks <<ComboboxSelected>> { wmproc [%W get] }
+ttk::combobox $wt.iwatermarks -state readonly -textvariable wmimsrc -values $iwatermarksk
+$wt.iwatermarks set [lindex $iwatermarksk 0]
+bind $wt.iwatermarks <<ComboboxSelected>> { wmproc [%W get] }
 
-ttk::spinbox .f2.ac.n.wm.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
+ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
 	-validatecommand { string is integer %P }
-.f2.ac.n.wm.imgsize set $wmimsize
-bind .f2.ac.n.wm.imgsize <ButtonRelease> { wmproc [%W get] }
-bind .f2.ac.n.wm.imgsize <KeyRelease> { wmproc [%W get] }
+$wt.imgsize set $wmimsize
+bind $wt.imgsize <ButtonRelease> { wmproc [%W get] }
+bind $wt.imgsize <KeyRelease> { wmproc [%W get] }
 
-ttk::combobox .f2.ac.n.wm.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
-.f2.ac.n.wm.position set $wmpos
-bind .f2.ac.n.wm.iposition <<ComboboxSelected>> { wmproc [%W get] }
+ttk::combobox $wt.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 8
+$wt.position set $wmpos
+bind $wt.iposition <<ComboboxSelected>> { wmproc [%W get] }
 
-grid .f2.ac.n.wm.lsize .f2.ac.n.wm.lpos -row 1 -sticky w
-grid .f2.ac.n.wm.ltext .f2.ac.n.wm.watermarks .f2.ac.n.wm.fontsize .f2.ac.n.wm.position -row 2 -sticky we
-grid .f2.ac.n.wm.limg .f2.ac.n.wm.iwatermarks .f2.ac.n.wm.imgsize .f2.ac.n.wm.iposition -row 3 -sticky we
-grid .f2.ac.n.wm.ltext .f2.ac.n.wm.limg -column 1
-grid .f2.ac.n.wm.watermarks .f2.ac.n.wm.iwatermarks -column 2
-grid .f2.ac.n.wm.lsize .f2.ac.n.wm.fontsize .f2.ac.n.wm.imgsize -column 3
-grid .f2.ac.n.wm.lpos .f2.ac.n.wm.position .f2.ac.n.wm.iposition -column 4
-grid columnconfigure .f2.ac.n.wm {2} -weight 4
+set iblendmodes [list "Bumpmap" "Burn" "Color_Burn" "Color_Dodge" "Colorize" "Copy_Black" "Copy_Blue" "Copy_Cyan" "Copy_Green" "Copy_Magenta" "Copy_Opacity" "Copy_Red" "Copy_Yellow" "Darken" "DarkenIntensity" "Difference" "Divide" "Dodge" "Exclusion" "Hard_Light" "Hue" "Light" "Lighten" "LightenIntensity" "Linear_Burn" "Linear_Dodge" "Linear_Light" "Luminize" "Minus" "ModulusAdd" "ModulusSubtract" "Multiply" "Overlay" "Pegtop_Light" "Pin_Light" "Plus" "Saturate" "Screen" "Soft_Light" "Vivid_Light"]
+ttk::combobox $wt.iblend -state readonly -textvariable wmimcomp -values $iblendmodes -width 12
+$wt.iblend set $wmimcomp
+bind $wt.iblend <<ComboboxSelected>> { wmproc [%W get] }
+
+canvas $wt.chos -bg $wmcol -width 48 -height 28
+bind $wt.chos <Button> { set wmcol [setColor %W $wmcol] }
+canvas $wt.wcol -bg white -width 24 -height 24
+bind $wt.wcol <Button> { set wmcol [setColor $wt.chos white 0]}
+canvas $wt.bcol -bg black -width 24 -height 24
+bind $wt.bcol <Button> { set wmcol [setColor $wt.chos black 0]}
+
+proc setColor { w col {direct 1} { title "Choose color"} } {
+	#Call color chooser and store value to set canvas color and get rgb values
+	if { $direct } {
+		set col [tk_chooseColor -title $title -initialcolor $col -parent .]
+	}
+	if { [expr {$col ne "" ? 1 : 0}] } {
+		$w configure -bg $col
+	}
+	return $col
+}
+
+#Position widgets on frame using a grid
+grid $wt.lsize $wt.lpos $wt.wcol $wt.bcol -row 1 -sticky ws
+grid $wt.ltext $wt.watermarks $wt.fontsize $wt.position $wt.chos -row 2 -sticky we
+grid $wt.limg $wt.iwatermarks $wt.imgsize $wt.iposition $wt.iblend -row 3 -sticky we
+grid $wt.ltext $wt.limg -column 1
+grid $wt.watermarks $wt.iwatermarks -column 2
+grid $wt.lsize $wt.fontsize $wt.imgsize -column 3
+grid $wt.lpos $wt.position $wt.iposition -column 4
+grid $wt.chos $wt.wcol $wt.iblend -column 5
+grid $wt.bcol -column 6
+grid $wt.chos $wt.iblend -columnspan 2
+grid columnconfigure $wt {2} -weight 3
 
 
-.f2.ac.n add .f2.ac.n.wm -text "Watermark" -underline 0
+.f2.ac.n add $wt -text "Watermark" -underline 0
 
 ttk::frame .f2.ac.n.sz
 
