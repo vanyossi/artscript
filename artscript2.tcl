@@ -108,7 +108,8 @@ set hasinkscape [validate "inkscape"]
 #calligraconvert path, if true converts using calligra to /tmp/*.png
 set hascalligra [validate "calligraconverter"]
 
-#Check if we have files to work on, if not, finish program.
+#Check if we have files to work on, if not, finish program.q
+# TODO: look for binary paths using global $env variable
 if {[catch $argv] == 0 } { 
 	alert ok info "Operation Done" "No files selected Exiting"
 	exit
@@ -476,14 +477,14 @@ ttk::panedwindow .f2.ac -orient horizontal
 .f2 add .f2.fb
 .f2 add .f2.ac
 
-set fileheaders { id input fext size outname }
+set fileheaders { id input ext size outname }
 ttk::treeview .f2.fb.flist -columns $fileheaders -show headings -yscrollcommand ".f2.fb.sscrl set"
 foreach col $fileheaders {
 	set name [string totitle $col]
 	.f2.fb.flist heading $col -text $name -command [list treeSort .f2.fb.flist $col 0 ]
 }
 .f2.fb.flist column id -width 48 -stretch 0
-.f2.fb.flist column fext -width 48 -stretch 0
+.f2.fb.flist column ext -width 48 -stretch 0
 .f2.fb.flist column size -width 86 -stretch 0
 
 #Populate tree
