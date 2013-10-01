@@ -20,6 +20,9 @@
 package require Tk
 ttk::style theme use clam
 
+# Create the namespace
+namespace eval ::img { }
+
 set ::ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
 #set date values
 #Get a different number each run
@@ -131,9 +134,9 @@ proc listValidate { ltoval {counter 1}} {
 		dict set inputfiles $id size $size
 		dict set inputfiles $id ext $ext
 		dict set inputfiles $id path $apath
+		dict set inputfiles $id deleted 0
 		dict set handlers $iname $h
 	}
-
 	set fc $counter
 	
 	set identify "identify -quiet -format %wx%h\|%m\|%M\|"
@@ -243,9 +246,26 @@ proc listValidate { ltoval {counter 1}} {
 listValidate $argv
 
 #Check if resulting lists have elements
-proc getFilesTotal {} {
+proc getFilesTotal { { all 0} } {
 	global inputfiles
-	return [llength [dict keys $inputfiles]]
+
+	if {$all == 1 } {
+		dict for {id datas} $inputfiles {
+ 	 		dict with datas {
+				if { $deleted == 0 } {
+					lappend count $id
+				}
+ 	 		}
+		}
+	} else {
+		set count [dict keys $inputfiles]
+	}
+	#[dict filter $inputfiles script {k v} {expr {$v eq $c}}]
+	return [llength $count]
+}
+
+proc updateWinTitle {} {
+	wm title . "Artscript $::version -- [getFilesTotal 1] Files selected"
 }
 
 if { [getFilesTotal] == 0} {
@@ -267,6 +287,24 @@ putsHandlers "m"
 #--- Window options
 wm title . "Artscript $version -- [getFilesTotal] Files selected"
 
+proc openFiles {} {
+
+	global inputfiles
+	set exts [list $::ext]
+	set types " \
+	 	\"{Suported Images} 	$exts \"
+   	{{KRA, ORA}					{.ora .kra}		} \
+		{{SVG, AI}					{.svg .ai}		} \
+		{{XCF, PSD}					{.xcf .psd}		} \
+   	{{PNG}            	{.png}				} \
+		{{JPG, JPEG}        {.jpg .jpeg}	} \
+	"
+  set files [tk_getOpenFile -filetypes $types -initialdir $::env(HOME) -multiple 1]
+	listValidate $files [expr {[getFilesTotal]+1}]
+	addTreevalues .f2.fb.flist $inputfiles
+	updateWinTitle
+}
+
 #Gui proc events
 proc wmproc {value} {
 	if { !$::watsel } {
@@ -283,6 +321,38 @@ proc changeval {} {
 		dict set inputfiles $arg oname $oname
 		.m1.flist set [set imgid$arg] output $oname
 	}
+}
+
+proc addTreevalues { w fdict } {
+	# .f2.fb.flist
+	#puts [dict keys [set ${c}fdict]]
+	#or puts [dict keys [subst $${c}fdict]]
+	dict for {id datas} $fdict {
+		#check to see if id exists to avoid duplication
+		if { [info exists ::img::imgid$id] || [dict get $fdict $id deleted] } {
+			continue
+		}
+ 	  dict with datas {
+				set values [list $id $name $ext $size $oname]
+				set ::img::imgid$id [$w insert {} end -values $values]
+ 	  }
+	}
+}
+
+proc removeTreeItem { w i } {
+	global inputfiles
+
+	foreach item $i {
+
+		set id [$w set $item id]
+
+		# TODO undo last delete
+		dict set inputfiles $id deleted 1
+		unset ::img::imgid$id
+	}
+	# remove keys from tree
+	$w delete $i
+	updateWinTitle
 }
 
 # from http://wiki.tcl.tk/20930
@@ -309,7 +379,13 @@ proc treeSort {tree col direction} {
 # Attempts to load a thumbnail from thumbnails folder if exists.
 # Creates a thumbnail for files missing Large thumbnail
 proc showPreview { w f {tryprev 1}} {
+
 	global inputfiles env
+
+	#Do not process if selection is multiple
+	if {[llength $f] > 1} { return -code 3 }
+
+	set f [lindex [.f2.fb.flist item $f -values] 0]
 
 	proc makeThumb { path tsize } {
 		set cmd [dict create]
@@ -389,7 +465,9 @@ proc scrollTabs { w i {dir 1} } {
 #Gui Construct
 pack [ttk::frame .f1] -side top -expand 0 -fill x
 ttk::label .f1.title -text "Artscript 2.0alpha"
-pack .f1.title -side left
+ttk::button .f1.add -text "Add files" -command { puts [openFiles] }
+pack .f1.title .f1.add -side left
+
 
 # Paned view
 ttk::panedwindow .f2 -orient vertical
@@ -398,24 +476,21 @@ ttk::panedwindow .f2.ac -orient horizontal
 .f2 add .f2.fb
 .f2 add .f2.ac
 
-set fileheaders { id input ext size outname }
+set fileheaders { id input fext size outname }
 ttk::treeview .f2.fb.flist -columns $fileheaders -show headings -yscrollcommand ".f2.fb.sscrl set"
 foreach col $fileheaders {
 	set name [string totitle $col]
 	.f2.fb.flist heading $col -text $name -command [list treeSort .f2.fb.flist $col 0 ]
 }
 .f2.fb.flist column id -width 48 -stretch 0
-.f2.fb.flist column ext -width 48 -stretch 0
+.f2.fb.flist column fext -width 48 -stretch 0
 .f2.fb.flist column size -width 86 -stretch 0
 
-dict for {inputfile datas} $inputfiles {
-   dict with datas {
-			set values [list $inputfile $name $ext $size $oname]
-			set imgid$inputfile [.f2.fb.flist insert {} end  -values $values]
-   }
-}
+#Populate tree
+addTreevalues .f2.fb.flist $inputfiles
 
-bind .f2.fb.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [lindex [%W item [%W selection] -values] 0] }
+bind .f2.fb.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [%W selection] }
+bind .f2.fb.flist <Key-Delete> { removeTreeItem %W [%W selection] }
 ttk::scrollbar .f2.fb.sscrl -orient vertical -command { .f2.fb.flist yview }
 
 
