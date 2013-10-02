@@ -289,6 +289,11 @@ putsHandlers "m"
 #--- Window options
 wm title . "Artscript $version -- [getFilesTotal] Files selected"
 
+set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
+if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
+	wm iconphoto . -default $wmicon
+}
+
 proc openFiles {} {
 
 	global inputfiles
@@ -585,7 +590,7 @@ proc makeInt { w ft fl } {
 
 ttk::frame $wt.sc
 
-ttk::scale $wt.sc.txop -from .1 -to 1.0 -variable wmop -value $wmop -orient horizontal -command { makeInt wmop "%.1f"  }
+ttk::scale $wt.sc.txop -from 10 -to 100 -variable wmop -value $wmop -orient horizontal -command { makeInt wmop "%.0f"  }
 ttk::label $wt.sc.tolab -textvariable wmop
 
 ttk::scale $wt.sc.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { makeInt wmimop "%.0f"  }
