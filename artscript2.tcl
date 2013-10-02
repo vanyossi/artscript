@@ -47,9 +47,9 @@ set ::watermarks [list \
 ]
 set ::wmsize 10
 set ::wmcol "#000000"
-set ::wmop 0.8
-set ::wmpos {SouthWest}
-set ::wmpositions [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
+set ::wmop 80
+set ::wmpos "BottomRight"
+set ::wmpositions [list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom" "BottomRight"]
 #Place image watermark URL. /home/user/image
 set ::wmimsrc ""
 set ::iwatermarks [dict create \
@@ -319,6 +319,7 @@ proc wmproc {value} {
 	}
 	puts $value
 }
+
 proc changeval {} {
 	global inputfiles
 	foreach arg [dict keys $inputfiles] {
@@ -525,9 +526,12 @@ bind .f2.ac.n <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
 set wt {.f2.ac.n.wm}
 ttk::frame $wt -padding 6
 
+ttk::label $wt.lsel -text "Selection*"
 ttk::label $wt.lsize -text "Size" -width 4
 ttk::label $wt.lpos -text "Position" -width 10
+ttk::label $wt.lop -text "Opacity" -width 10
 
+ttk::checkbutton $wt.cbtx -onvalue true -offvalue false -variable watseltxt
 ttk::label $wt.ltext -text "Text"
 ttk::combobox $wt.watermarks -state readonly -textvariable wmtxt -values $watermarks -width 28
 $wt.watermarks set [lindex $watermarks 0]
@@ -540,10 +544,11 @@ $wt.fontsize set $wmsize
 bind $wt.fontsize <ButtonRelease> { wmproc [%W get] }
 bind $wt.fontsize <KeyRelease> { wmproc [%W get] }
 
-ttk::combobox $wt.position -state readonly -textvariable wmpossel -values $wmpositions -width 8
+ttk::combobox $wt.position -state readonly -textvariable wmpossel -values $wmpositions -width 10
 $wt.position set $wmpos
-bind $wt.position <<ComboboxSelected>> { wmproc [%W get] }
+bind $wt.position <<ComboboxSelected>> { wmproc [%W current] }
 
+ttk::checkbutton $wt.cbim -onvalue true -offvalue false -variable watselimg
 ttk::label $wt.limg -text "Image"
 # dict get $dic key
 set iwatermarksk [dict keys $iwatermarks]
@@ -557,21 +562,24 @@ $wt.imgsize set $wmimsize
 bind $wt.imgsize <ButtonRelease> { wmproc [%W get] }
 bind $wt.imgsize <KeyRelease> { wmproc [%W get] }
 
-ttk::combobox $wt.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 8
+ttk::combobox $wt.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
 $wt.position set $wmpos
-bind $wt.iposition <<ComboboxSelected>> { wmproc [%W get] }
+bind $wt.iposition <<ComboboxSelected>> { wmproc [%W current] }
 
-set iblendmodes [list "Bumpmap" "Burn" "Color_Burn" "Color_Dodge" "Colorize" "Copy_Black" "Copy_Blue" "Copy_Cyan" "Copy_Green" "Copy_Magenta" "Copy_Opacity" "Copy_Red" "Copy_Yellow" "Darken" "DarkenIntensity" "Difference" "Divide" "Dodge" "Exclusion" "Hard_Light" "Hue" "Light" "Lighten" "LightenIntensity" "Linear_Burn" "Linear_Dodge" "Linear_Light" "Luminize" "Minus" "ModulusAdd" "ModulusSubtract" "Multiply" "Overlay" "Pegtop_Light" "Pin_Light" "Plus" "Saturate" "Screen" "Soft_Light" "Vivid_Light"]
-ttk::combobox $wt.iblend -state readonly -textvariable wmimcomp -values $iblendmodes -width 12
-$wt.iblend set $wmimcomp
-bind $wt.iblend <<ComboboxSelected>> { wmproc [%W get] }
+proc makeInt { w ft fl } {
+	set ::$w [format $ft $fl]
+}
 
-canvas $wt.chos -bg $wmcol -width 48 -height 28
-bind $wt.chos <Button-1> { set wmcol [setColor %W $wmcol] }
-canvas $wt.wcol -bg white -width 24 -height 24
-bind $wt.wcol <Button-1> { set wmcol [setColor $wt.chos white 0]}
-canvas $wt.bcol -bg black -width 24 -height 24
-bind $wt.bcol <Button-1> { set wmcol [setColor $wt.chos black 0]}
+ttk::scale $wt.txop -from 10 -to 100 -variable wmop -value $wmop -orient horizontal -command { makeInt wmop "%.0f"  }
+ttk::label $wt.tolab -width 3 -textvariable wmop
+
+ttk::scale $wt.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { makeInt wmimop "%.0f"  }
+ttk::label $wt.iolab -width 3 -textvariable wmimop
+
+ttk::frame $wt.st
+ttk::label $wt.st.txcol -text "Text Color"
+ttk::label $wt.st.imstyle -text "Image Blending"
+ttk::separator $wt.st.sep -orient vertical
 
 proc setColor { w col {direct 1} { title "Choose color"} } {
 	#Call color chooser and store value to set canvas color and get rgb values
@@ -584,34 +592,36 @@ proc setColor { w col {direct 1} { title "Choose color"} } {
 	return $col
 }
 
-proc makeInt { w ft fl } {
-	set ::$w [format $ft $fl]
-}
+canvas $wt.st.chos -bg $wmcol -width 48 -height 28
+bind $wt.st.chos <Button-1> { set wmcol [setColor %W $wmcol] }
+canvas $wt.st.wcol -bg white -width 24 -height 24
+bind $wt.st.wcol <Button-1> { set wmcol [setColor $wt.st.chos white 0]}
+canvas $wt.st.bcol -bg black -width 24 -height 24
+bind $wt.st.bcol <Button-1> { set wmcol [setColor $wt.st.chos black 0]}
 
-ttk::frame $wt.sc
-
-ttk::scale $wt.sc.txop -from 10 -to 100 -variable wmop -value $wmop -orient horizontal -command { makeInt wmop "%.0f"  }
-ttk::label $wt.sc.tolab -textvariable wmop
-
-ttk::scale $wt.sc.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { makeInt wmimop "%.0f"  }
-ttk::label $wt.sc.iolab -textvariable wmimop
+set iblendmodes [list "Bumpmap" "Burn" "Color_Burn" "Color_Dodge" "Colorize" "Copy_Black" "Copy_Blue" "Copy_Cyan" "Copy_Green" "Copy_Magenta" "Copy_Opacity" "Copy_Red" "Copy_Yellow" "Darken" "DarkenIntensity" "Difference" "Divide" "Dodge" "Exclusion" "Hard_Light" "Hue" "Light" "Lighten" "LightenIntensity" "Linear_Burn" "Linear_Dodge" "Linear_Light" "Luminize" "Minus" "ModulusAdd" "ModulusSubtract" "Multiply" "Overlay" "Pegtop_Light" "Pin_Light" "Plus" "Saturate" "Screen" "Soft_Light" "Vivid_Light"]
+ttk::combobox $wt.st.iblend -state readonly -textvariable wmimcomp -values $iblendmodes -width 12
+$wt.st.iblend set $wmimcomp
+bind $wt.st.iblend <<ComboboxSelected>> { wmproc [%W get] }
 
 
+set wtp 2
 #Position widgets on frame using a grid
-grid $wt.lsize $wt.lpos $wt.wcol $wt.bcol -row 1 -sticky ws
-grid $wt.ltext $wt.watermarks $wt.fontsize $wt.position $wt.chos -row 2 -sticky we
-grid $wt.limg $wt.iwatermarks $wt.imgsize $wt.iposition $wt.iblend -row 3 -sticky we
-grid $wt.ltext $wt.limg -column 1
-grid $wt.watermarks $wt.iwatermarks -column 2
-grid $wt.lsize $wt.fontsize $wt.imgsize -column 3
-grid $wt.lpos $wt.position $wt.iposition -column 4
-grid $wt.chos $wt.wcol $wt.iblend -column 5
-grid $wt.bcol -column 6
-grid $wt.chos $wt.iblend -columnspan 2
-grid $wt.sc -columnspan 6 -row 4
-grid columnconfigure $wt {2} -weight 3
+grid $wt.lsize $wt.lpos $wt.lop -row 1 -sticky ws
+grid $wt.cbtx $wt.ltext $wt.watermarks $wt.fontsize $wt.position $wt.txop $wt.tolab -row 2 -sticky we -padx $wtp -pady $wtp
+grid $wt.cbim $wt.limg $wt.iwatermarks $wt.imgsize $wt.iposition $wt.imop $wt.iolab -row 3 -sticky we -padx $wtp -pady $wtp
+grid $wt.cbtx $wt.cbim -column 1 -padx 0 -ipadx 0
+grid $wt.ltext $wt.limg -column 2
+grid $wt.watermarks $wt.iwatermarks -column 3
+grid $wt.lsize $wt.fontsize $wt.imgsize -column 4
+grid $wt.lpos $wt.position $wt.iposition -column 5
+grid $wt.lop $wt.txop $wt.imop -column 6
+grid $wt.tolab $wt.iolab -column 7
+grid $wt.st -row 4 -column 3 -columnspan 4 -sticky we -pady 4
+grid columnconfigure $wt {3} -weight 1
 
-pack $wt.sc.tolab $wt.sc.txop $wt.sc.iolab $wt.sc.imop -side left
+pack $wt.st.txcol $wt.st.chos $wt.st.wcol $wt.st.bcol $wt.st.sep $wt.st.imstyle $wt.st.iblend -expand 1 -side left -fill x
+pack configure $wt.st.txcol $wt.st.chos $wt.st.wcol $wt.st.bcol $wt.st.imstyle -expand 0
 
 
 .f2.ac.n add $wt -text "Watermark" -underline 0
@@ -634,8 +644,8 @@ ttk::frame .f2.ac.onam
 
 .f2.ac add .f2.ac.n
 .f2.ac add .f2.ac.onam
-.f2.ac pane .f2.ac.n -weight 4
-.f2.ac pane .f2.ac.onam -weight 6
+.f2.ac pane .f2.ac.n -weight 6
+.f2.ac pane .f2.ac.onam -weight 4
 
 # Output Suffix
 set formats [list png jpg gif ora keep]
@@ -660,7 +670,7 @@ pack .f3.rev.checkwm
 
 pack .f3.rev -side left
 
-
+set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
 #Resize: returns the validated entry as wxh or ready true as "-resize wxh\>"
 proc getSizeSel { {collage false} {ready false}} {
 	if { [string is list $::sizext] } {
