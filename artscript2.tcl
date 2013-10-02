@@ -387,7 +387,7 @@ proc showPreview { w f {tryprev 1}} {
 	#Do not process if selection is multiple
 	if {[llength $f] > 1} { return -code 3 }
 
-	set f [lindex [.f2.fb.flist item $f -values] 0]
+	set id [lindex [.f2.fb.flist item $f -values] 0]
 
 	proc makeThumb { path tsize } {
 		set cmd [dict create]
@@ -417,7 +417,7 @@ proc showPreview { w f {tryprev 1}} {
 		catch {file delete $tmpfile}
 	}
 
-	set path [dict get $inputfiles $f path]
+	set path [dict get $inputfiles $id path]
 
 	set thumbname [lindex [exec echo -n "file://$path" \| md5sum] 0]
 	set thumbdir "$env(HOME)/.thumbnails"
