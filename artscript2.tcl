@@ -82,23 +82,15 @@ set ::outext "jpg"
 #Don't modify below this line
 set ::version "v2.0-alpha"
 set ::lstmsg ""
+# TODO remove this list of global tcl vars. set all user vars in a pair list value, or array.
 set ::gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_pkgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
 #Function to send message boxes
 proc alert {type icon title msg} {
 		tk_messageBox -type $type -icon $icon -title $title \
 		-message $msg
 }
-#Validation Functions
-#Finds program trying to get program version, return 0 if program missing
-#proc validate {program} {
-#	catch {set fail [exec -ignorestderr $program --version]} msg
-#	if { [catch {set fail}] eq "1"} {
-#		puts "$msg"
-#		return 0
-#	}
-#  puts "$program found"
-#	return 1
-# }
+
+# TODO: look for binary paths using global $env variable
 proc validate {program} {
 	expr { ![catch {exec which $program}] ? [return 1] : [return 0] }
 }
@@ -109,21 +101,14 @@ set hasinkscape [validate "inkscape"]
 #calligraconvert path, if true converts using calligra to /tmp/*.png
 set hascalligra [validate "calligraconverter"]
 
-#Check if we have files to work on, if not, finish program.q
-# TODO: look for binary paths using global $env variable
-if {[catch $argv] == 0 } { 
-	alert ok info "Operation Done" "No files selected Exiting"
-	exit
-}
-# listValidate:
+# Global dictionaries, files values, files who process
 set inputfiles [dict create]
 set handlers [dict create]
-# Validates arguments input mimetypes, keeps images strip the rest
-# Creates a separate list for .kra, .xcf, .psd, .svg and .ora to process separatedly
+# Checks the files listed in args to be valid files supported	
 proc listValidate { ltoval {counter 1}} {
 	global ext hasinkscape hascalligra hasgimp
 	global identify ops
-
+	
 	proc setDictEntries { id fpath size ext h} {
 		global inputfiles handlers
 
@@ -139,14 +124,19 @@ proc listValidate { ltoval {counter 1}} {
 		dict set inputfiles $id deleted 0
 		dict set handlers $iname $h
 	}
+	# Keep $fc adding up if proc is called a second time. TODO (perhaps make global)
 	set fc $counter
 	
+	# TODO make functions work with a single identify format { identify -quiet -format "%wx%h:%m:%M " }
+	# Last returns a list of (n) nunber of layers the image has
 	set identify "identify -quiet -format %wx%h\|%m\|%M\|"
+	# Variable to store option arguments:ex :p xx.preset
 	set ops [dict create]
 	set options true
 	set lops 1
 	#We validate sort arguments into options and filelists
 	foreach i $ltoval {
+		# TODO inset while to avoid evaluating this when options is set to false
 		incr c
 		if { [string index $i 0] == ":" && $options} {
 			dict set ops $i [lindex $argv $c]
@@ -155,13 +145,15 @@ proc listValidate { ltoval {counter 1}} {
 		} elseif { $options && $lops == $c } {
 			set options false
 		}
-		#from here vars are not options but files
+		# from here vars are not options but files
+		# Call itself with directory contents if arg is dir
 		if {[file isdirectory $i]} {
 			listValidate [glob -nocomplain -directory $i -type f *] $fc
 			continue
 		}
 		set filext [string tolower [file extension $i] ]
 		set iname [file tail $i]
+
 		if {[lsearch $ext $filext ] >= 0 } {
 			if { [regexp {.xcf|.psd} $filext ] && $hasgimp } {
 
@@ -172,14 +164,18 @@ proc listValidate { ltoval {counter 1}} {
 				continue
 
 			} elseif { [regexp {.svg|.ai} $filext ] && $hasinkscape } {
+
 				if { [catch { exec inkscape -S $i | head -n 1 } msg] } {
 					append lstmsg "EE: $i discarted\n"
 					puts $msg
 					continue
 				}
-
+				
+				# TODO get rid of head cmd
 				set svgcon [exec inkscape -S $i | head -n 1]
+				# Get the last elements of first line == w x h
 				set svgvals [lrange [split $svgcon {,}] end-1 end]
+				# Make float to int. TODO check if format "%.0f" works best here
 				set size [expr {round([lindex $svgvals 0])}]
 				append size "x" [expr {round([lindex $svgvals 1])}]
 
@@ -189,6 +185,8 @@ proc listValidate { ltoval {counter 1}} {
 
 			} elseif { [regexp {.kra|.ora|.xcf|.psd} $filext ] && $hascalligra } {
 				set size "N/A"
+				# TODO Simplify
+				# Get contents from file and parse them into Size values.
 				if { $filext == ".ora" } {
 					if { [catch { set zipcon [exec unzip -p $i stack.xml | grep image | head -n 1] } msg] } {
 						continue
@@ -212,6 +210,7 @@ proc listValidate { ltoval {counter 1}} {
 				incr fc
 				continue
 
+			# Catch magick errors. Some files have the extension but are not valid types
 			} else {
 				if { [catch {set finfo [exec {*}[split $identify " "] $i ] } msg ] } {
 					puts $msg
@@ -224,6 +223,9 @@ proc listValidate { ltoval {counter 1}} {
 				setDictEntries $fc $i $size $filext "m"
 				incr fc
 			}
+		
+		# When no extension we still check if file is valid image file, this can't tell
+		# if image type is openraster, krita or gimp valid. Need to work with mimes.
 		} elseif { [string is boolean [file extension $i]] && !$options } {
 			if { [catch { set f [exec {*}[split $identify " "] $i ] } msg ] } {
 				puts $msg
@@ -244,14 +246,15 @@ proc listValidate { ltoval {counter 1}} {
 		}
 	}
 }
-#We run function to validate input mimetypes
+# Validate input filetypes
 listValidate $argv
 
-#Check if resulting lists have elements
+# Returns total of files in dict except for flagged as deleted.
+# TODO all boolean is reversed.
 proc getFilesTotal { { all 0} } {
 	global inputfiles
 
-	if {$all == 1 } {
+	if { $all == 1 } {
 		dict for {id datas} $inputfiles {
  	 		dict with datas {
 				if { $deleted == 0 } {
@@ -262,7 +265,6 @@ proc getFilesTotal { { all 0} } {
 	} else {
 		set count [dict keys $inputfiles]
 	}
-	#[dict filter $inputfiles script {k v} {expr {$v eq $c}}]
 	return [llength $count]
 }
 
@@ -270,11 +272,7 @@ proc updateWinTitle {} {
 	wm title . "Artscript $::version -- [getFilesTotal 1] Files selected"
 }
 
-if { [getFilesTotal] == 0} {
-	alert ok info "Operation Done" "No image files selected Exiting"
-	exit
-}
-
+# Returns a list with all keys that match value == c
 proc putsHandlers {c} {
 	global handlers
 	set ${c}fdict [dict filter $handlers script {k v} {expr {$v eq $c}}]
@@ -289,13 +287,13 @@ putsHandlers "m"
 #--- Window options
 wm title . "Artscript $version -- [getFilesTotal] Files selected"
 
+# We test if icon exist before addin it to the wm
 set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
 if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 	wm iconphoto . -default $wmicon
 }
 
 proc openFiles {} {
-
 	global inputfiles
 	set exts [list $::ext]
 	set types " \
@@ -306,20 +304,26 @@ proc openFiles {} {
 	{{PNG}           {.png}       } \
 	{{JPG, JPEG}     {.jpg .jpeg} } \
 	"
-  set files [tk_getOpenFile -filetypes $types -initialdir $::env(HOME) -multiple 1]
-	listValidate $files [expr {[getFilesTotal]+1}]
-	addTreevalues .f2.fb.flist $inputfiles
+	set files [tk_getOpenFile -filetypes $types -initialdir $::env(HOME) -multiple 1]
+	
+	listValidate $files [expr {[getFilesTotal]+1}] ; # Add 1 to keep global counter id in sync
+	# TODO Instead of using global inputfiles we could create a trasition dict and append to it.
+	addTreevalues .f2.fb.flist $inputfiles 
 	updateWinTitle
 }
 
-#Gui proc events
+# ----=== Gui proc events ===----
+
+# Checks checkbox state, turns on if off and returns value.
+# TODO Make versatile to any checkbox
 proc wmproc {value} {
 	if { !$::watsel } {
 		.f3.rev.checkwm invoke
 	}
 	puts $value
 }
-
+# Sets a custom value to any key of all members o the dict
+# TODO complete the function. recieves widget, inputdict, key to alter, script
 proc changeval {} {
 	global inputfiles
 	foreach arg [dict keys $inputfiles] {
@@ -330,7 +334,7 @@ proc changeval {} {
 		.m1.flist set [set imgid$arg] output $oname
 	}
 }
-
+# Get nested dict values and place them in the tree $w
 proc addTreevalues { w fdict } {
 	# .f2.fb.flist
 	#puts [dict keys [set ${c}fdict]]
@@ -365,7 +369,7 @@ proc removeTreeItem { w i } {
 
 # from http://wiki.tcl.tk/20930
 proc treeSort {tree col direction} {
-# Build something we can sort
+	# Build something we can sort
     set data {}
     foreach row [$tree children {}] {
         lappend data [list [$tree set $row $col] $row]
@@ -388,13 +392,9 @@ proc treeSort {tree col direction} {
 # Creates a thumbnail for files missing Large thumbnail
 proc showPreview { w f {tryprev 1}} {
 
-	global inputfiles env
-
-	#Do not process if selection is multiple
-	if {[llength $f] > 1} { return -code 3 }
-
-	set id [lindex [.f2.fb.flist item $f -values] 0]
-
+	# First define subprocesses
+	# TODO, set a rename proc "" to delete process and make it trully local (or lambas?)
+	# makeThumb creates a thumbnail based on path (file type) makes requested sizes.
 	proc makeThumb { path tsize } {
 		set cmd [dict create]
 		dict set cmd .ora {Thumbnails/thumbnail.png}
@@ -404,11 +404,13 @@ proc showPreview { w f {tryprev 1}} {
 
 		if { [regexp {.ora|.kra} $filext ] } {
 			set container [dict get $cmd $filext]
+			#unzip to location tmp$container
 			catch {exec unzip $path $container -d /tmp/}
 			set tmpfile "/tmp/$container"
 			set path $tmpfile
 
-			# remove gimp and psd thumnail if we cannot figure it out how to keep GUI responsive
+		# Remove gimp and psd thumnail if we cannot figure it out how to keep GUI responsive
+		# Or: force use of tmp file from convert (faster) instead of savind a preview.
 		} elseif {[regexp {.xcf|.psd} $filext ]} {
 			set tmpfile "atk-gimpprev.png"
 			set cmd "(let* ( (image (car (gimp-file-load 1 \"$path\" \"$path\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"/tmp/$tmpfile\" \"/tmp/$tmpfile\") )(gimp-quit 0)"
@@ -423,13 +425,23 @@ proc showPreview { w f {tryprev 1}} {
 		catch {file delete $tmpfile}
 	}
 
-	set path [dict get $inputfiles $id path]
+	global inputfiles env
 
+	# Do not process if selection is multiple
+	if {[llength $f] > 1} {
+		return -code 3
+	}
+	# TODO, get value with no lindex: .t set $f id
+	set id [lindex [.f2.fb.flist item $f -values] 0]
+	set path [dict get $inputfiles $id path]
+	# Creates md5 checksum from text string: TODO avoid using echo
+	# exec md5sum << "string" and string trim $hash {- }
 	set thumbname [lindex [exec echo -n "file://$path" \| md5sum] 0]
 	set thumbdir "$env(HOME)/.thumbnails"
 	set lthumb "${thumbdir}/large/$thumbname.png"
 	set nthumb "${thumbdir}/normal/$thumbname.png"
 
+	# Displays preview in widget, Make proc of this.
 	if { [file exists $lthumb ] } {
 		global img oldimg
 		set prevgif {/tmp/atkpreview.gif}
@@ -442,7 +454,8 @@ proc showPreview { w f {tryprev 1}} {
 		catch {image delete $oldimg}
 
 		catch {file delete $prevgif}
-		return
+		return ; # Exits parent proc
+		# As a proc it has to return true false
 
 	} elseif { [file exists $nthumb] } {
 		puts "$path has normal thumb"
@@ -456,9 +469,11 @@ proc showPreview { w f {tryprev 1}} {
 		showPreview w $f 0
 	}
 }
-#Scroll trough tabs on a notebook.
+
+# Scroll trough tabs on a notebook. (dir = direction)
 proc scrollTabs { w i {dir 1} } {
 		set tlist [llength [$w tabs]]
+		# Defines if we add or res
 		expr { $dir ? [set op ""] : [set op "-"] }
 		incr i [append ${op} 1]
 		if { $i < 0 } {
@@ -470,26 +485,31 @@ proc scrollTabs { w i {dir 1} } {
 		}
 }
 
+# Defines a combobox editable with right click
 proc comboBoxEditEvents { w } {
 	bind $w <<ComboboxSelected>> { wmproc [%W get] }
 	bind $w <Button-3> { %W configure -state normal }
 	bind $w <FocusOut> { %W configure -state readonly }
 }
 
-#Gui Construct
+
+# ----=== Gui Construct ===----
+# TODO Make every frame a procedure to ease movement of the parts
+# Top menu panel
 pack [ttk::frame .f1] -side top -expand 0 -fill x
 ttk::label .f1.title -text "Artscript 2.0alpha"
 ttk::button .f1.add -text "Add files" -command { puts [openFiles] }
 pack .f1.title .f1.add -side left
 
 
-# Paned view
+# Paned views, File manager and options
 ttk::panedwindow .f2 -orient vertical
 ttk::frame .f2.fb
 ttk::panedwindow .f2.ac -orient horizontal
 .f2 add .f2.fb
 .f2 add .f2.ac
 
+# --== File manager treeeview start ==
 set fileheaders { id input ext size outname }
 ttk::treeview .f2.fb.flist -columns $fileheaders -show headings -yscrollcommand ".f2.fb.sscrl set"
 foreach col $fileheaders {
@@ -507,22 +527,24 @@ bind .f2.fb.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [%W selection] }
 bind .f2.fb.flist <Key-Delete> { removeTreeItem %W [%W selection] }
 ttk::scrollbar .f2.fb.sscrl -orient vertical -command { .f2.fb.flist yview }
 
-
+# --== Thumbnail
 ttk::labelframe .f2.fb.lprev -width 276 -height 292 -padding 6 -labelanchor n -text "Thumbnail"
 # -labelwidget .f2.ac.checkwm
 ttk::label .f2.fb.lprev.im -anchor center -text "No preview"
+
 
 pack .f2.fb.flist -side left -expand 1 -fill both
 pack .f2.fb.sscrl .f2.fb.lprev -side left -expand 0 -fill both
 pack propagate .f2.fb.lprev 0
 pack .f2.fb.lprev.im -expand 1 -fill both
 
-
+# --== Option tabs
 ttk::notebook .f2.ac.n
 ttk::notebook::enableTraversal .f2.ac.n
 bind .f2.ac.n <ButtonPress-4> { scrollTabs %W [%W index current] 1 }
 bind .f2.ac.n <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
 
+# Set a var to ease modularization. TODO: procs
 set wt {.f2.ac.n.wm}
 ttk::frame $wt -padding 6
 
@@ -531,12 +553,14 @@ ttk::label $wt.lsize -text "Size" -width 4
 ttk::label $wt.lpos -text "Position" -width 10
 ttk::label $wt.lop -text "Opacity" -width 10
 
+# Text watermark ops
 ttk::checkbutton $wt.cbtx -onvalue true -offvalue false -variable watseltxt
 ttk::label $wt.ltext -text "Text"
 ttk::combobox $wt.watermarks -state readonly -textvariable wmtxt -values $watermarks -width 28
 $wt.watermarks set [lindex $watermarks 0]
 comboBoxEditEvents $wt.watermarks
 
+# font size spinbox
 set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
 ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
 	-validatecommand { string is integer %P }
@@ -544,28 +568,35 @@ $wt.fontsize set $wmsize
 bind $wt.fontsize <ButtonRelease> { wmproc [%W get] }
 bind $wt.fontsize <KeyRelease> { wmproc [%W get] }
 
+# Text position box
 ttk::combobox $wt.position -state readonly -textvariable wmpossel -values $wmpositions -width 10
 $wt.position set $wmpos
 bind $wt.position <<ComboboxSelected>> { wmproc [%W current] }
 
+# Image watermark ops
 ttk::checkbutton $wt.cbim -onvalue true -offvalue false -variable watselimg
 ttk::label $wt.limg -text "Image"
 # dict get $dic key
+# Get only the name for image list.
 set iwatermarksk [dict keys $iwatermarks]
 ttk::combobox $wt.iwatermarks -state readonly -textvariable wmimsrc -values $iwatermarksk
 $wt.iwatermarks set [lindex $iwatermarksk 0]
 bind $wt.iwatermarks <<ComboboxSelected>> { wmproc [%W get] }
 
+# Image size box \%
 ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
 	-validatecommand { string is integer %P }
 $wt.imgsize set $wmimsize
 bind $wt.imgsize <ButtonRelease> { wmproc [%W get] }
 bind $wt.imgsize <KeyRelease> { wmproc [%W get] }
 
+# Image position
 ttk::combobox $wt.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
 $wt.position set $wmpos
 bind $wt.iposition <<ComboboxSelected>> { wmproc [%W current] }
 
+# Opacity scales
+# Set a given float as integer, TODO uplevel to set local context variable an not global namespace
 proc makeInt { w ft fl } {
 	set ::$w [format $ft $fl]
 }
@@ -576,6 +607,7 @@ ttk::label $wt.tolab -width 3 -textvariable wmop
 ttk::scale $wt.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { makeInt wmimop "%.0f"  }
 ttk::label $wt.iolab -width 3 -textvariable wmimop
 
+# Style options
 ttk::frame $wt.st
 ttk::label $wt.st.txcol -text "Text Color"
 ttk::label $wt.st.imstyle -text "Image Blending"
@@ -586,6 +618,7 @@ proc setColor { w col {direct 1} { title "Choose color"} } {
 	if { $direct } {
 		set col [tk_chooseColor -title $title -initialcolor $col -parent .]
 	}
+	# User selectet a color and not cancel then
 	if { [expr {$col ne "" ? 1 : 0}] } {
 		$w configure -bg $col
 	}
@@ -604,9 +637,8 @@ ttk::combobox $wt.st.iblend -state readonly -textvariable wmimcomp -values $ible
 $wt.st.iblend set $wmimcomp
 bind $wt.st.iblend <<ComboboxSelected>> { wmproc [%W get] }
 
+set wtp 2 ; # Padding value
 
-set wtp 2
-#Position widgets on frame using a grid
 grid $wt.lsize $wt.lpos $wt.lop -row 1 -sticky ws
 grid $wt.cbtx $wt.ltext $wt.watermarks $wt.fontsize $wt.position $wt.txop $wt.tolab -row 2 -sticky we -padx $wtp -pady $wtp
 grid $wt.cbim $wt.limg $wt.iwatermarks $wt.imgsize $wt.iposition $wt.imop $wt.iolab -row 3 -sticky we -padx $wtp -pady $wtp
@@ -624,12 +656,9 @@ pack $wt.st.txcol $wt.st.chos $wt.st.wcol $wt.st.bcol $wt.st.sep $wt.st.imstyle 
 pack configure $wt.st.txcol $wt.st.chos $wt.st.wcol $wt.st.bcol $wt.st.imstyle -expand 0
 
 
-.f2.ac.n add $wt -text "Watermark" -underline 0
-
 ttk::frame .f2.ac.n.sz
-.f2.ac.n add .f2.ac.n.sz -text "Resize" -underline 0
 
-#Size options
+# --== Size options
 ttk::treeview .f2.ac.n.sz.sizes -selectmode extended -show tree -yscrollcommand ".f2.ac.n.sz.sscrl set" -height 4
 foreach size $sizes {
 	.f2.ac.n.sz.sizes insert {} end -text $size
@@ -640,14 +669,16 @@ ttk::scrollbar .f2.ac.n.sz.sscrl -orient vertical -command { .f2.ac.n.sz.sizes y
 pack .f2.ac.n.sz.sizes -side left -expand 1 -fill both
 pack .f2.ac.n.sz.sscrl -side left -fill y
 
+
+# Add frames to tabs in notebook
+.f2.ac.n add $wt -text "Watermark" -underline 0
+.f2.ac.n add .f2.ac.n.sz -text "Resize" -underline 0
+
+# --== Suffix and prefix ops
 ttk::frame .f2.ac.onam
 
-.f2.ac add .f2.ac.n
-.f2.ac add .f2.ac.onam
-.f2.ac pane .f2.ac.n -weight 6
-.f2.ac pane .f2.ac.onam -weight 4
 
-# Output Suffix
+# --== Output frame
 set formats [list png jpg gif ora keep]
 ttk::label .f2.ac.onam.ltext -text "Save to"
 ttk::combobox .f2.ac.onam.formats -state readonly -textvariable outext -values $formats
@@ -657,9 +688,16 @@ bind .f2.ac.onam.formats <<ComboboxSelected>> { puts [%W get] }
 pack .f2.ac.onam.formats
 
 
+# Add frame notebook to pane left.
+.f2.ac add .f2.ac.n
+.f2.ac add .f2.ac.onam
+.f2.ac pane .f2.ac.n -weight 6
+.f2.ac pane .f2.ac.onam -weight 4
+
 #pack panned window
 pack .f2 -side top -expand 1 -fill both
 
+# ----==== Status bar
 pack [ttk::frame .f3] -side top -expand 0 -fill x
 ttk::frame .f3.rev
 ttk::frame .f3.do
@@ -667,10 +705,12 @@ ttk::frame .f3.do
 ttk::checkbutton .f3.rev.checkwm -text "W" -onvalue true -offvalue false -variable watsel
 
 pack .f3.rev.checkwm
-
 pack .f3.rev -side left
 
+# Positions list correspond to $::watemarkpos, but names as imagemagick needs
 set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
+
+# TODO adapt all below to new code.
 #Resize: returns the validated entry as wxh or ready true as "-resize wxh\>"
 proc getSizeSel { {collage false} {ready false}} {
 	if { [string is list $::sizext] } {
