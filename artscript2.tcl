@@ -299,12 +299,12 @@ proc openFiles {} {
 	global inputfiles
 	set exts [list $::ext]
 	set types " \
-	 	\"{Suported Images} 	$exts \"
-   	{{KRA, ORA}					{.ora .kra}		} \
-		{{SVG, AI}					{.svg .ai}		} \
-		{{XCF, PSD}					{.xcf .psd}		} \
-   	{{PNG}            	{.png}				} \
-		{{JPG, JPEG}        {.jpg .jpeg}	} \
+	 	\"{Suported Images}  $exts \"
+	{{KRA, ORA}      {.ora .kra}  } \
+	{{SVG, AI}       {.svg .ai}   } \
+	{{XCF, PSD}      {.xcf .psd}  } \
+	{{PNG}           {.png}       } \
+	{{JPG, JPEG}     {.jpg .jpeg} } \
 	"
   set files [tk_getOpenFile -filetypes $types -initialdir $::env(HOME) -multiple 1]
 	listValidate $files [expr {[getFilesTotal]+1}]
@@ -738,6 +738,38 @@ proc rgbtohsv { r g b } {
 	return [list $h [format "%0.2f" $s] [format "%0.2f" $v] [format "%0.2f" $l] [format "%0.2f" $luma]]
 }
 
+#Preproces functions
+#watermark
+proc watermark {} {
+
+# ::wmtxt ::watermarks wmsize wmcol wmop wmpos wmpositions  wmimsrc iwatermarks ::wmimpos ::wmimsize ::wmimcomp ::wmimop ::watsel watseltxt watselimg
+
+# convert -size ${width}x${height} xc:transparent -pointsize $::wmsize -gravity Center           -stroke $::wmcol -strokewidth 1 -annotate 0 $::wmtxt -blur 80x2   -background none +repage           -stroke none -fill $wmcolinv -annotate 0 $::wmtxt -trim $wmtmp
+# wmtmp = /tmp/artk-watermark.png
+# color in hex, no rgb mod necessary
+# add wmtmp to delete list
+# width and height: calculate length, multiply by 10x20
+
+#inide convert function, after resize
+# { -gravity $::wmpos $wmtmp -compose dissolve -define compose:args=$::wmop -composite } Can be repeated
+
+	global watxt watsel wmsize wmpos wmcol opacity wmimsel
+
+	set rgbout [setRGBColor $wmcol $opacity]
+	set watval ""
+	#Watermarks, we check if checkbox selected to add characters to string
+	if {$watsel} {
+		set watval "-pointsize $wmsize -fill $rgbout -draw \"gravity $wmpos text 10,10 \'$watxt\'\""
+	}
+	#we check image watermark checkbox to add image wm
+	if { $wmimsel } {
+			if { [file exists $::wmimsrc] } {
+				set watval [concat $watval "-gravity $::wmimpos -draw \"image $::wmimcomp 10,10 0,0 '$::wmimsrc' \""]
+			}
+		}
+	return $watval
+}
+
 #Prepares output name adding Suffix or Prefix
 #Checks if destination file exists and adds a standard suffix
 proc setOutputName { oname fext { oprefix false } { orename false } {ordir false} {tmprun false} {size false} {singleresize 0} } {
@@ -847,15 +879,7 @@ proc processInkscape { {outdir "/tmp"} olist } {
 	return $ifiles
 }
 
-# width and height same as source (or BIG)
-# exec
-# convert -size 1284x897 xc:transparent -font Helvetica -pointsize 12 -gravity Center           -stroke rgba\(0,0,0,.2\) -strokewidth 1 -annotate 0 'Copyright ghevan' -blur 80x2   -background none +repage           -stroke none -fill rgba\(255,255,255,.7\) -annotate 0 'Copyright ghevan' -trim watermark2.png
-
-# Make watermark to /tmp/image
-# compose
-# convert chara-design-test.png -gravity SouthEast watermark.png -compose dissolve -define compose:args=80 -composite  anno_fancy23.jpg
-# args=80 = opacity 80%
-
-
-
+#general unsharp value
+# -unsharp 0x6+0.5+0
+#extra quality x3 smashing
 
