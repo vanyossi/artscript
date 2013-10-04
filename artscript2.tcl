@@ -47,6 +47,7 @@ set ::watermarks [list \
 ]
 set ::wmsize 10
 set ::wmcol "#000000"
+set ::wmcolswatch [list "red" "#f00" "blue" "#00f" "green" "#0f0" "black" "#000" "white" "#fff" ]
 set ::wmop 80
 set ::wmpos "BottomRight"
 set ::wmpositions [list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom" "BottomRight"]
@@ -635,11 +636,7 @@ bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.chec
 # Opacity scales
 # Set a given float as integer, TODO uplevel to set local context variable an not global namespace
 proc progressBarSet { gvar wt cb ft fl } {
-
 	bindsetAction $gvar [format $ft $fl] watsel ".f3.rev.checkwm $wt.$cb"
-
-	# set ::$w [format $ft $fl]
-	
 }
 
 ttk::scale $wt.txop -from 10 -to 100 -variable wmop -value $wmop -orient horizontal -command { progressBarSet wmop $wt cbtx "%.0f" }
@@ -697,6 +694,7 @@ proc setColor { w var item col {direct 1} { title "Choose color"} } {
 	}
 	# User selected a color and not cancel then
 	if { [expr {$col ne "" ? 1 : 0}] } {
+		puts $col
 		$w itemconfigure $item -fill $col
 		$w itemconfigure $::c(main) -outline [getContrastColor $col]
 	}
@@ -710,7 +708,7 @@ proc getContrastColor { color } {
 
 proc drawSwatch { w args } {
 	set args {*}$args
-	set chal [expr {[llength $args]/2}] ; # Half swatch list
+	set chal [expr {([llength $args]/2)+1}] ; # Half swatch list
 
 	set gap 10
 	set height 26
@@ -762,10 +760,17 @@ proc dec2rgb {r {g 0} {b UNSET} {clip 0}} {
 }
 
 proc getswatches { {colist 0} {sortby 1}} {
+	# Set a default palette, colors have to be in rgb
 	set swcol { Black {0 0 0} English-red {208 0 0} {Dark crimson} {120 4 34} Orange {254 139 0} Sand {193 177 127} Sienna {183 65 0} {Yellow ochre} {215 152 11} {Cobalt blue} {0 70 170} Blue {30 116 253} {Bright steel blue} {170 199 254} Mint {118 197 120} Aquamarine {192 254 233} {Forest green} {0 67 32} {Sea green} {64 155 104} Green-yellow {188 245 28} Purple {137 22 136} Violet {77 38 137} {Rose pink} {254 101 203} Pink {254 202 218} {CMYK Cyan} {0 254 254} {CMYK Yellow} {254 254 0} White {255 255 255} }
 	
-	if { $colist } {
-		set swcol "colist"
+	if { [llength $colist] > 1 } {
+		set swcol [list]
+		# Convert hex list from user to rgb 257 vals
+		foreach {ncol el} $colist {
+			set rgb6 [winfo rgb . $el]
+			set rgb6 [list [expr {[lindex $rgb6 0]/257}] [expr {[lindex $rgb6 1]/257}] [expr {[lindex $rgb6 2]/257}] ]
+			lappend swcol $ncol $rgb6
+		}
 	}
 
 	set swdict [dict create {*}$swcol]
@@ -791,13 +796,13 @@ canvas $wt.st.chos  -width 62 -height 26
 set c(main) [$wt.st.chos create rectangle 2 2 26 26 -fill $::wmcol -width 2 -outline [getContrastColor $::wmcol] -tags {main}]
 $wt.st.chos bind main <Button-1> { setColor %W wmcol $c(main) [%W itemconfigure $c(main) -fill] }
 
-set wmswatch [getswatches]
+set wmswatch [getswatches $::wmcolswatch]
 drawSwatch $wt.st.chos $wmswatch
 
 set iblendmodes [list "Bumpmap" "Burn" "Color_Burn" "Color_Dodge" "Colorize" "Copy_Black" "Copy_Blue" "Copy_Cyan" "Copy_Green" "Copy_Magenta" "Copy_Opacity" "Copy_Red" "Copy_Yellow" "Darken" "DarkenIntensity" "Difference" "Divide" "Dodge" "Exclusion" "Hard_Light" "Hue" "Light" "Lighten" "LightenIntensity" "Linear_Burn" "Linear_Dodge" "Linear_Light" "Luminize" "Minus" "ModulusAdd" "ModulusSubtract" "Multiply" "Overlay" "Pegtop_Light" "Pin_Light" "Plus" "Saturate" "Screen" "Soft_Light" "Vivid_Light"]
 ttk::combobox $wt.st.iblend -state readonly -textvariable wmimcomp -values $iblendmodes -width 12
 $wt.st.iblend set $wmimcomp
-bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] watsel .f3.rev.checkwm }
+bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] watsel ".f3.rev.checkwm $wt.cbim" }
 
 set wtp 2 ; # Padding value
 
