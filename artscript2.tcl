@@ -613,24 +613,147 @@ ttk::label $wt.st.txcol -text "Text Color"
 ttk::label $wt.st.imstyle -text "Image Blending"
 ttk::separator $wt.st.sep -orient vertical
 
-proc setColor { w col {direct 1} { title "Choose color"} } {
+#Convert RGB to HSV, to calculate contrast colors
+proc rgbtohsv { r g b } {
+	set r1 [expr {$r/255.0}]
+	set g1 [expr {$g/255.0}]
+	set b1 [expr {$b/255.0}]
+	set max [expr {max($r1,$g1,$b1)}]
+	set min [expr {min($r1,$g1,$b1)}]
+	set delta [expr {$max-$min}]
+	set h -1
+	set s {}
+	set v $max
+	set l $v
+	set luma $l
+
+	if {$delta != 0} {
+		set l [expr { ($max + $min) / 2 } ]
+		set s [expr { $delta/$v }]
+		set luma [expr { (0.2126 * $r1) + (0.7152 * $g1) + (0.0722 * $b1) }]
+		puts $luma
+		if { $max == $r1 } {
+			set h [expr { ($g1-$b1) / $delta }]
+		} elseif { $max == $g1 } {
+			set h [expr { 2 + ($b1-$r1) / $delta }]
+		} else {
+			set h [expr { 4 + ($r1-$g1) / $delta }]
+		}
+		set h [expr {round(60 * $h)}]
+		if { $h < 0 } { incr h 360 }
+	} else {
+		set s 0
+	}
+	return [list $h [format "%0.2f" $s] [format "%0.2f" $v] [format "%0.2f" $l] [format "%0.2f" $luma]]
+}
+
+proc setColor { w var item col {direct 1} { title "Choose color"} } {
+	upvar 1 $var txtcol
+	set col [lindex $col end]
+
 	#Call color chooser and store value to set canvas color and get rgb values
 	if { $direct } {
 		set col [tk_chooseColor -title $title -initialcolor $col -parent .]
 	}
-	# User selectet a color and not cancel then
+	# User selected a color and not cancel then
 	if { [expr {$col ne "" ? 1 : 0}] } {
-		$w configure -bg $col
+		$w itemconfigure $item -fill $col
+		$w itemconfigure $::c(main) -outline [getContrastColor $col]
 	}
 	return $col
 }
+proc getContrastColor { color } {
+	set rgbs [winfo rgb . $color]
+	set luma [lindex [rgbtohsv {*}$rgbs ] 4]
+	return [expr { $luma >= 165 ? "black" : "white" }]
+}
 
-canvas $wt.st.chos -bg $wmcol -width 48 -height 28
-bind $wt.st.chos <Button-1> { set wmcol [setColor %W $wmcol] }
-canvas $wt.st.wcol -bg white -width 24 -height 24
-bind $wt.st.wcol <Button-1> { set wmcol [setColor $wt.st.chos white 0]}
-canvas $wt.st.bcol -bg black -width 24 -height 24
-bind $wt.st.bcol <Button-1> { set wmcol [setColor $wt.st.chos black 0]}
+proc drawSwatch { w args } {
+	set args {*}$args
+	set chal [expr {[llength $args]/2}] ; # Half swatch list
+	puts $chal
+	set gap 10
+	set height 26
+	set width [expr {$height+($chal*13)+$gap}]
+	puts $width
+	set cw 13
+	set ch 13
+	set x [expr {26+$gap}]
+	set y 1
+	
+	$w configure -width $width
+
+	foreach swatch $args {
+		incr i
+		set ::c($i) [$w create rectangle $x $y [expr {$x+$cw}] [expr {$y+$ch-1}] -fill $swatch -width 1 -outline {gray26} -tags {swatch}]
+		set col [lindex [$w itemconfigure $::c($i) -fill] end]
+		$w bind $::c($i) <Button-1> [list setColor $w wmcol $::c(main) $col 0 ]
+		if { $i == $chal } {
+			incr y $ch
+			set x [expr {$x-($cw*$i)}]
+		}
+		incr x 13
+	}
+}
+
+# from http://wiki.tcl.tk/534
+proc dec2rgb {r {g 0} {b UNSET} {clip 0}} {
+	if {![string compare $b "UNSET"]} {
+		set clip $g
+		if {[regexp {^-?(0-9)+$} $r]} {
+			foreach {r g b} $r {break}
+		} else {
+			foreach {r g b} [winfo rgb . $r] {break}
+		}
+	}
+	set max 255
+	set len 2
+	if {($r > 255) || ($g > 255) || ($b > 255)} {
+		if {$clip} {
+		set r [expr {$r>>8}]; set g [expr {$g>>8}]; set b [expr {$b>>8}]
+		} else {
+			set max 65535
+			set len 4
+		}
+	}
+	return [format "#%.${len}X%.${len}X%.${len}X" \
+	  [expr {($r>$max)?$max:(($r<0)?0:$r)}] \
+	  [expr {($g>$max)?$max:(($g<0)?0:$g)}] \
+	  [expr {($b>$max)?$max:(($b<0)?0:$b)}]]
+}
+
+proc getswatches { {colist 0} {sortby 1}} {
+	set swcol { Black {0 0 0} English-red {208 0 0} {Dark crimson} {120 4 34} Orange {254 139 0} Sand {193 177 127} Sienna {183 65 0} {Yellow ochre} {215 152 11} {Cobalt blue} {0 70 170} Blue {30 116 253} {Bright steel blue} {170 199 254} Mint {118 197 120} Aquamarine {192 254 233} {Forest green} {0 67 32} {Sea green} {64 155 104} Green-yellow {188 245 28} Purple {137 22 136} Violet {77 38 137} {Rose pink} {254 101 203} Pink {254 202 218} {CMYK Cyan} {0 254 254} {CMYK Yellow} {254 254 0} White {255 255 255} }
+	
+	if { $colist } {
+		set swcol "colist"
+	}
+
+	set swdict [dict create {*}$swcol]
+	set swhex [dict create]
+	set swfinal [dict create]
+
+	dict for {key value} $swdict {
+		lappend swluma [list $key [lindex [rgbtohsv {*}$value] $sortby]]
+		dict set swhex $key [dec2rgb {*}$value]
+	}
+
+	foreach pair [lsort -index 1 $swluma] {
+		set swname [lindex $pair 0]
+		dict set swfinal $swname [dict get $swhex $swname]
+	}
+	return [dict values $swfinal]
+}
+
+
+
+
+canvas $wt.st.chos  -width 62 -height 26
+set c(main) [$wt.st.chos create rectangle 2 2 26 26 -fill $::wmcol -width 2 -outline [getContrastColor $::wmcol] -tags {main}]
+$wt.st.chos bind main <Button-1> { setColor %W wmcol $c(main) [%W itemconfigure $c(main) -fill] }
+
+set wmswatch [getswatches]
+drawSwatch $wt.st.chos $wmswatch
 
 set iblendmodes [list "Bumpmap" "Burn" "Color_Burn" "Color_Dodge" "Colorize" "Copy_Black" "Copy_Blue" "Copy_Cyan" "Copy_Green" "Copy_Magenta" "Copy_Opacity" "Copy_Red" "Copy_Yellow" "Darken" "DarkenIntensity" "Difference" "Divide" "Dodge" "Exclusion" "Hard_Light" "Hue" "Light" "Lighten" "LightenIntensity" "Linear_Burn" "Linear_Dodge" "Linear_Light" "Luminize" "Minus" "ModulusAdd" "ModulusSubtract" "Multiply" "Overlay" "Pegtop_Light" "Pin_Light" "Plus" "Saturate" "Screen" "Soft_Light" "Vivid_Light"]
 ttk::combobox $wt.st.iblend -state readonly -textvariable wmimcomp -values $iblendmodes -width 12
@@ -652,8 +775,8 @@ grid $wt.tolab $wt.iolab -column 7
 grid $wt.st -row 4 -column 3 -columnspan 4 -sticky we -pady 4
 grid columnconfigure $wt {3} -weight 1
 
-pack $wt.st.txcol $wt.st.chos $wt.st.wcol $wt.st.bcol $wt.st.sep $wt.st.imstyle $wt.st.iblend -expand 1 -side left -fill x
-pack configure $wt.st.txcol $wt.st.chos $wt.st.wcol $wt.st.bcol $wt.st.imstyle -expand 0
+pack $wt.st.txcol $wt.st.chos $wt.st.sep $wt.st.imstyle $wt.st.iblend -expand 1 -side left -fill x
+pack configure $wt.st.txcol $wt.st.chos $wt.st.imstyle -expand 0
 
 
 ttk::frame .f2.ac.n.sz
@@ -747,36 +870,7 @@ proc getSizeSel { {collage false} {ready false}} {
 		return $sizeval
 }
 
-#Convert RGB to HSV, to calculate contrast colors
-proc rgbtohsv { r g b } {
-	set r1 [expr {$r/255.0}]
-	set g1 [expr {$g/255.0}]
-	set b1 [expr {$b/255.0}]
-	set max [expr {max($r1,$g1,$b1)}]
-	set min [expr {min($r1,$g1,$b1)}]
-	set delta [expr {$max-$min}]
-	set h -1
-	set s {}
-	set v $max
 
-	if {$delta != 0} {
-		set l [expr { ($max + $min) / 2 } ]
-		set s [expr { $delta/$v }]
-		set luma [expr { (0.2126 * $r1) + (0.7152 * $g1) + (0.0722 * $b1) }]
-		if { $max == $r1 } {
-			set h [expr { ($g1-$b1) / $delta }]
-		} elseif { $max == $g1 } {
-			set h [expr { 2 + ($b1-$r1) / $delta }]
-		} else {
-			set h [expr { 4 + ($r1-$g1) / $delta }]
-		}
-		set h [expr {round(60 * $h)}]
-		if { $h < 0 } { incr h 360 }
-	} else {
-		set s 0
-	}
-	return [list $h [format "%0.2f" $s] [format "%0.2f" $v] [format "%0.2f" $l] [format "%0.2f" $luma]]
-}
 
 #Preproces functions
 #watermark
