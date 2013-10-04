@@ -61,7 +61,10 @@ set ::wmimsize "0"
 set ::wmimcomp "Over"
 set ::wmimop 100
 
-set ::watsel false
+set ::watsel 0
+set ::watseltxt 0
+set ::watselimg 0
+
 
 #Sizes
 set ::sizes [list \
@@ -316,11 +319,30 @@ proc openFiles {} {
 
 # Checks checkbox state, turns on if off and returns value.
 # TODO Make versatile to any checkbox
-proc wmproc {value} {
-	if { !$::watsel } {
-		.f3.rev.checkwm invoke
+proc bindsetAction { args } {
+	foreach i $args {
+		incr n
+		set $n $i
 	}
-	puts $value
+	setGValue $1 $2
+	optionOn $3 $4
+}
+proc setGValue {gvar value} {
+	if {$gvar != 0} {
+		upvar #0 $gvar var
+		set var $value
+		puts $var
+	}
+}
+proc optionOn {gvar args} {
+	upvar #0 $gvar var
+	foreach check {*}$args {
+		set vari [$check cget -variable]
+		upvar #0 $vari wmcbst
+		if { !$var || !$wmcbst} {
+			$check invoke
+		}
+	}
 }
 # Sets a custom value to any key of all members o the dict
 # TODO complete the function. recieves widget, inputdict, key to alter, script
@@ -486,9 +508,10 @@ proc scrollTabs { w i {dir 1} } {
 }
 
 # Defines a combobox editable with right click
-proc comboBoxEditEvents { w {script {wmproc [%W get]}} } {
+proc comboBoxEditEvents { w {script {optionOn watsel} }} {
 	bind $w <<ComboboxSelected>> $script
 	bind $w <Button-3> { %W configure -state normal }
+	bind $w <KeyRelease> $script
 	bind $w <FocusOut> { %W configure -state readonly }
 }
 
@@ -553,58 +576,76 @@ ttk::label $wt.lsize -text "Size" -width 4
 ttk::label $wt.lpos -text "Position" -width 10
 ttk::label $wt.lop -text "Opacity" -width 10
 
+proc  turnOffParentCB { parent args } {
+	set varpar [$parent cget -variable]
+	upvar #0 $varpar pbvar
+	foreach cb $args {
+		set varcb [$cb cget -variable]
+		upvar #0 $varcb cbvar
+		lappend total $cbvar
+	}
+	set total [expr [join $total +]]
+	if { ($total > 0 && !$pbvar) || ($total == 0 && $pbvar) } {
+		$parent invoke
+	}
+}
+
 # Text watermark ops
-ttk::checkbutton $wt.cbtx -onvalue true -offvalue false -variable watseltxt
+ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable watseltxt -command { turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
 ttk::label $wt.ltext -text "Text"
 ttk::combobox $wt.watermarks -state readonly -textvariable wmtxt -values $watermarks -width 28
 $wt.watermarks set [lindex $watermarks 0]
-comboBoxEditEvents $wt.watermarks
+comboBoxEditEvents $wt.watermarks {bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx"}
 
 # font size spinbox
 set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
 ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
 	-validatecommand { string is integer %P }
 $wt.fontsize set $wmsize
-bind $wt.fontsize <ButtonRelease> { wmproc [%W get] }
-bind $wt.fontsize <KeyRelease> { wmproc [%W get] }
+bind $wt.fontsize <ButtonRelease> {bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx"}
+bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx" }
 
 # Text position box
 ttk::combobox $wt.position -state readonly -textvariable wmpossel -values $wmpositions -width 10
 $wt.position set $wmpos
-bind $wt.position <<ComboboxSelected>> { wmproc [%W current] }
+bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx" }
 
 # Image watermark ops
-ttk::checkbutton $wt.cbim -onvalue true -offvalue false -variable watselimg
+ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable watselimg -command {turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
 ttk::label $wt.limg -text "Image"
 # dict get $dic key
 # Get only the name for image list.
 set iwatermarksk [dict keys $iwatermarks]
 ttk::combobox $wt.iwatermarks -state readonly -textvariable wmimsrc -values $iwatermarksk
 $wt.iwatermarks set [lindex $iwatermarksk 0]
-bind $wt.iwatermarks <<ComboboxSelected>> { wmproc [%W get] }
+bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbim" }
 
 # Image size box \%
 ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
 	-validatecommand { string is integer %P }
 $wt.imgsize set $wmimsize
-bind $wt.imgsize <ButtonRelease> { wmproc [%W get] }
-bind $wt.imgsize <KeyRelease> { wmproc [%W get] }
+bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] watsel .f3.rev.checkwm }
+bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel ".f3.rev.checkwm $wt.cbim"] }
 
 # Image position
 ttk::combobox $wt.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
 $wt.position set $wmpos
-bind $wt.iposition <<ComboboxSelected>> { wmproc [%W current] }
+bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbim" }
 
 # Opacity scales
 # Set a given float as integer, TODO uplevel to set local context variable an not global namespace
-proc makeInt { w ft fl } {
-	set ::$w [format $ft $fl]
+proc progressBarSet { gvar wt cb ft fl } {
+
+	bindsetAction $gvar [format $ft $fl] watsel ".f3.rev.checkwm $wt.$cb"
+
+	# set ::$w [format $ft $fl]
+	
 }
 
-ttk::scale $wt.txop -from 10 -to 100 -variable wmop -value $wmop -orient horizontal -command { makeInt wmop "%.0f"  }
+ttk::scale $wt.txop -from 10 -to 100 -variable wmop -value $wmop -orient horizontal -command { progressBarSet wmop $wt cbtx "%.0f" }
 ttk::label $wt.tolab -width 3 -textvariable wmop
 
-ttk::scale $wt.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { makeInt wmimop "%.0f"  }
+ttk::scale $wt.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { progressBarSet wmimop $wt cbim "%.0f" }
 ttk::label $wt.iolab -width 3 -textvariable wmimop
 
 # Style options
@@ -631,7 +672,6 @@ proc rgbtohsv { r g b } {
 		set l [expr { ($max + $min) / 2 } ]
 		set s [expr { $delta/$v }]
 		set luma [expr { (0.2126 * $r1) + (0.7152 * $g1) + (0.0722 * $b1) }]
-		puts $luma
 		if { $max == $r1 } {
 			set h [expr { ($g1-$b1) / $delta }]
 		} elseif { $max == $g1 } {
@@ -648,7 +688,7 @@ proc rgbtohsv { r g b } {
 }
 
 proc setColor { w var item col {direct 1} { title "Choose color"} } {
-	upvar 1 $var txtcol
+	upvar 1 $var txtcol ; # review if txtcol can be deleted
 	set col [lindex $col end]
 
 	#Call color chooser and store value to set canvas color and get rgb values
@@ -671,11 +711,10 @@ proc getContrastColor { color } {
 proc drawSwatch { w args } {
 	set args {*}$args
 	set chal [expr {[llength $args]/2}] ; # Half swatch list
-	puts $chal
+
 	set gap 10
 	set height 26
 	set width [expr {$height+($chal*13)+$gap}]
-	puts $width
 	set cw 13
 	set ch 13
 	set x [expr {26+$gap}]
@@ -758,7 +797,7 @@ drawSwatch $wt.st.chos $wmswatch
 set iblendmodes [list "Bumpmap" "Burn" "Color_Burn" "Color_Dodge" "Colorize" "Copy_Black" "Copy_Blue" "Copy_Cyan" "Copy_Green" "Copy_Magenta" "Copy_Opacity" "Copy_Red" "Copy_Yellow" "Darken" "DarkenIntensity" "Difference" "Divide" "Dodge" "Exclusion" "Hard_Light" "Hue" "Light" "Lighten" "LightenIntensity" "Linear_Burn" "Linear_Dodge" "Linear_Light" "Luminize" "Minus" "ModulusAdd" "ModulusSubtract" "Multiply" "Overlay" "Pegtop_Light" "Pin_Light" "Plus" "Saturate" "Screen" "Soft_Light" "Vivid_Light"]
 ttk::combobox $wt.st.iblend -state readonly -textvariable wmimcomp -values $iblendmodes -width 12
 $wt.st.iblend set $wmimcomp
-bind $wt.st.iblend <<ComboboxSelected>> { wmproc [%W get] }
+bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] watsel .f3.rev.checkwm }
 
 set wtp 2 ; # Padding value
 
@@ -800,8 +839,11 @@ pack .f2.ac.n.sz.sscrl -side left -fill y
 # --== Suffix and prefix ops
 set ou .f2.ac.onam
 ttk::frame $ou
+ttk::checkbutton $ou.cbpre -onvalue true -offvalue false -variable prefixsel -text "Suffix and Prefix"
+ttk::labelframe $ou.efix -text "Suffix and Prefix" -labelwidget $ou.cbpre
 
-ttk::labelframe $ou.efix -text "Output Name"
+ttk::label $ou.lpre -text "Prefix"
+ttk::label $ou.lsuf -text "Suffix"
 
 set ::suffixes [list \
 	"net" \
@@ -809,7 +851,7 @@ set ::suffixes [list \
 	"by-[string map -nocase {{ } -} $autor]" \
 	"$date" \
 ]
-lappend ::suffixes {}
+lappend ::suffixes {} ; # Appends an empty value to allow easy deselect
 ttk::combobox $ou.efix.pre -state readonly -textvariable ::ouprefix -values $suffixes
 $ou.efix.pre set [lindex $suffixes 0]
 comboBoxEditEvents $ou.efix.pre {printOutname [.f2.fb.flist set [.f2.fb.flist selection] input]}
@@ -833,6 +875,7 @@ proc treeAlterVal { w column {script {puts $value}} } {
 
 proc printOutname { f } {
 	treeAlterVal .f2.fb.flist oname {lindex [getOutputName $value $::outext $::ouprefix $::ousuffix] 0}
+	bindsetAction 0 0 prefixsel .f2.ac.onam.cbpre
 	set fname [getOutputName $f $::outext $::ouprefix $::ousuffix]
 	puts $fname
 }
@@ -867,7 +910,24 @@ pack [ttk::frame .f3] -side top -expand 0 -fill x
 ttk::frame .f3.rev
 ttk::frame .f3.do
 
-ttk::checkbutton .f3.rev.checkwm -text "W" -onvalue true -offvalue false -variable watsel
+# A master checkbox unset all of the submitted childs
+# All variables must be declared for it to work.
+# proc master child1 var1 ?child2 ?var2 ...
+proc turnOffChildCB { w args } {
+	upvar #0 $w father
+	set checkbs [list {*}$args]
+
+	if {!$father} {
+		dict for {c var} $checkbs {
+			upvar #0 $var mn
+			if {$mn} {
+				$c invoke
+			}
+		}
+	}
+}
+
+ttk::checkbutton .f3.rev.checkwm -text "W" -onvalue 1 -offvalue 0 -variable watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
 
 pack .f3.rev.checkwm
 pack .f3.rev -side left
