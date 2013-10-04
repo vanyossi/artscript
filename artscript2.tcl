@@ -79,6 +79,7 @@ set ::sizes [list \
 	"50%" \
 ]
 
+set ::prefixsel 0
 #Extension & output
 set ::outext "jpg"
 
@@ -694,7 +695,6 @@ proc setColor { w var item col {direct 1} { title "Choose color"} } {
 	}
 	# User selected a color and not cancel then
 	if { [expr {$col ne "" ? 1 : 0}] } {
-		puts $col
 		$w itemconfigure $item -fill $col
 		$w itemconfigure $::c(main) -outline [getContrastColor $col]
 	}
