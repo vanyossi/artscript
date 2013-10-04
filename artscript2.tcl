@@ -73,9 +73,7 @@ set ::sizes [list \
 	"1650x1650" \
 	"1280x1280" \
 	"1024x1024" \
-	"800x800" \
-	"150x150" \
-	"100x100" \
+	"720x720" \
 	"50%" \
 ]
 
@@ -822,19 +820,77 @@ grid columnconfigure $wt {3} -weight 1
 pack $wt.st.txcol $wt.st.chos $wt.st.sep $wt.st.imstyle $wt.st.iblend -expand 1 -side left -fill x
 pack configure $wt.st.txcol $wt.st.chos $wt.st.imstyle -expand 0
 
-
-ttk::frame .f2.ac.n.sz
-
 # --== Size options
-ttk::treeview .f2.ac.n.sz.sizes -selectmode extended -show tree -yscrollcommand ".f2.ac.n.sz.sscrl set" -height 4
-foreach size $sizes {
-	.f2.ac.n.sz.sizes insert {} end -text $size
-}
-bind .f2.ac.n.sz.sizes <<TreeviewSelect>> { puts [%W selection] }
-ttk::scrollbar .f2.ac.n.sz.sscrl -orient vertical -command { .f2.ac.n.sz.sizes yview }
+proc tabResize {st} {
+	global wList hList
+	foreach size $::sizes {
+		if { [string index $size end] == {%} } {
+			lappend pList $size
+		} else {
+			set size [split $size {x}]
+			lappend wList [lindex $size 0]
+			lappend hList [lindex $size 0]
+		}
+	}
+	lappend wList $pList 
+	
+	ttk::frame $st -padding 6
+	ttk::style layout small.TButton {
+		Button.border -sticky nswe -border 1 -children {
+			Button.focus -sticky nswe -children {
+				Button.spacing -sticky nswe -children {Button.label -sticky nswe}
+				}
+			}
+		}
+	# ttk::style configure small.TButton -background color
+	
+	# grid $st.add$id  -column 0 -row 0
+	
+	proc addSizecol {st id row {state normal}} {
+		global wList hList
+		
+		ttk::combobox $st.wid$id -state readonly -values $wList
+		$st.wid$id set [lindex $wList 0]
+		ttk::combobox $st.hei$id -state readonly -values $hList
+		# ttk::separator $st.sep -orient vertical -padding
+		ttk::label $st.xmul$id -text "x" -font "-size 18"
+		
+		set row [expr {$row+1}]
+		ttk::button $st.add$id -text "+" -width 2 -style small.TButton -command [list addSizecol $st $row $row]
+		
+		grid $st.add$id $st.wid$id $st.xmul$id $st.hei$id -row $row
+		grid $st.add$id -row $row
+		grid columnconfigure $st {1 2} -pad 6
+		
+		set preid [expr {$id-1}]
+		if { ![catch {grid forget $st.add$preid}] } {
+			puts "$id $preid $row"
+			ttk::button $st.del$preid -text "-" -width 2 -style small.TButton -command [list delSizecol $st $preid]
+			grid $st.del$preid -column 0 -row $id
+		}
+		set cols [lindex [grid size $st] end]
+		set i 1
+		while { $i <= $cols } {
+			if { [winfo exists $st.wid$i] } {
+				set w [$st.wid$i get]
+				set h [$st.hei$i get]
+				lappend gsels "$w $h"
+			}
+			incr i
+		}
+		
+		puts $gsels
+		puts [llength $gsels]
+	}
+	proc delSizecol { st id } {
+		# grid forget $st.del$id $st.add$id $st.wid$id $st.xmul$id $st.hei$id
+		destroy $st.del$id $st.add$id $st.wid$id $st.xmul$id $st.hei$id
+	}
+	addSizecol $st 1 1
 
-pack .f2.ac.n.sz.sizes -side left -expand 1 -fill both
-pack .f2.ac.n.sz.sscrl -side left -fill y
+}
+tabResize .f2.ac.n.sz
+
 
 
 # Add frames to tabs in notebook
