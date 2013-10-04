@@ -486,8 +486,8 @@ proc scrollTabs { w i {dir 1} } {
 }
 
 # Defines a combobox editable with right click
-proc comboBoxEditEvents { w } {
-	bind $w <<ComboboxSelected>> { wmproc [%W get] }
+proc comboBoxEditEvents { w {script {wmproc [%W get]}} } {
+	bind $w <<ComboboxSelected>> $script
 	bind $w <Button-3> { %W configure -state normal }
 	bind $w <FocusOut> { %W configure -state readonly }
 }
@@ -509,8 +509,8 @@ ttk::panedwindow .f2.ac -orient horizontal
 .f2 add .f2.fb
 .f2 add .f2.ac
 
-# --== File manager treeeview start ==
-set fileheaders { id input ext size outname }
+# --== File manager treeview start ==
+set fileheaders { id input ext size oname }
 ttk::treeview .f2.fb.flist -columns $fileheaders -show headings -yscrollcommand ".f2.fb.sscrl set"
 foreach col $fileheaders {
 	set name [string totitle $col]
@@ -798,10 +798,52 @@ pack .f2.ac.n.sz.sscrl -side left -fill y
 .f2.ac.n add .f2.ac.n.sz -text "Resize" -underline 0
 
 # --== Suffix and prefix ops
-ttk::frame .f2.ac.onam
+set ou .f2.ac.onam
+ttk::frame $ou
+
+ttk::labelframe $ou.efix -text "Output Name"
+
+set ::suffixes [list \
+	"net" \
+	"archive" \
+	"by-[string map -nocase {{ } -} $autor]" \
+	"$date" \
+]
+lappend ::suffixes {}
+ttk::combobox $ou.efix.pre -state readonly -textvariable ::ouprefix -values $suffixes
+$ou.efix.pre set [lindex $suffixes 0]
+comboBoxEditEvents $ou.efix.pre {printOutname [.f2.fb.flist set [.f2.fb.flist selection] input]}
+ttk::combobox $ou.efix.suf -state readonly -textvariable ::ousuffix -values $suffixes
+$ou.efix.suf set [lindex $suffixes end-1]
+comboBoxEditEvents $ou.efix.suf {printOutname [.f2.fb.flist set [.f2.fb.flist selection] input]}
+
+# Sets a custom value to any key of all members o the dict
+# TODO complete the function. recieves widget, inputdict, key to alter, script
+proc treeAlterVal { w column {script {puts $value}} } {
+	global inputfiles
+	
+	foreach id [dict keys $inputfiles] {
+
+		set value [dict get $inputfiles $id $column]
+		set newvalue [uplevel 0 $script]
+		
+		$w set [set ::img::imgid$id] $column $newvalue
+	}
+}
+
+proc printOutname { f } {
+	treeAlterVal .f2.fb.flist oname {lindex [getOutputName $value $::outext $::ouprefix $::ousuffix] 0}
+	set fname [getOutputName $f $::outext $::ouprefix $::ousuffix]
+	puts $fname
+}
+pack $ou.efix
+pack $ou.efix.pre $ou.efix.suf -padx $wtp -side left
 
 
 # --== Output frame
+
+
+
 set formats [list png jpg gif ora keep]
 ttk::label .f2.ac.onam.ltext -text "Save to"
 ttk::combobox .f2.ac.onam.formats -state readonly -textvariable outext -values $formats
@@ -832,6 +874,7 @@ pack .f3.rev -side left
 
 # Positions list correspond to $::watemarkpos, but names as imagemagick needs
 set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
+
 
 # TODO adapt all below to new code.
 #Resize: returns the validated entry as wxh or ready true as "-resize wxh\>"
@@ -906,41 +949,29 @@ proc watermark {} {
 
 #Prepares output name adding Suffix or Prefix
 #Checks if destination file exists and adds a standard suffix
-proc setOutputName { oname fext { oprefix false } { orename false } {ordir false} {tmprun false} {size false} {singleresize 0} } {
-	if { [string is boolean $size] || !$singleresize } {
-		set size ""
+proc getOutputName { iname outext { prefix "" } { suffix {} } {tmprun false} {orloc 0} } {
+	
+	# if {$tmprun} { set suffix "" } else { set tmpsuffix $::suffix }
+	
+	if {$orloc != 0 } {
+		set iname $orloc
 	}
-	set tmpprefix ""
-	if {$tmprun} { set tmpsuffix "" } else { set tmpsuffix $::suffix }
-	if {![string is boolean $ordir]} {
-		set oname $ordir
-	}
-	set dir [file dirname $oname]
-	set name [file rootname [file tail $oname]]
-	set ext [file extension $oname]
-	set safe ""
-	if {$oprefix} {
-		set tmpprefix $tmpsuffix
-		set tmpsuffix ""
-	}
+	set dir [file normalize [file dirname $iname]]
+	set name [file rootname [file tail $iname]]
 
-	set newname [concat $tmpprefix [list $name] $tmpsuffix "$size"]
-	set newname [join $newname "_"]
-	if { [file exists [file join $dir "$newname.$fext"] ] } {
+	set lname [concat $prefix [list $name] $suffix ] ; # Name in brackets to protect white space
+
+	append outname [join $lname "_"] "." $outext
+	
+	#Add a counter if filename exists
+	while { [file exists [file join $dir "$outname"] ] } {
 		incr s
-		set safe "_atk$s"
+		set safe "_$s"
+		set outname [join [list [string trimright $outname ".$outext"] $safe ".$outext"] {} ]
 	}
-	append cname $newname $safe "." $fext
-	#set fname [file join $dir $cname]
-
-	set olist ""
-	return [lappend olist $cname $dir]
-}
-#Return output name to use in GUI
-proc getOutputName { {indx 0} } {
-	#Concatenate both lists to always have an output example name
-	set i [lindex [concat $::argv $::gimplist $::calligralist $::inkscapelist] $indx]
-	return [lindex [setOutputName $i $::outextension $::prefixsel] 0]
+	
+	set olist [list]
+	return [lappend olist $outname $dir]
 }
 
 #gimp process
