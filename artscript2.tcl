@@ -33,7 +33,7 @@ set ::month [lindex $now 1]
 set ::day [lindex $now 2]
 set ::date [join [list $year $month $day] "-"]
 #set autor name
-set ::autor "Your Name Here"
+set ::autor "Autor"
 #Initialize variables for presets
 
 #Watermark options
@@ -76,10 +76,12 @@ set ::sizes [list \
 	"720x720" \
 	"50%" \
 ]
+set ::sizesel 0
 
 set ::prefixsel 0
 #Extension & output
 set ::outext "jpg"
+set ::iquality 92
 
 #--=====
 #Don't modify below this line
@@ -335,12 +337,14 @@ proc setGValue {gvar value} {
 	}
 }
 proc optionOn {gvar args} {
-	upvar #0 $gvar var
-	foreach check {*}$args {
-		set vari [$check cget -variable]
-		upvar #0 $vari wmcbst
-		if { !$var || !$wmcbst} {
-			$check invoke
+	if {$gvar != 0} {
+		upvar #0 $gvar var
+		foreach check {*}$args {
+			set vari [$check cget -variable]
+			upvar #0 $vari wmcbst
+			if { !$var || !$wmcbst} {
+				$check invoke
+			}
 		}
 	}
 }
@@ -634,14 +638,14 @@ bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.chec
 
 # Opacity scales
 # Set a given float as integer, TODO uplevel to set local context variable an not global namespace
-proc progressBarSet { gvar wt cb ft fl } {
-	bindsetAction $gvar [format $ft $fl] watsel ".f3.rev.checkwm $wt.$cb"
+proc progressBarSet { gvar cvar wt cb ft fl } {
+	bindsetAction $gvar [format $ft $fl] $cvar ".f3.rev.checkwm $wt.$cb"
 }
 
-ttk::scale $wt.txop -from 10 -to 100 -variable wmop -value $wmop -orient horizontal -command { progressBarSet wmop $wt cbtx "%.0f" }
+ttk::scale $wt.txop -from 10 -to 100 -variable wmop -value $wmop -orient horizontal -command { progressBarSet wmop watsel $wt cbtx "%.0f" }
 ttk::label $wt.tolab -width 3 -textvariable wmop
 
-ttk::scale $wt.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { progressBarSet wmimop $wt cbim "%.0f" }
+ttk::scale $wt.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { progressBarSet wmimop watsel $wt cbim "%.0f" }
 ttk::label $wt.iolab -width 3 -textvariable wmimop
 
 # Style options
@@ -835,6 +839,19 @@ proc tabResize {st} {
 	lappend wList $pList 
 	
 	ttk::frame $st -padding 6
+	
+	ttk::frame $st.lef
+	ttk::labelframe $st.rgt -text "Options"
+	
+	grid $st.lef -column 1 -row 1 -sticky nesw
+	grid $st.rgt -column 2 -row 1 -sticky nesw
+	grid columnconfigure $st 1 -weight 1 -minsize 250
+	grid columnconfigure $st 2 -weight 2 -minsize 250
+	grid rowconfigure $st 1 -weight 1 
+	
+	ttk::label $st.rgt.ins -text ""
+	pack $st.rgt.ins -side left
+	
 	ttk::style layout small.TButton {
 		Button.border -sticky nswe -border 1 -children {
 			Button.focus -sticky nswe -children {
@@ -843,26 +860,25 @@ proc tabResize {st} {
 			}
 		}
 	# ttk::style configure small.TButton -background color
-	#ttk::label $st.ins -text "Select the sizes you want for output"
+	
 	# grid $st.ins -column 0 -row 1 -columnspan 5 -sticky we
-	ttk::label $st.ann -text "   No Selection" -font "-size 14"
-	ttk::button $st.add -text "+" -width 2 -style small.TButton -command [list addSizecol $st 1 1]
-	grid $st.ann -column 1 -row 1 -columnspan 4 -sticky nwse
-	grid $st.add -column 0 -row 1 -sticky e
-	grid rowconfigure $st 1 -minsize 28
+	ttk::label $st.lef.ann -text "   No Selection" -font "-size 14"
+	ttk::button $st.lef.add -text "+" -width 2 -style small.TButton -command [list addSizecol $st.lef 1 1]
+	grid $st.lef.ann -column 1 -row 1 -columnspan 4 -sticky nwse
+	grid $st.lef.add -column 0 -row 1 -sticky w
+	grid rowconfigure $st.lef 1 -minsize 28
 
 	proc getSizesSel { w } {
-		set cols [llength [grid slaves $w -column 2]]
-		set i 1
+		set cols [grid slaves $w -column 2]	
 		set gsels {}
-		while { $i <= $cols } {
-			if { [winfo exists $w.wid$i] } {
-				set wid [$w.wid$i get]
-				set hei [$w.hei$i get]
-				lappend gsels "$wid $hei"
-			}
-			incr i
+		set widx [expr {[string length $w]+4}]
+		foreach el $cols {
+			set idl [string range $el $widx end]
+			set wid [$w.wid$idl get]
+			set hei [$w.hei$idl get]
+			lappend gsels "$wid $hei"
 		}
+
 		return $gsels
 	}
 	
@@ -870,8 +886,12 @@ proc tabResize {st} {
 		set sizesels [getSizesSel $w]
 		if { [llength $sizesels] > 1 } {
 			# treeAlterVal .f2.fb.flist oname {lindex [getOutputName $value $::outext $::oupreffix $::ousuffix] 0}
+		} elseif { [llength $sizesels] == 1 } {
+			bindsetAction 0 0 sizesel .f3.rev.checksz
+		} elseif { [llength $sizesels] == 0 } {
+			.f3.rev.checksz invoke
 		}
-		# bindsetAction 0 0 prefixsel .f2.ac.onam.cbpre
+		
 		# set fname [getOutputName $f $::outext $::ouprefix $::ousuffix]
 		# puts $fname
 	}
@@ -885,6 +905,7 @@ proc tabResize {st} {
 		ttk::combobox $st.hei$id -state readonly -width 8 -values $hList
 		$st.hei$id set [lindex $hList 0]
 		comboBoxEditEvents $st.wid$id "eventSize $st %W"
+		comboBoxEditEvents $st.hei$id "eventSize $st %W"
 		# ttk::separator $st.sep -orient vertical -padding
 		ttk::label $st.xmu$id -text "x" -font "-size 18"	
 		ttk::button $st.del$id -text "-" -width 2 -style small.TButton -command [list delSizecol $st $id]
@@ -900,15 +921,21 @@ proc tabResize {st} {
 		incr row
 		$st.add configure -command [list addSizecol $st $id $row]
 		
+		eventSize $st 0
+		
 	}
 	proc delSizecol { st id } {
 		# grid forget $st.del$id $st.wid$id $st.xmul$id $st.hei$id
 		destroy $st.del$id $st.wid$id $st.xmu$id $st.hei$id
+		set szgrid [llength [getSizesSel $st]]
+		
+		eventSize $st 0
 		if {[llength [grid slaves $st -row 1]] <= 1 } {
 			set i 1
 			set sboxl [lsort [grid slaves $st -column 2]]
+			set widx [expr {[string length $st]+4}]
 			foreach el $sboxl {
-				set idl [string range $el 15 end]
+				set idl [string range $el $widx end]
 				grid $st.del$idl $st.wid$idl $st.xmu$idl $st.hei$idl -row $i
 				incr i
 			}
@@ -917,14 +944,11 @@ proc tabResize {st} {
 			$st.add configure -command [list addSizecol $st $id 1]
 			grid $st.ann -column 1 -row 1 -columnspan 4 -sticky nwse
 		}
-		set szgrid [llength [getSizesSel $st]]
-
+		return $szgrid
 	}
-
 }
+
 tabResize .f2.ac.n.sz
-
-
 
 # Add frames to tabs in notebook
 .f2.ac.n add $wt -text "Watermark" -underline 0
@@ -934,7 +958,7 @@ tabResize .f2.ac.n.sz
 set ou .f2.ac.onam
 ttk::frame $ou
 ttk::checkbutton $ou.cbpre -onvalue true -offvalue false -variable prefixsel -text "Suffix and Prefix"
-ttk::labelframe $ou.efix -text "Suffix and Prefix" -labelwidget $ou.cbpre
+ttk::labelframe $ou.efix -text "Suffix and Prefix" -labelwidget $ou.cbpre -padding 6
 
 ttk::label $ou.lpre -text "Prefix"
 ttk::label $ou.lsuf -text "Suffix"
@@ -946,10 +970,17 @@ set ::suffixes [list \
 	"$date" \
 ]
 lappend ::suffixes {} ; # Appends an empty value to allow easy deselect
-ttk::combobox $ou.efix.pre -state readonly -textvariable ::ouprefix -values $suffixes
+foreach suf $::suffixes {
+	lappend suflw [string length $suf]
+}
+set suflw [lindex [lsort -integer -decreasing $suflw] 0]
+set suflw [expr {int($suflw+($suflw*.2))}]
+expr { $suflw > 16 ? [set suflw 16] : [set suflw] }
+
+ttk::combobox $ou.efix.pre -width $suflw -state readonly -textvariable ::ouprefix -values $suffixes
 $ou.efix.pre set [lindex $suffixes 0]
 comboBoxEditEvents $ou.efix.pre {printOutname [.f2.fb.flist set [.f2.fb.flist selection] input]}
-ttk::combobox $ou.efix.suf -state readonly -textvariable ::ousuffix -values $suffixes
+ttk::combobox $ou.efix.suf -width $suflw -state readonly -textvariable ::ousuffix -values $suffixes
 $ou.efix.suf set [lindex $suffixes end-1]
 comboBoxEditEvents $ou.efix.suf {printOutname [.f2.fb.flist set [.f2.fb.flist selection] input]}
 
@@ -973,28 +1004,52 @@ proc printOutname { f } {
 	set fname [getOutputName $f $::outext $::ouprefix $::ousuffix]
 	puts $fname
 }
-pack $ou.efix
-pack $ou.efix.pre $ou.efix.suf -padx $wtp -side left
-
 
 # --== Output frame
 
+ttk::labelframe $ou.f -text "Output & Quality" -padding 8
 
+set formats [list PNG JPG GIF] ; # TODO ora and keep
+ttk::label $ou.f.lbl -text "Format:"
+ttk::combobox $ou.f.fmt -state readonly -width 6 -textvariable outext -values $formats
+$ou.f.fmt set [lindex $formats 0]
+bind $ou.f.fmt <<ComboboxSelected>> { puts [%W get] }
 
-set formats [list png jpg gif ora keep]
-ttk::label .f2.ac.onam.ltext -text "Save to"
-ttk::combobox .f2.ac.onam.formats -state readonly -textvariable outext -values $formats
-.f2.ac.onam.formats set [lindex $formats 0]
-bind .f2.ac.onam.formats <<ComboboxSelected>> { puts [%W get] }
+ttk::label $ou.f.qtb -text "Quality:"
+ttk::scale $ou.f.qal -from 10 -to 100 -variable iquality -value $::iquality -orient horizontal -command { progressBarSet iquality 0 0 0 "%.0f" }
 
-pack .f2.ac.onam.formats
+ttk::label $ou.f.qlb -width 4 -textvariable iquality
+
+ttk::separator $ou.sep -orient horizontal
+
+pack $ou.efix $ou.sep $ou.f -side top -fill both -expand 1 -padx $wtp
+pack configure $ou.sep -padx 24 -pady 6 -expand 0
+pack configure $ou.efix -fill x -expand 0
+
+pack $ou.efix.pre $ou.efix.suf -padx $wtp -side left -fill x -expand 1
+
+ttk::separator $ou.f.sep -orient vertical
+
+grid $ou.f.qtb $ou.f.qlb $ou.f.qal -row 1
+grid configure $ou.f.qtb -column 1
+grid configure $ou.f.qal -column 2 -columnspan 2 -sticky we
+grid configure $ou.f.qlb -column 4 -sticky w
+grid $ou.f.lbl $ou.f.fmt -row 2
+grid configure $ou.f.lbl -column 2
+grid configure $ou.f.fmt -column 3
+grid configure $ou.f.fmt $ou.f.qlb -sticky we
+grid configure $ou.f.qtb $ou.f.lbl -sticky e
+
+grid columnconfigure $ou.f {2} -weight 12 -pad 4 
+grid columnconfigure $ou.f {1} -weight 2 -pad 4
+grid rowconfigure $ou.f {0 1 2 3} -weight 1 -pad 4
 
 
 # Add frame notebook to pane left.
 .f2.ac add .f2.ac.n
 .f2.ac add .f2.ac.onam
 .f2.ac pane .f2.ac.n -weight 6
-.f2.ac pane .f2.ac.onam -weight 4
+.f2.ac pane .f2.ac.onam -weight 2
 
 #pack panned window
 pack .f2 -side top -expand 1 -fill both
@@ -1021,9 +1076,10 @@ proc turnOffChildCB { w args } {
 	}
 }
 
-ttk::checkbutton .f3.rev.checkwm -text "W" -onvalue 1 -offvalue 0 -variable watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
+ttk::checkbutton .f3.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
+ttk::checkbutton .f3.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable sizesel
 
-pack .f3.rev.checkwm
+pack .f3.rev.checkwm .f3.rev.checksz -side left
 pack .f3.rev -side left
 
 # Positions list correspond to $::watemarkpos, but names as imagemagick needs
