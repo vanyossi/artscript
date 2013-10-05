@@ -1009,7 +1009,7 @@ proc printOutname { f } {
 
 ttk::labelframe $ou.f -text "Output & Quality" -padding 8
 
-set formats [list PNG JPG GIF] ; # TODO ora and keep
+set formats [list png jpg gif] ; # TODO ora and keep
 ttk::label $ou.f.lbl -text "Format:"
 ttk::combobox $ou.f.fmt -state readonly -width 6 -textvariable outext -values $formats
 $ou.f.fmt set [lindex $formats 0]
@@ -1174,12 +1174,14 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {tmprun false} {or
 	append outname [join $lname "_"] "." $outext
 	
 	#Add a counter if filename exists
+	set tmpname $outname
 	while { [file exists [file join $dir "$outname"] ] } {
+		set outname $tmpname
 		incr s
 		set safe "_$s"
 		set outname [join [list [string trimright $outname ".$outext"] $safe ".$outext"] {} ]
 	}
-	
+	unset tmpname
 	set olist [list]
 	return [lappend olist $outname $dir]
 }
