@@ -843,50 +843,83 @@ proc tabResize {st} {
 			}
 		}
 	# ttk::style configure small.TButton -background color
+	#ttk::label $st.ins -text "Select the sizes you want for output"
+	# grid $st.ins -column 0 -row 1 -columnspan 5 -sticky we
+	ttk::label $st.ann -text "   No Selection" -font "-size 14"
+	ttk::button $st.add -text "+" -width 2 -style small.TButton -command [list addSizecol $st 1 1]
+	grid $st.ann -column 1 -row 1 -columnspan 4 -sticky nwse
+	grid $st.add -column 0 -row 1 -sticky e
+	grid rowconfigure $st 1 -minsize 28
+
+	proc getSizesSel { w } {
+		set cols [llength [grid slaves $w -column 2]]
+		set i 1
+		set gsels {}
+		while { $i <= $cols } {
+			if { [winfo exists $w.wid$i] } {
+				set wid [$w.wid$i get]
+				set hei [$w.hei$i get]
+				lappend gsels "$wid $hei"
+			}
+			incr i
+		}
+		return $gsels
+	}
 	
-	# grid $st.add$id  -column 0 -row 0
+	proc eventSize { w wc } {
+		set sizesels [getSizesSel $w]
+		if { [llength $sizesels] > 1 } {
+			# treeAlterVal .f2.fb.flist oname {lindex [getOutputName $value $::outext $::oupreffix $::ousuffix] 0}
+		}
+		# bindsetAction 0 0 prefixsel .f2.ac.onam.cbpre
+		# set fname [getOutputName $f $::outext $::ouprefix $::ousuffix]
+		# puts $fname
+	}
 	
 	proc addSizecol {st id row {state normal}} {
 		global wList hList
 		
-		ttk::combobox $st.wid$id -state readonly -values $wList
+		grid forget $st.ann
+		ttk::combobox $st.wid$id -state readonly -width 8 -justify right -values $wList
 		$st.wid$id set [lindex $wList 0]
-		ttk::combobox $st.hei$id -state readonly -values $hList
+		ttk::combobox $st.hei$id -state readonly -width 8 -values $hList
+		$st.hei$id set [lindex $hList 0]
+		comboBoxEditEvents $st.wid$id "eventSize $st %W"
 		# ttk::separator $st.sep -orient vertical -padding
-		ttk::label $st.xmul$id -text "x" -font "-size 18"
+		ttk::label $st.xmu$id -text "x" -font "-size 18"	
+		ttk::button $st.del$id -text "-" -width 2 -style small.TButton -command [list delSizecol $st $id]
 		
-		set row [expr {$row+1}]
-		ttk::button $st.add$id -text "+" -width 2 -style small.TButton -command [list addSizecol $st $row $row]
+		grid $st.del$id $st.wid$id $st.xmu$id $st.hei$id -row $row
+		grid $st.del$id -column 1
+		grid $st.wid$id -column 2 -sticky we
+		grid $st.xmu$id -column 3 
+		grid $st.hei$id -column 4 -sticky we
+		grid columnconfigure $st {3} -pad 18
 		
-		grid $st.add$id $st.wid$id $st.xmul$id $st.hei$id -row $row
-		grid $st.add$id -row $row
-		grid columnconfigure $st {1 2} -pad 6
+		incr id
+		incr row
+		$st.add configure -command [list addSizecol $st $id $row]
 		
-		set preid [expr {$id-1}]
-		if { ![catch {grid forget $st.add$preid}] } {
-			puts "$id $preid $row"
-			ttk::button $st.del$preid -text "-" -width 2 -style small.TButton -command [list delSizecol $st $preid]
-			grid $st.del$preid -column 0 -row $id
-		}
-		set cols [lindex [grid size $st] end]
-		set i 1
-		while { $i <= $cols } {
-			if { [winfo exists $st.wid$i] } {
-				set w [$st.wid$i get]
-				set h [$st.hei$i get]
-				lappend gsels "$w $h"
-			}
-			incr i
-		}
-		
-		puts $gsels
-		puts [llength $gsels]
 	}
 	proc delSizecol { st id } {
-		# grid forget $st.del$id $st.add$id $st.wid$id $st.xmul$id $st.hei$id
-		destroy $st.del$id $st.add$id $st.wid$id $st.xmul$id $st.hei$id
+		# grid forget $st.del$id $st.wid$id $st.xmul$id $st.hei$id
+		destroy $st.del$id $st.wid$id $st.xmu$id $st.hei$id
+		if {[llength [grid slaves $st -row 1]] <= 1 } {
+			set i 1
+			set sboxl [lsort [grid slaves $st -column 2]]
+			foreach el $sboxl {
+				set idl [string range $el 15 end]
+				grid $st.del$idl $st.wid$idl $st.xmu$idl $st.hei$idl -row $i
+				incr i
+			}
+		}
+		if { [llength [grid slaves $st -column 2]] == 0 } {
+			$st.add configure -command [list addSizecol $st $id 1]
+			grid $st.ann -column 1 -row 1 -columnspan 4 -sticky nwse
+		}
+		set szgrid [llength [getSizesSel $st]]
+
 	}
-	addSizecol $st 1 1
 
 }
 tabResize .f2.ac.n.sz
