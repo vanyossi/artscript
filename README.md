@@ -1,41 +1,42 @@
 artscriptk
 ==========
 
-Artscript is a TK GUI wrapper for convert and calligraconverter
+Artscript is a GUI wrapper for Imagemagick actions (Watermarking, Resize, Collages) that allos to work with KRA, ORA, XCF, aiming for clarity in use while obtaining high quality results.
 
 #About
-*Script inspired by David Revoy (www.davidrevoy.com , info@davidrevoy.com )*
-About format based on his Artscript comments.
+*Script originally inspired by David Revoy (www.davidrevoy.com , info@davidrevoy.com )*
 
 #### Goal
-- Batch convert most image formats supported by imagemagick and calligraconvert.
-- Dependencies (that I know of) : imagemagick, tk 8.5
-- Optional dependencies: calligraconverter, inkscape
+- Aid in the deploy of digital artwork for media with the best possible quality
+- Core Dependencies: imagemagick, tk 8.5, zip, md5
+- Optional dependencies: calligraconverter, inkscape, gimp
 - Tested in: Xfce 4.10, thunar 1.4.0, dolphin and nautilus
 
 ###License
 GPL 3.0
 ### Disclamer
 
-I'm not a developer, I learn programming on my spare time.  
-I made it for my personal use and I tested it as much as I could to avoid corrupted files and overwrittes
- 
+I'm not a developer, what you have is the product of learning programming on my spare time.
+There might be some rough edges and bugs, please feel free to report them using github
+
+I tested artscript2 as much as I could to avoid corrupted files and unwanted overwrites
 
 ### Dependencies
 
 - **Tk:** For Gui.  
 - **ImageMagick (6.7.5 and up):** Library for manipulating image formats.
-- **calligraconverter (optional):** Handles converts from XCF, ORA and KRA files.
-- **inkscape (optional):** If inkscape is present it will be usen to convert svg, otherwise imagemagick will process them.  
+- **zip:** Get info from ORA and KRA files (width height and the likes)
+- **md5:** Read and generate thumbnails
+- **calligraconverter (optional):** Handles the converts from ORA and KRA files to PNG
+- **inkscape (optional):** Handles mostly SVG and AI converts. If inkscape is not found Imagemagick will perform SVG transforms
 
 
 ### What it does
-Artscript is a GUI wrapper for convert and calligraconvert.
-It will accept a list of images and make a series of operations such as resize, add watermark, add a suffix or preffx to the output filename and change file format. All or some at the same time.
+Artscript is a GUI wrapper for Imagemagick actions (Watermarking, Resize, Collages) that allows to work with KRA, ORA, XCF, aiming for clarity in use while obtaining high quality results.
 
-It will output all files to the current directory.  
+It's best used combined with a file manager (ex. thunar) or image manager (ex.geeqie) to quickly populate the file list and from there modify the options to add watermar, resizes, set name ouput.
 
-It's perfect for preparing images before publishing (web for ex), create thumbnails or collage of images in directory, for example.
+It's perfect for batch preparing images before publishing (web for ex), create thumbnails or collage of images in the directory, for example
 
 # How to run it
 
@@ -111,36 +112,40 @@ As an alternative place for installation, you could place the "arscript.desktop"
 
 
 # Usage GUI
+
+All comboboxes can be edited pressing "Right CLick" to enter edit mode
+
 **Watermark** 
-- Select any preset or add custom in empty field at the bottom.
-- Select color pressing upper white color box and set opacity value using the slider. *By default the color si white, pressing the black rectangle will change the color to black.*
+- Select any preset, (you can edit text field)
+- Set size, position and opacity of the waterarks options selected
+- At the bottom the styles options are located. Color is for text color and Image blend mode defines how to combine the image pixels in the picture, I recomend Over, Multiply and Overlay
 
 **Size**  
 *By default resize is off:*
-- Select from list or set a new value in the box below the list.
-- Tile is not used unless you want to make an image Collage.
-- Size in Collage refers to the tile size of each individual image composing the collage
-- A Tile of 2x2 with Size 200x200 will produce an image close to 400x400.
+- Press + to add a new size.
+- Size is organized as width x height.
+- Selecting a Width value automatically selects the same value in the height box.
+- Always set the widht first.
+- Artscript can do multiple resize in the same operation. Add more sizes at will.
+
+*Suffix is off by default*
+- Left box corresponds to prefix, Box at the right is suffix
+- Select Any value to activate it.
+- Right click to edit the text in the box selected. (The edit will be lost if you select another list value)
+- The string will join with an underscore with the original name
 
 **Output**  
-- Select extension from radioboxes or set a custom extension.
+- Select an output extension
 - Only rename will ignore the extension setting since no convert will be done.
--  Leave ext unchanged. Supose you select 10 files, 5 jpg, 4 png and 1 gif. The program will convert, add watermarks and suffix, making the copies the same file format as the originals.
-  
-*Suffix is off by default*
-Add any text to activate.  
-The string will have an underscore before any text you input, or after If you check the box called "Prefix"  
-Add Date suffix, adds the current date un the format YY-MM-DD  
 
 Press Convert to Run options
 
-## Collage
-To make a Collage from input files set "Make Collage Please" to on
-Make Collage Please checkbutton will generate a Tiled image containing all selected images. It will add a watermark if you set it so and a suffix.
+## Collage (In Development)
+- To make a Collage from input files set "Make Collage Please" to on
+- Make Collage Please checkbutton will generate a Tiled image containing all selected images. It will add a watermark if you set it so and a suffix.
 
 
 # Customize:  
-Lists contain User predefined values.  
-You can modify any variable between "#--=====" markers to get the options you use the most.  
+- Do not modify "artscript.tcl" file. Set your values using the presets file.
 
 
