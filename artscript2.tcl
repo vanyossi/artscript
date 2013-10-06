@@ -885,6 +885,23 @@ proc tabResize {st} {
 	
 	proc eventSize { w wc } {
 		set sizesels [getSizesSel $w]
+		#Set the interface according to the size type px or %
+		if {![string is boolean $wc]} {
+			set sel [$wc get]
+			set id [string range $wc end end]
+			set pref [string range $wc 0 end-4]
+			append hei $pref "hei" $id
+			$hei set $sel
+			if { [string range $sel end end] == {%} } {
+				grid forget $hei
+				${pref}xmu$id configure -text "%"
+			} elseif { [lindex [${pref}xmu$id configure -text] end] == "%" } {
+				array set info [grid info $wc]
+				grid $hei -column 4 -row $info(-row) -sticky we
+				${pref}xmu$id configure -text "x"
+			}
+		}
+
 		if { [llength $sizesels] > 1 } {
 			# treeAlterVal .f2.fb.flist oname {lindex [getOutputName $value $::outext $::oupreffix $::ousuffix] 0}
 		} elseif { [llength $sizesels] == 1 } {
