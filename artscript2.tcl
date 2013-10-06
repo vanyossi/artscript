@@ -901,9 +901,11 @@ proc tabResize {st} {
 		global wList hList
 		
 		grid forget $st.ann
-		ttk::combobox $st.wid$id -state readonly -width 8 -justify right -values $wList
+		ttk::combobox $st.wid$id -state readonly -width 8 -justify right -values $wList -validate key \
+	-validatecommand { regexp {^(()|[0-9])+(()|%%)$} %P }
 		$st.wid$id set [lindex $wList 0]
-		ttk::combobox $st.hei$id -state readonly -width 8 -values $hList
+		ttk::combobox $st.hei$id -state readonly -width 8 -values $hList -validate key \
+	-validatecommand { string is integer %P }
 		$st.hei$id set [lindex $hList 0]
 		comboBoxEditEvents $st.wid$id "eventSize $st %W"
 		comboBoxEditEvents $st.hei$id "eventSize $st %W"
@@ -1036,7 +1038,7 @@ grid configure $ou.f.qal -column 2 -columnspan 2 -sticky we
 grid configure $ou.f.qlb -column 4 -sticky w
 grid $ou.f.lbl $ou.f.fmt -row 2
 grid configure $ou.f.lbl -column 2
-grid configure $ou.f.fmt -column 3
+grid configure $ou.f.fmt -column 3	
 grid $ou.f.ove -row 3 -column 2
 grid configure $ou.f.fmt $ou.f.qlb -sticky we
 grid configure $ou.f.qtb $ou.f.lbl -sticky e
