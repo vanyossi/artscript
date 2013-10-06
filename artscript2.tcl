@@ -79,6 +79,7 @@ set ::sizes [list \
 set ::sizesel 0
 
 set ::prefixsel 0
+set ::overwrite 0
 #Extension & output
 set ::outext "jpg"
 set ::iquality 92
@@ -1013,14 +1014,13 @@ set formats [list png jpg gif] ; # TODO ora and keep
 ttk::label $ou.f.lbl -text "Format:"
 ttk::combobox $ou.f.fmt -state readonly -width 6 -textvariable outext -values $formats
 $ou.f.fmt set [lindex $formats 0]
-bind $ou.f.fmt <<ComboboxSelected>> { puts [%W get] }
+bind $ou.f.fmt <<ComboboxSelected>> { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $value $::outext $::ouprefix $::ousuffix] 0} }
 
 ttk::label $ou.f.qtb -text "Quality:"
 ttk::scale $ou.f.qal -from 10 -to 100 -variable iquality -value $::iquality -orient horizontal -command { progressBarSet iquality 0 0 0 "%.0f" }
-
 ttk::label $ou.f.qlb -width 4 -textvariable iquality
-
 ttk::separator $ou.sep -orient horizontal
+ttk::checkbutton $ou.f.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable overwrite -command { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $value $::outext $::ouprefix $::ousuffix] 0} }
 
 pack $ou.efix $ou.sep $ou.f -side top -fill both -expand 1 -padx $wtp
 pack configure $ou.sep -padx 24 -pady 6 -expand 0
@@ -1037,6 +1037,7 @@ grid configure $ou.f.qlb -column 4 -sticky w
 grid $ou.f.lbl $ou.f.fmt -row 2
 grid configure $ou.f.lbl -column 2
 grid configure $ou.f.fmt -column 3
+grid $ou.f.ove -row 3 -column 2
 grid configure $ou.f.fmt $ou.f.qlb -sticky we
 grid configure $ou.f.qtb $ou.f.lbl -sticky e
 
@@ -1161,6 +1162,10 @@ proc watermark {} {
 #Checks if destination file exists and adds a standard suffix
 proc getOutputName { iname outext { prefix "" } { suffix {} } {tmprun false} {orloc 0} } {
 	
+	if {!$::prefixsel} {
+		set prefix {}
+		set suffix {}
+	}
 	# if {$tmprun} { set suffix "" } else { set tmpsuffix $::suffix }
 	
 	if {$orloc != 0 } {
@@ -1174,14 +1179,17 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {tmprun false} {or
 	append outname [join $lname "_"] "." $outext
 	
 	#Add a counter if filename exists
-	set tmpname $outname
-	while { [file exists [file join $dir "$outname"] ] } {
-		set outname $tmpname
-		incr s
-		set safe "_$s"
-		set outname [join [list [string trimright $outname ".$outext"] $safe ".$outext"] {} ]
+	if {!$::overwrite} {
+		set tmpname $outname
+		while { [file exists [file join $dir "$outname"] ] } {
+			set outname $tmpname
+			incr s
+			set safe "_$s"
+			set outname [join [list [string trimright $outname ".$outext"] $safe ".$outext"] {} ]
+		}
+		unset tmpname
 	}
-	unset tmpname
+	
 	set olist [list]
 	return [lappend olist $outname $dir]
 }
