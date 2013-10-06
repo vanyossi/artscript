@@ -112,7 +112,6 @@ As an alternative place for installation, you could place the "arscript.desktop"
 
 
 # Usage GUI
-<<<<<<< HEAD
 
 All comboboxes can be edited pressing "Right CLick" to enter edit mode
 
@@ -136,41 +135,12 @@ All comboboxes can be edited pressing "Right CLick" to enter edit mode
 - The string will join with an underscore with the original name
 
 ### Output format 
-=======
-
-All comboboxes can be edited pressing "Right CLick" to enter edit mode
-
-**Watermark** 
-- Select any preset, (you can edit text field)
-- Set size, position and opacity of the waterarks options selected
-- At the bottom the styles options are located. Color is for text color and Image blend mode defines how to combine the image pixels in the picture, I recomend Over, Multiply and Overlay
-
-**Size**  
-*By default resize is off:*
-- Press + to add a new size.
-- Size is organized as width x height.
-- Selecting a Width value automatically selects the same value in the height box.
-- Always set the widht first.
-- Artscript can do multiple resize in the same operation. Add more sizes at will.
-
-*Suffix is off by default*
-- Left box corresponds to prefix, Box at the right is suffix
-- Select Any value to activate it.
-- Right click to edit the text in the box selected. (The edit will be lost if you select another list value)
-- The string will join with an underscore with the original name
-
-**Output**  
->>>>>>> 1542bdea96d94b475febea32f61a3a068bd1376d
 - Select an output extension
 - Only rename will ignore the extension setting since no convert will be done.
 
 Press Convert to Run options
 
-<<<<<<< HEAD
 ### Collage (In Development)
-=======
-## Collage (In Development)
->>>>>>> 1542bdea96d94b475febea32f61a3a068bd1376d
 - To make a Collage from input files set "Make Collage Please" to on
 - Make Collage Please checkbutton will generate a Tiled image containing all selected images. It will add a watermark if you set it so and a suffix.
 
