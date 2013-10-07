@@ -48,14 +48,15 @@ set ::watermarks [list \
 
 set ::wmsize 10
 set ::wmcol "#000000"
-set ::wmcolswatch [list "red" "#f00" "blue" "#00f" "green" "#0f0" "black" "#000" "white" "#fff" ]
+set ::wmcolswatch {} ; # [list "red" "#f00" "blue" "#00f" "green" "#0f0" "black" "#000" "white" "#fff" ]
 set ::wmop 80
 set ::wmpos "BottomRight"
 set ::wmpositions [list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom" "BottomRight"]
 #Place image watermark URL. /home/user/image
 set ::wmimsrc ""
+# Set name path of your watermark images. Path must be absolute
 set ::iwatermarks [dict create \
-	"Logo" "/path/to/logo" \
+	"Logo" "/Path/to/logo" \
 	"Client Watermark" "/path/to/watermarkimg" \
 ]
 set ::wmimpos "Center"
@@ -82,7 +83,7 @@ set ::sizesel 0
 set ::prefixsel 0
 set ::overwrite 0
 #Extension & output
-set ::outext "jpg"
+set ::outext "png"
 set ::iquality 92
 
 #--=====
@@ -644,7 +645,7 @@ bind $wt.fontsize <ButtonRelease> {bindsetAction wmsize [%W get] watsel ".f3.rev
 bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx" }
 
 # Text position box
-ttk::combobox $wt.position -state readonly -textvariable wmpossel -values $wmpositions -width 10
+ttk::combobox $wt.position -state readonly -textvariable wmpos -values $::wmpositions -width 10
 $wt.position set $wmpos
 bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx" }
 
@@ -653,10 +654,11 @@ ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable watselimg -command {t
 ttk::label $wt.limg -text "Image"
 # dict get $dic key
 # Get only the name for image list.
-set iwatermarksk [dict keys $iwatermarks]
-ttk::combobox $wt.iwatermarks -state readonly -textvariable wmimsrc -values $iwatermarksk
+set iwatermarksk [dict keys $::iwatermarks]
+ttk::combobox $wt.iwatermarks -state readonly -values $::iwatermarksk
 $wt.iwatermarks set [lindex $iwatermarksk 0]
-bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbim" }
+set ::wmimsrc [dict get $::iwatermarks [lindex $iwatermarksk 0]]
+bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel ".f3.rev.checkwm $wt.cbim" }
 
 # Image size box \%
 ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
@@ -667,7 +669,7 @@ bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel ".f3.rev.
 
 # Image position
 ttk::combobox $wt.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
-$wt.position set $wmpos
+$wt.iposition set $wmimpos
 bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbim" }
 
 # Opacity scales
@@ -733,13 +735,14 @@ proc setColor { w var item col {direct 1} { title "Choose color"} } {
 	if { [expr {$col ne "" ? 1 : 0}] } {
 		$w itemconfigure $item -fill $col
 		$w itemconfigure $::c(main) -outline [getContrastColor $col]
+		set txtcol $col
 	}
 	return $col
 }
 proc getContrastColor { color } {
 	set rgbs [winfo rgb . $color]
 	set luma [lindex [rgbtohsv {*}$rgbs ] 4]
-	return [expr { $luma >= 165 ? "black" : "white" }]
+	return [expr { $luma >= 105 ? "black" : "white" }]
 }
 
 proc drawSwatch { w args } {
@@ -835,7 +838,7 @@ $wt.st.chos bind main <Button-1> { setColor %W wmcol $c(main) [%W itemconfigure 
 set wmswatch [getswatches $::wmcolswatch]
 drawSwatch $wt.st.chos $wmswatch
 
-set iblendmodes [list "Bumpmap" "Burn" "Color_Burn" "Color_Dodge" "Colorize" "Copy_Black" "Copy_Blue" "Copy_Cyan" "Copy_Green" "Copy_Magenta" "Copy_Opacity" "Copy_Red" "Copy_Yellow" "Darken" "DarkenIntensity" "Difference" "Divide" "Dodge" "Exclusion" "Hard_Light" "Hue" "Light" "Lighten" "LightenIntensity" "Linear_Burn" "Linear_Dodge" "Linear_Light" "Luminize" "Minus" "ModulusAdd" "ModulusSubtract" "Multiply" "Overlay" "Pegtop_Light" "Pin_Light" "Plus" "Saturate" "Screen" "Soft_Light" "Vivid_Light"]
+set iblendmodes [list Bumpmap ColorBurn ColorDodge Darken Exclusion HardLight Hue Lighten LinearBurn LinearDodge LinearLight Multiply Overlay Over Plus Saturate Screen SoftLight VividLight]
 ttk::combobox $wt.st.iblend -state readonly -textvariable wmimcomp -values $iblendmodes -width 12
 $wt.st.iblend set $wmimcomp
 bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] watsel ".f3.rev.checkwm $wt.cbim" }
@@ -1132,12 +1135,11 @@ proc turnOffChildCB { w args } {
 
 ttk::checkbutton .f3.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
 ttk::checkbutton .f3.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable sizesel
+# ttk::button .f3.rev.btest -text "test" -command {watermark}
 
 pack .f3.rev.checkwm .f3.rev.checksz -side left
 pack .f3.rev -side left
-
-# Positions list correspond to $::watemarkpos, but names as imagemagick needs
-set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
+# pack .f3.rev.btest -side left
 
 
 # TODO adapt all below to new code.
@@ -1182,33 +1184,48 @@ proc getSizeSel { {collage false} {ready false}} {
 #Preproces functions
 #watermark
 proc watermark {} {
-
-# ::wmtxt ::watermarks wmsize wmcol wmop wmpos wmpositions  wmimsrc iwatermarks ::wmimpos ::wmimsize ::wmimcomp ::wmimop ::watsel watseltxt watselimg
-
-# convert -size ${width}x${height} xc:transparent -pointsize $::wmsize -gravity Center           -stroke $::wmcol -strokewidth 1 -annotate 0 $::wmtxt -blur 80x2   -background none +repage           -stroke none -fill $wmcolinv -annotate 0 $::wmtxt -trim $wmtmp
-# wmtmp = /tmp/artk-watermark.png
-# color in hex, no rgb mod necessary
-# add wmtmp to delete list
-# width and height: calculate length, multiply by 10x20
-
-#inide convert function, after resize
-# { -gravity $::wmpos $wmtmp -compose dissolve -define compose:args=$::wmop -composite } Can be repeated
-
-	global watxt watsel wmsize wmpos wmcol opacity wmimsel
-
-	set rgbout [setRGBColor $wmcol $opacity]
-	set watval ""
-	#Watermarks, we check if checkbox selected to add characters to string
-	if {$watsel} {
-		set watval "-pointsize $wmsize -fill $rgbout -draw \"gravity $wmpos text 10,10 \'$watxt\'\""
+	global deleteFileList
+	set wmcmd {}
+	
+	# Positions list correspond to $::watemarkpos, but names as imagemagick needs
+	set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
+	set wmpossel   [lindex $magickpos [.f2.ac.n.wm.position current] ]
+	set wmimpossel [lindex $magickpos [.f2.ac.n.wm.iposition current] ]
+	# wmtxt watermarks wmsize wmcol wmcolswatch wmop wmpositions wmimsrc iwatermarks wmimpos wmimsize wmimcomp wmimop watsel watseltxt watselimg
+	#Watermarks, check if checkboxes selected
+	if { $::watseltxt } {
+		set wmtmptx [file join "/tmp" "artk-tmp-wtmk.png" ]
+		set width [expr {[string length $::wmtxt] * 3 * ceil($::wmsize/4.0)}]
+		set height [expr {[llength [split $::wmtxt {\n}]] * 30 * ceil($::wmsize/8.0)}]
+		set wmcolinv [getContrastColor $::wmcol ]
+		
+		set wmtcmd [list convert -size ${width}x${height} xc:transparent -pointsize $::wmsize -gravity Center -stroke $wmcolinv -strokewidth 2 -fill $wmcolinv -annotate -.5-.5 "$::wmtxt" -gaussian-blur 5x3 -background none +repage -stroke none -fill $::wmcol -annotate 0 "$::wmtxt" -trim $wmtmptx]
+		exec {*}$wmtcmd
+		
+		lappend deleteFileList $wmtmptx ; # add wmtmp to delete list
+		append wmcmd [list -gravity $wmpossel $wmtmptx -compose dissolve -define compose:args=$::wmop -geometry +10+10 -composite ]
+		# puts [subst $wmcmd] ; # unfold if string in {}
 	}
-	#we check image watermark checkbox to add image wm
-	if { $wmimsel } {
-			if { [file exists $::wmimsrc] } {
-				set watval [concat $watval "-gravity $::wmimpos -draw \"image $::wmimcomp 10,10 0,0 '$::wmimsrc' \""]
-			}
+	if { $::watselimg && [file exists $::wmimsrc] } {
+		set identify {identify -quiet -format "%wx%h:%m:%M "}
+		if { [catch {set finfo [exec {*}$identify $::wmimsrc ] } msg ] } {
+			puts $msg	
+		} else {
+			set imfl [split $finfo { }]
+			set iminfo [lindex [split $imfl ":"] 0]
+			set size [lindex $iminfo 0]
+			set wmtmpim [file join "/tmp" "artk-tmp-wtmkim.png" ]
+			set wmicmd [ list convert -size $size xc:transparent -gravity Center $::wmimsrc -compose dissolve -define compose:args=$::wmimop -composite $wmtmpim]
+			exec {*}$wmicmd
+			
+			# set watval [concat -gravity $::wmimpos -draw "\"image $::wmimcomp 10,10 0,0 '$::wmimsrc'\""]
+			lappend deleteFileList $wmtmpim ; # add wmtmp to delete list
+			append wmcmd " " [list -gravity $wmimpossel $wmtmpim -compose $::wmimcomp -define compose:args=$::wmimop -geometry +10+10 -composite ]
+			# puts $watval
+			
 		}
-	return $watval
+	}
+	return $wmcmd
 }
 
 #gimp process
