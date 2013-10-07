@@ -107,6 +107,39 @@ set hasinkscape [validate "inkscape"]
 #calligraconvert path, if true converts using calligra to /tmp/*.png
 set hascalligra [validate "calligraconverter"]
 
+#Prepares output name adding Suffix or Prefix
+#Checks if destination file exists and adds a standard suffix
+proc getOutputName { iname outext { prefix "" } { suffix {} } {tmprun false} {orloc 0} } {
+	
+	if {!$::prefixsel} {
+		set prefix {}
+		set suffix {}
+	}
+	# if {$tmprun} { set suffix "" } else { set tmpsuffix $::suffix }
+	
+	if {$orloc != 0 } {
+		set iname $orloc
+	}
+	set dir [file normalize [file dirname $iname]]
+	set name [file rootname [file tail $iname]]
+	set lname [concat $prefix [list $name] $suffix ] ; # Name in brackets to protect white space
+	append outname [join $lname "_"] "." $outext
+	
+	#Add a counter if filename exists
+	if {!$::overwrite} {
+		set tmpname $outname
+		while { [file exists [file join $dir "$outname"] ] } {
+			set outname $tmpname
+			incr s
+			set safe "_$s"
+			set outname [join [list [string trimright $outname ".$outext"] $safe ".$outext"] {} ]
+		}
+		unset tmpname
+	}
+	set olist [list]
+	return [lappend olist $outname $dir]
+}
+
 # Global dictionaries, files values, files who process
 set inputfiles [dict create]
 set handlers [dict create]
@@ -123,7 +156,7 @@ proc listValidate { ltoval {counter 1}} {
 		set ext [string trim $ext {.}]
 		
 		dict set inputfiles $id name $iname
-		dict set inputfiles $id oname $iname
+		dict set inputfiles $id oname [lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0]
 		dict set inputfiles $id size $size
 		dict set inputfiles $id ext $ext
 		dict set inputfiles $id path $apath
@@ -977,7 +1010,7 @@ tabResize .f2.ac.n.sz
 # --== Suffix and prefix ops
 set ou .f2.ac.onam
 ttk::frame $ou
-ttk::checkbutton $ou.cbpre -onvalue true -offvalue false -variable prefixsel -text "Suffix and Prefix"
+ttk::checkbutton $ou.cbpre -onvalue 1 -offvalue 0 -variable prefixsel -text "Suffix and Prefix" -command {printOutname 0 }
 ttk::labelframe $ou.efix -text "Suffix and Prefix" -labelwidget $ou.cbpre -padding 6
 
 ttk::label $ou.lpre -text "Prefix"
@@ -999,10 +1032,10 @@ expr { $suflw > 16 ? [set suflw 16] : [set suflw] }
 
 ttk::combobox $ou.efix.pre -width $suflw -state readonly -textvariable ::ouprefix -values $suffixes
 $ou.efix.pre set [lindex $suffixes 0]
-comboBoxEditEvents $ou.efix.pre {printOutname [.f2.fb.flist set [.f2.fb.flist selection] input]}
+comboBoxEditEvents $ou.efix.pre {printOutname %W }
 ttk::combobox $ou.efix.suf -width $suflw -state readonly -textvariable ::ousuffix -values $suffixes
 $ou.efix.suf set [lindex $suffixes end-1]
-comboBoxEditEvents $ou.efix.suf {printOutname [.f2.fb.flist set [.f2.fb.flist selection] input]}
+comboBoxEditEvents $ou.efix.suf {printOutname %W }
 
 # Sets a custom value to any key of all members o the dict
 # TODO complete the function. recieves widget, inputdict, key to alter, script
@@ -1012,17 +1045,18 @@ proc treeAlterVal { w column {script {puts $value}} } {
 	foreach id [dict keys $inputfiles] {
 
 		set value [dict get $inputfiles $id $column]
+		set fpath [dict get $inputfiles $id path]
 		set newvalue [uplevel 0 $script]
 		
 		$w set [set ::img::imgid$id] $column $newvalue
 	}
 }
 
-proc printOutname { f } {
-	treeAlterVal .f2.fb.flist oname {lindex [getOutputName $value $::outext $::ouprefix $::ousuffix] 0}
-	bindsetAction 0 0 prefixsel .f2.ac.onam.cbpre
-	set fname [getOutputName $f $::outext $::ouprefix $::ousuffix]
-	puts $fname
+proc printOutname { w } {
+	if {$::prefixsel || $w != 0} {
+		bindsetAction 0 0 prefixsel .f2.ac.onam.cbpre
+	}
+	treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0}
 }
 
 # --== Output frame
@@ -1033,13 +1067,13 @@ set formats [list png jpg gif] ; # TODO ora and keep
 ttk::label $ou.f.lbl -text "Format:"
 ttk::combobox $ou.f.fmt -state readonly -width 6 -textvariable outext -values $formats
 $ou.f.fmt set [lindex $formats 0]
-bind $ou.f.fmt <<ComboboxSelected>> { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $value $::outext $::ouprefix $::ousuffix] 0} }
+bind $ou.f.fmt <<ComboboxSelected>> { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
 
 ttk::label $ou.f.qtb -text "Quality:"
 ttk::scale $ou.f.qal -from 10 -to 100 -variable iquality -value $::iquality -orient horizontal -command { progressBarSet iquality 0 0 0 "%.0f" }
 ttk::label $ou.f.qlb -width 4 -textvariable iquality
 ttk::separator $ou.sep -orient horizontal
-ttk::checkbutton $ou.f.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable overwrite -command { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $value $::outext $::ouprefix $::ousuffix] 0} }
+ttk::checkbutton $ou.f.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable overwrite -command { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
 
 pack $ou.efix $ou.sep $ou.f -side top -fill both -expand 1 -padx $wtp
 pack configure $ou.sep -padx 24 -pady 6 -expand 0
@@ -1177,41 +1211,7 @@ proc watermark {} {
 	return $watval
 }
 
-#Prepares output name adding Suffix or Prefix
-#Checks if destination file exists and adds a standard suffix
-proc getOutputName { iname outext { prefix "" } { suffix {} } {tmprun false} {orloc 0} } {
-	
-	if {!$::prefixsel} {
-		set prefix {}
-		set suffix {}
-	}
-	# if {$tmprun} { set suffix "" } else { set tmpsuffix $::suffix }
-	
-	if {$orloc != 0 } {
-		set iname $orloc
-	}
-	set dir [file normalize [file dirname $iname]]
-	set name [file rootname [file tail $iname]]
 
-	set lname [concat $prefix [list $name] $suffix ] ; # Name in brackets to protect white space
-
-	append outname [join $lname "_"] "." $outext
-	
-	#Add a counter if filename exists
-	if {!$::overwrite} {
-		set tmpname $outname
-		while { [file exists [file join $dir "$outname"] ] } {
-			set outname $tmpname
-			incr s
-			set safe "_$s"
-			set outname [join [list [string trimright $outname ".$outext"] $safe ".$outext"] {} ]
-		}
-		unset tmpname
-	}
-	
-	set olist [list]
-	return [lappend olist $outname $dir]
-}
 
 #gimp process
 proc processGimp { olist } {
