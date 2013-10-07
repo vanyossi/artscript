@@ -80,6 +80,9 @@ set ::sizes [list \
 ]
 set ::sizesel 0
 
+set ::ouprefix {}
+set ::ousuffix {}
+
 set ::prefixsel 0
 set ::overwrite 0
 #Extension & output
@@ -162,7 +165,7 @@ proc listValidate { ltoval {counter 1}} {
 		dict set inputfiles $id ext $ext
 		dict set inputfiles $id path $apath
 		dict set inputfiles $id deleted 0
-		dict set handlers $iname $h
+		dict set handlers $id $h
 	}
 	# Keep $fc adding up if proc is called a second time. TODO (perhaps make global)
 	set fc $counter
@@ -316,13 +319,13 @@ proc updateWinTitle {} {
 proc putsHandlers {c} {
 	global handlers
 	set ${c}fdict [dict filter $handlers script {k v} {expr {$v eq $c}}]
-	puts [dict keys [set ${c}fdict]]
+	return [dict keys [set ${c}fdict]]
 	#or puts [dict keys [subst $${c}fdict]]
 }
-putsHandlers "g"
-putsHandlers "i"
-putsHandlers "k"
-putsHandlers "m"
+puts [putsHandlers "g"]
+puts [putsHandlers "i"]
+puts [putsHandlers "k"]
+puts [putsHandlers "m"]
 
 #--- Window options
 wm title . "Artscript $version -- [getFilesTotal] Files selected"
@@ -383,6 +386,39 @@ proc optionOn {gvar args} {
 		}
 	}
 }
+# Parent cb only off if all args are off
+# proc master child1? child2?...
+proc  turnOffParentCB { parent args } {
+	set varpar [$parent cget -variable]
+	upvar #0 $varpar pbvar
+	foreach cb $args {
+		set varcb [$cb cget -variable]
+		upvar #0 $varcb cbvar
+		lappend total $cbvar
+	}
+	set total [expr [join $total +]]
+	if { ($total > 0 && !$pbvar) || ($total == 0 && $pbvar) } {
+		$parent invoke
+	}
+}
+
+# A master checkbox unset all of the submitted childs
+# All variables must be declared for it to work.
+# proc master child1 var1 ?child2 ?var2 ...
+proc turnOffChildCB { w args } {
+	upvar #0 $w father
+	set checkbs [list {*}$args]
+
+	if {!$father} {
+		dict for {c var} $checkbs {
+			upvar #0 $var mn
+			if {$mn} {
+				$c invoke
+			}
+		}
+	}
+}
+
 # Sets a custom value to any key of all members o the dict
 # TODO complete the function. recieves widget, inputdict, key to alter, script
 proc changeval {} {
@@ -615,19 +651,6 @@ ttk::label $wt.lsize -text "Size" -width 4
 ttk::label $wt.lpos -text "Position" -width 10
 ttk::label $wt.lop -text "Opacity" -width 10
 
-proc  turnOffParentCB { parent args } {
-	set varpar [$parent cget -variable]
-	upvar #0 $varpar pbvar
-	foreach cb $args {
-		set varcb [$cb cget -variable]
-		upvar #0 $varcb cbvar
-		lappend total $cbvar
-	}
-	set total [expr [join $total +]]
-	if { ($total > 0 && !$pbvar) || ($total == 0 && $pbvar) } {
-		$parent invoke
-	}
-}
 
 # Text watermark ops
 ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable watseltxt -command { turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
@@ -1119,26 +1142,10 @@ pack [ttk::frame .f3] -side top -expand 0 -fill x
 ttk::frame .f3.rev
 ttk::frame .f3.do
 
-# A master checkbox unset all of the submitted childs
-# All variables must be declared for it to work.
-# proc master child1 var1 ?child2 ?var2 ...
-proc turnOffChildCB { w args } {
-	upvar #0 $w father
-	set checkbs [list {*}$args]
-
-	if {!$father} {
-		dict for {c var} $checkbs {
-			upvar #0 $var mn
-			if {$mn} {
-				$c invoke
-			}
-		}
-	}
-}
 
 ttk::checkbutton .f3.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
 ttk::checkbutton .f3.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable sizesel
-# ttk::button .f3.rev.btest -text "test" -command {getFinalSizelist}
+# ttk::button .f3.rev.btest -text "test" -command {processHandlerFiles "i"}
 
 pack .f3.rev.checkwm .f3.rev.checksz -side left
 pack .f3.rev -side left
@@ -1205,76 +1212,49 @@ proc watermark {} {
 	return $wmcmd
 }
 
-#gimp process
-proc processGimp { olist } {
-	set ifiles ""
-	if [llength $olist] {
-		foreach i $olist {
-			#Sends file input for processing, stripping input directory
-			set io [setOutputName $i "png" 0 0 0 1]
-			set outname [lindex $io 0]
-			set origin [lindex $io 1]
-			#Make png to feed convert
-			#We set the command outside for later unfolding or it won't work.
-			set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"/tmp/$outname\" \"/tmp/$outname\") )(gimp-quit 0)"
+#Calligra, gimp and inkscape converter
+proc processHandlerFiles { handler {outdir "/tmp"} } {
+	global inputfiles
+	
+	# Files to convert
+	set ids [putsHandlers $handler]
+	set msg {}
+	foreach imgv $ids {
+		array set id [dict get $inputfiles $imgv]
+		set outname [file join ${outdir} [file root $id(name)]]
+		append outname ".png"
+		
+		if { $handler == {g} } {
+			set i $id(path)
+			set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"$outname\" \"$outname\") )(gimp-quit 0)"
 			#run gimp command, it depends on file extension to do transforms.
 			catch { exec gimp -i -b $cmd } msg
-			#udpate progressbar
-			progressUpdate
-
+		}
+		if { $handler == {i} } {
+			# output 100%, resize imagick
+			catch { exec inkscape $id(path) -z -C -d 90 -e $outname } msg
+		}
+		if { $handler == {k} } {
+			catch { exec calligraconverter --batch -- $id(path) $outname } msg
+		}
+		
+		#Error reporting, if code NONE then png conversion success.
+		if { ![file exists $outname ]} {
 			set errc $::errorCode;
 			set erri $::errorInfo
 			puts "errc: $errc \n\n"
-			#puts "erri: $erri"
 			if {$errc != "NONE"} {
-				append ::lstmsg "EE: $i discarted\n"
+				append ::lstmsg "EE: $$id(name) discarted\n"
 				puts $msg
-				continue
 			}
-			#Add png to argv file list on /tmp dir and originalpath to dict
-			dict set ifiles [file join "/" "tmp" "$outname"] [file join $origin $i]
+			error "something went wrong, Tmp png wasn't created"
+			continue
 		}
-	}
-	return $ifiles
+		dict set inputfiles $imgv tmp $outname
+		puts [dict get $inputfiles $imgv]
+	}	
+	return 0
 }
-
-#Inkscape converter
-proc processInkscape { {outdir "/tmp"} olist } {
-	set ifiles ""
-	set sizeval [getSizeSel]
-	if [llength $olist] {
-		foreach i $olist {
-			set inksize "-d 90"
-			if {$::sizesel || $::tilesel } {
-				if {![string match -nocase {*[0-9]\%} $sizeval]} {
-					set inksize [string range $sizeval 0 [string last "x" $sizeval]-1]
-					set inksize "-w $inksize"
-				} else {
-					set inksize [string range $sizeval 0 [string last "%" $sizeval]-1]
-					set inksize [expr {90 * ($inksize / 100.0)} ]
-					set inksize "-d $inksize"
-				}
-			}
-			#Sends file input for processing, stripping input directory
-			set io [setOutputName $i "png" 0 0 0 1]
-			set outname [file join $outdir [lindex $io 0]]
-			set origin [lindex $io 1]
-			#Make png to feed convert
-			#Inkscape error handling works ok in most situations. errorCode is always reported as NONE so it isn't reliable.
-			if { [catch { exec inkscape $i -z -C $inksize -e $outname } msg] } {
-				append lstmsg "EE: $i discarted\n"
-				puts $msg
-				continue
-			}
-			#udpate progressbar
-			progressUpdate
-			#Add png to argv file list on /tmp dir and originalpath to dict
-			dict set ifiles $outname [file join $origin $i]
-		}
-	}
-	return $ifiles
-}
-
 #general unsharp value
 # -unsharp 0x6+0.5+0
 #extra quality x3 smashing
