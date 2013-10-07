@@ -906,7 +906,10 @@ proc tabResize {st} {
 	grid rowconfigure $st.lef 1 -minsize 28
 
 	proc getSizesSel { w } {
-		set cols [grid slaves $w -column 2]	
+		set cols [grid slaves $w -column 2]
+		if { $cols == "$w.ann" } {
+			return 0
+		}
 		set gsels {}
 		set widx [expr {[string length $w]+4}]
 		foreach el $cols {
@@ -915,7 +918,6 @@ proc tabResize {st} {
 			set hei [$w.hei$idl get]
 			lappend gsels "$wid $hei"
 		}
-
 		return $gsels
 	}
 	
@@ -929,6 +931,7 @@ proc tabResize {st} {
 			append hei $pref "hei" $id
 			$hei set $sel
 			if { [string range $sel end end] == {%} } {
+				$hei set {} ; # set to not to avoid sizes like 50%x50% no supported
 				grid forget $hei
 				${pref}xmu$id configure -text "%"
 			} elseif { [lindex [${pref}xmu$id configure -text] end] == "%" } {
@@ -1135,7 +1138,7 @@ proc turnOffChildCB { w args } {
 
 ttk::checkbutton .f3.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
 ttk::checkbutton .f3.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable sizesel
-# ttk::button .f3.rev.btest -text "test" -command {watermark}
+# ttk::button .f3.rev.btest -text "test" -command {getFinalSizelist}
 
 pack .f3.rev.checkwm .f3.rev.checksz -side left
 pack .f3.rev -side left
@@ -1144,42 +1147,16 @@ pack .f3.rev -side left
 
 # TODO adapt all below to new code.
 #Resize: returns the validated entry as wxh or ready true as "-resize wxh\>"
-proc getSizeSel { {collage false} {ready false}} {
-	if { [string is list $::sizext] } {
-		set sizeval [lindex $::sizext 0]
-	} else {
-		set sizeval [string trim $::sizext]
-	}
-	#We check if user wants resize and $sizeval not empty
-	if {$collage} {
-		#We have to substract the margin from the tile value, in this way the user gets
-		# the results is expecting (200px tile 2x2 = 400px)
-		if { $sizeval == "x" } {
-			#turns concat mode on
-			return "{} 0 0"
-		} elseif {![string match -nocase {*[0-9]\%} $sizeval] && ![string is boolean $sizeval] } {
-			set mgap [expr {($::mborder + $::mspace)*2} ]
-			set xpos [string last "x" $sizeval]
-			set sizelast [expr {[string range $sizeval $xpos+1 end]-$mgap}]
-			set sizefirst [expr {[string range $sizeval 0 $xpos-1]-$mgap}]
-			set sizeval "$sizefirst\x$sizelast\\>"
-			return [lappend sizeval $sizefirst $sizelast]
-		} else {
-			set tmpl ""
-			return [lappend tmpl [string trim $sizeval "\%"] "0" "0"]
-		}
-	} else {
-		if {!$::sizesel || [string is boolean $sizeval] || $sizeval == "x" } {
-			set sizeval ""
-		}
-		if {$ready && ![string is boolean $sizeval] } {
-			set sizeval "-resize $sizeval\\>"
+proc getFinalSizelist {} {
+	set sizeprelist [getSizesSel .f2.ac.n.sz.lef]
+	set $sizelist {}
+	if {$sizeprelist != 0 } {
+		foreach {size} $sizeprelist {
+			lappend sizelist [join $size {x}]
 		}
 	}
-		return $sizeval
+	return $sizelist
 }
-
-
 
 #Preproces functions
 #watermark
