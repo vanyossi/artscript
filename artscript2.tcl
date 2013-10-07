@@ -114,7 +114,7 @@ set hascalligra [validate "calligraconverter"]
 
 #Prepares output name adding Suffix or Prefix
 #Checks if destination file exists and adds a standard suffix
-proc getOutputName { iname outext { prefix "" } { suffix {} } {tmprun false} {orloc 0} } {
+proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} {orloc 0} } {
 	
 	if {!$::prefixsel} {
 		set prefix {}
@@ -127,7 +127,7 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {tmprun false} {or
 	}
 	set dir [file normalize [file dirname $iname]]
 	set name [file rootname [file tail $iname]]
-	set lname [concat $prefix [list $name] $suffix ] ; # Name in brackets to protect white space
+	set lname [concat $prefix [list $name] $suffix $sizesufix ] ; # Name in brackets to protect white space
 	append outname [join $lname "_"] "." $outext
 	
 	#Add a counter if filename exists
@@ -296,7 +296,8 @@ listValidate $argv
 # TODO all boolean is reversed.
 proc getFilesTotal { { all 0} } {
 	global inputfiles
-
+	
+	set count 0
 	if { $all == 1 } {
 		dict for {id datas} $inputfiles {
  	 		dict with datas {
@@ -484,7 +485,23 @@ proc treeSort {tree col direction} {
     set cmd [list treeSort $tree $col [expr {!$direction}]]
     $tree heading $col -command $cmd
 }
-
+proc updateTextLabel { w gval args } {
+	upvar #0 $gval tvar
+	set opt [dict create {*}$args]
+	
+	if {[dict exists $opt suffix]} {
+		set suffix [dict get $opt suffix]
+	} else {
+		set suffix {}
+	}
+	if {[dict exists $opt text]} {
+		$w configure -text [concat $suffix [dict get $opt text] ]
+	}
+	if {[dict exists $opt textv]} {
+		set tvar [concat $suffix [dict get $opt textv] ]
+	}
+	
+}
 # Attempts to load a thumbnail from thumbnails folder if exists.
 # Creates a thumbnail for files missing Large thumbnail
 proc showPreview { w f {tryprev 1}} {
@@ -1078,6 +1095,7 @@ proc treeAlterVal { w column {script {puts $value}} } {
 		set newvalue [uplevel 0 $script]
 		
 		$w set [set ::img::imgid$id] $column $newvalue
+		dict set inputfiles $id $column $newvalue
 	}
 }
 
@@ -1145,22 +1163,41 @@ ttk::frame .f3.do
 
 ttk::checkbutton .f3.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
 ttk::checkbutton .f3.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable sizesel
-# ttk::button .f3.rev.btest -text "test" -command {processHandlerFiles "i"}
+
+ttk::progressbar .f3.do.pbar -maximum [getFilesTotal 1] -variable ::cur -length "300"
+ttk::label .f3.do.plabel -text "Converting: " -textvariable pbtext
+ttk::button .f3.do.bconvert -text "Convert" -command {convert}
 
 pack .f3.rev.checkwm .f3.rev.checksz -side left
 pack .f3.rev -side left
-# pack .f3.rev.btest -side left
+pack .f3.do -side right
+pack .f3.do.bconvert -side right -fill x -padx 6 -pady 8
 
-
+proc pBarUpdate { w gvar args } {
+	upvar #0 $gvar cur
+	set opt [dict create]
+	set opt [dict create {*}$args]
+	
+	if {[dict exists $opt max]} {
+		$w configure -maximum [dict get $opt max]
+		update
+	}
+	if {[dict exists $opt current]} {
+		set cur [dict get $opt current]
+	}
+	incr cur
+	update
+}
 # TODO adapt all below to new code.
 #Resize: returns the validated entry as wxh or ready true as "-resize wxh\>"
 proc getFinalSizelist {} {
 	set sizeprelist [getSizesSel .f2.ac.n.sz.lef]
-	set $sizelist {}
 	if {$sizeprelist != 0 } {
 		foreach {size} $sizeprelist {
 			lappend sizelist [join $size {x}]
 		}
+	} else {
+		set sizelist 0
 	}
 	return $sizelist
 }
@@ -1214,12 +1251,15 @@ proc watermark {} {
 
 #Calligra, gimp and inkscape converter
 proc processHandlerFiles { handler {outdir "/tmp"} } {
-	global inputfiles
+	global inputfiles deleteFileList
 	
 	# Files to convert
 	set ids [putsHandlers $handler]
+	
+	pBarUpdate .f3.do.pbar cur max [llength $ids]
 	set msg {}
 	foreach imgv $ids {
+		updateTextLabel .f3.do.plabel pbtext textv "Converting... $id(name)"
 		array set id [dict get $inputfiles $imgv]
 		set outname [file join ${outdir} [file root $id(name)]]
 		append outname ".png"
@@ -1251,11 +1291,94 @@ proc processHandlerFiles { handler {outdir "/tmp"} } {
 			continue
 		}
 		dict set inputfiles $imgv tmp $outname
-		puts [dict get $inputfiles $imgv]
+		lappend deleteFileList $outname
+		# puts [dict get $inputfiles $imgv]
+		
+	pBarUpdate .f3.do.pbar cur
 	}	
 	return 0
 }
-#general unsharp value
-# -unsharp 0x6+0.5+0
-#extra quality x3 smashing
+
+proc convert {} {
+	global inputfiles deleteFileList
+	
+	#Create progressbar
+	pack .f3.do.plabel .f3.do.pbar -side left -fill x -padx 2 -pady 0
+	
+	#get watermark value
+	set wmark [watermark]
+	#get make resize string
+	set sizes [getFinalSizelist]
+	
+	#process tmp files
+	processHandlerFiles g
+	processHandlerFiles k
+	processHandlerFiles i
+	
+	puts [expr {[getFilesTotal 1]*[llength $sizes]}]
+	pBarUpdate .f3.do.pbar cur max [expr {[getFilesTotal 1]*[llength $sizes]}]
+
+	dict for {id datas} $::inputfiles {
+		dict with datas {
+			if {!$deleted} {
+				set opath $path
+
+				if {[dict exists $datas tmp]} {
+					set opath $tmp
+				}
+				set filter "-interpolate bicubic -filter Lagrange"
+				set unsharp [string repeat "-unsharp 0.4x0.4+0.4+0.008 " 3]
+				
+				foreach dimension $sizes {
+					updateTextLabel .f3.do.plabel pbtext textv "Converting... $name"
+					set resize {}
+					if {$dimension == 0} {
+						set convertCmd [concat $opath $resize $wmark $unsharp $oname]
+						exec convert {*}$convertCmd
+						pBarUpdate .f3.do.pbar cur
+						continue
+					}
+					set cur_w [lindex [split $size {x} ] 0]
+					set dest_w [lindex [split $dimension {x} ] 0]
+					
+					if {[string range $dimension end end] == "%"} {
+						set dest_w [string trim 50% {%}]
+						set dest_w [expr {round($cur_w * ($dest_w / 100.0))} ]
+						set operator {}
+					} else {
+						set operator "\\>"
+					}
+					#Add resize filter (better quality)
+					set resize "-colorspace RGB"
+					set resize [concat $resize $filter]
+					while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
+						set cur_w [expr {round($cur_w * 0.80)}]
+						set resize [concat $resize -resize 80% +repage $unsharp]
+					}
+					# Final resize output
+					set resize [concat $resize -resize ${dimension}${operator} +repage -colorspace sRGB]
+					
+					updateTextLabel .f3.do.plabel pbtext textv "Converting... ${name}_$dimension"
+					
+					set soname [lindex [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] 0]
+					
+					set convertCmd [concat -quiet "$opath" $resize $wmark $unsharp "$soname"]
+					exec convert {*}$convertCmd
+					
+					pBarUpdate .f3.do.pbar cur
+				}
+				#convert for each size
+				#depend on size do quality unsharp
+				#general unsharp value
+				# -unsharp 0x6+0.5+0
+				#extra quality x3 smashing
+			}
+		}
+	}
+	updateTextLabel .f3.do.plabel pbtext textv "Deleting Temporary Files..."
+	catch {file delete [list $deleteFileList]}
+	pack forget .f3.do.pbar .f3.do.plabel
+	updateTextLabel .f3.do.plabel pbtext textv ""
+	#delete tmp files
+}
 
