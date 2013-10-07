@@ -45,6 +45,7 @@ set ::watermarks [list \
 	"Artwork: $autor" \
 	"$date" \
 ]
+
 set ::wmsize 10
 set ::wmcol "#000000"
 set ::wmcolswatch [list "red" "#f00" "blue" "#00f" "green" "#0f0" "black" "#000" "white" "#fff" ]
@@ -131,8 +132,7 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {tmprun false} {or
 		while { [file exists [file join $dir "$outname"] ] } {
 			set outname $tmpname
 			incr s
-			set safe "_$s"
-			set outname [join [list [string trimright $outname ".$outext"] $safe ".$outext"] {} ]
+			set outname [join [list [string trimright $outname ".$outext"] "_$s" ".$outext"] {} ]
 		}
 		unset tmpname
 	}
@@ -1210,8 +1210,6 @@ proc watermark {} {
 		}
 	return $watval
 }
-
-
 
 #gimp process
 proc processGimp { olist } {
