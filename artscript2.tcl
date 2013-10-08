@@ -1208,11 +1208,11 @@ proc watermark {} {
 		set height [expr {[llength [split $::wmtxt {\n}]] * 30 * ceil($::wmsize/8.0)}]
 		set wmcolinv [getContrastColor $::wmcol ]
 		
-		set wmtcmd [list convert -size ${width}x${height} xc:transparent -pointsize $::wmsize -gravity Center -stroke $wmcolinv -strokewidth 2 -fill $wmcolinv -annotate -.5-.5 "$::wmtxt" -gaussian-blur 5x3 -background none +repage -stroke none -fill $::wmcol -annotate 0 "$::wmtxt" -trim $wmtmptx]
+		set wmtcmd [list convert -size ${width}x${height} xc:transparent -pointsize $::wmsize -gravity Center -fill $::wmcol -annotate 0 "$::wmtxt" -trim \( +clone -background $wmcolinv  -shadow 80x2+0+0 -channel A -level 0,60% +channel \) +swap +repage -gravity center -composite $wmtmptx]
 		exec {*}$wmtcmd
 		
 		lappend deleteFileList $wmtmptx ; # add wmtmp to delete list
-		append wmcmd [list -gravity $wmpossel $wmtmptx -compose dissolve -define compose:args=$::wmop -geometry +10+10 -composite ]
+		append wmcmd [list -gravity $wmpossel $wmtmptx -compose dissolve -define compose:args=$::wmop -geometry +5+5 -composite ]
 		# puts [subst $wmcmd] ; # unfold if string in {}
 	}
 	if { $::watselimg && [file exists $::wmimsrc] } {
