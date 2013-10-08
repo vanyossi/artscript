@@ -1041,13 +1041,13 @@ proc convert [list [list argv $argv] ] {
 					set outputfile [file join $origin $outname]
 					puts "outputs $outputfile"
 					#If output is ora we have to use calligraconverter
-					set colorspace "sRGB"
+					set unsharp [string repeat "-unsharp 0.4x0.4+0.4+0.008 " 3]
 					if { ![string is boolean $resize] } {
-						set resize "-resize $resize\\>"
+						
+						set resize "-colorspace RGB -interpolate bicubic -filter Lagrange -resize $resize\\> $unsharp -colorspace sRGB"
 					}
 					#Run command
-				
-					eval exec convert -quiet {$i} $alpha -colorspace $colorspace {-interpolate bicubic -filter Lagrange} $resize $watval -quality $iquality {$outputfile}
+					eval exec convert -quiet {$i} $alpha $resize $watval $unsharp -quality $iquality {$outputfile}
 				}
 				#udpate progressbar
 				progressUpdate
