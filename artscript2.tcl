@@ -286,6 +286,63 @@ proc listValidate { ltoval {counter 1}} {
 # Validate input filetypes
 listValidate $argv
 
+#configuration an presets
+set configfile "presets.config"
+set configfile [file join [file dirname [info script]] $configfile]
+
+if { [file exists $configfile] } {
+	puts "config file found in: $configfile"
+
+	set File [open $configfile]
+	#read each line of File and store "key=value"
+	foreach {i} [split [read $File] \n] {
+			set firstc [string index $i 0]
+			if { $firstc != "#" && ![string is space $firstc] } {
+				lappend lista [split $i "="]
+				#lappend ListofResult [lindex [split $i ,] 1]
+			}
+		}
+		close $File
+	#declare default dictionary to add defaut config values
+	 set ::preset "default"
+	 if {[dict exists $ops ":preset"]} {
+		lappend ::preset [dict get $ops ":preset"]
+	 }
+	#iterate list and populate dictionary with values
+	set default true
+	foreach i $lista {
+		if { [lindex $i 0] == "preset" } {
+			set condict [lindex $i 1]
+			dict set presets $condict [dict create]
+			set datos false
+			continue
+		}
+		if {![info exists condict]} {
+			set condict "default"
+		}
+		dict set presets $condict [lindex $i 0] [lindex $i 1]
+	}
+	#set values according to preset
+	foreach i $preset {
+		if {[dict exists $presets $i]} {
+			dict for {key value} [dict get $presets $i] {
+				if {[info exists $key] != [regexp $gvars $key ] } {
+					if { [catch {set keyval [eval list [string trim $value]] } msg] } {
+						puts $msg
+					} else {
+						if {[llength $keyval] > 1} { 
+							set ::$key $keyval
+						} else {
+							set ::$key [string trim $keyval "{}"]
+						}
+					}
+				#puts [eval list [set $key] ]
+				#set ::$key [eval concat $tmpkey]
+				}
+			}
+		}
+	}
+}
 # Returns total of files in dict except for flagged as deleted.
 # TODO all boolean is reversed.
 proc getFilesTotal { { all 0} } {
