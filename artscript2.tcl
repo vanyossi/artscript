@@ -1378,8 +1378,8 @@ proc convert {} {
 				if {[dict exists $datas tmp]} {
 					set opath $tmp
 				}
-				set filter "-interpolate bicubic -filter Lagrange"
-				set unsharp [string repeat "-unsharp 0.4x0.4+0.4+0.008 " 3]
+				set filter "-interpolate bicubic -filter Parzen"
+				set unsharp [string repeat "-unsharp 0.48x0.48+0.75+0.012 " 1]
 				
 				foreach dimension $sizes {
 					updateTextLabel .f3.do.plabel pbtext textv "Converting... $name"
@@ -1407,7 +1407,7 @@ proc convert {} {
 					set resize "-colorspace RGB"
 					set resize [concat $resize $filter]
 					while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
-						set cur_w [expr {round($cur_w * 0.80)}]
+						set cur_w [expr {round($cur_w * 0.8)}]
 						set resize [concat $resize -resize 80% +repage $unsharp]
 					}
 					# Final resize output
