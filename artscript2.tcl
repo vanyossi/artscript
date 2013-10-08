@@ -602,12 +602,9 @@ proc showPreview { w f {tryprev 1}} {
 		# Remove gimp and psd thumnail if we cannot figure it out how to keep GUI responsive
 		# Or: force use of tmp file from convert (faster) instead of savind a preview.
 		} elseif {[regexp {.xcf|.psd} $filext ]} {
-			set tmpfile "atk-gimpprev.png"
-			set cmd "(let* ( (image (car (gimp-file-load 1 \"$path\" \"$path\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"/tmp/$tmpfile\" \"/tmp/$tmpfile\") )(gimp-quit 0)"
-			#run gimp command, it depends on file extension to do transforms.
-			catch { exec gimp -i -b $cmd } msg
-			set tmpfile "/tmp/$tmpfile"
-			set path $tmpfile
+			# TODO: Break appart preview function to allow loading thumbs from tmp folder
+			.f2.fb.lprev.im configure -compound text -text "No preview"
+			return 0
 		}
 		foreach {size dest} $tsize {
 			catch {exec convert $path -thumbnail [append size x $size] -flatten PNG32:$dest} msg
@@ -640,7 +637,7 @@ proc showPreview { w f {tryprev 1}} {
 		catch {set oldimg $img}
 		set img [image create photo -file /tmp/atkpreview.gif ]
 
-		.f2.fb.lprev.im configure -image $img
+		.f2.fb.lprev.im configure -compound image -image $img
 		catch {image delete $oldimg}
 
 		catch {file delete $prevgif}
