@@ -368,10 +368,13 @@ proc updateWinTitle {} {
 }
 
 # Returns a list with all keys that match value == c
-proc putsHandlers {c} {
+proc putsHandlers {args} {
 	global handlers
-	set ${c}fdict [dict filter $handlers script {k v} {expr {$v eq $c}}]
-	return [dict keys [set ${c}fdict]]
+	foreach c $args {
+		set ${c}fdict [dict filter $handlers script {k v} {expr {$v eq $c}}]
+		lappend images {*}[dict keys [set ${c}fdict]]
+	}
+	return $images
 	#or puts [dict keys [subst $${c}fdict]]
 }
 puts [putsHandlers "g"]
@@ -1303,11 +1306,12 @@ proc watermark {} {
 }
 
 #Calligra, gimp and inkscape converter
-proc processHandlerFiles { handler {outdir "/tmp"} } {
-	global inputfiles deleteFileList
+proc processHandlerFiles { {outdir "/tmp"} } {
+	global inputfiles handlers deleteFileList
 	
 	# Files to convert
-	set ids [putsHandlers $handler]
+	set ids [putsHandlers g i k]
+	array set handler $handlers
 	
 	pBarUpdate .f3.do.pbar cur max [llength $ids] current 0
 	set msg {}
@@ -1317,17 +1321,17 @@ proc processHandlerFiles { handler {outdir "/tmp"} } {
 		set outname [file join ${outdir} [file root $id(name)]]
 		append outname ".png"
 		
-		if { $handler == {g} } {
+		if { $handler($imgv) == {g} } {
 			set i $id(path)
 			set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"$outname\" \"$outname\") )(gimp-quit 0)"
 			#run gimp command, it depends on file extension to do transforms.
 			catch { exec gimp -i -b $cmd } msg
 		}
-		if { $handler == {i} } {
+		if { $handler($imgv) == {i} } {
 			# output 100%, resize imagick
 			catch { exec inkscape $id(path) -z -C -d 90 -e $outname } msg
 		}
-		if { $handler == {k} } {
+		if { $handler($imgv) == {k} } {
 			catch { exec calligraconverter --batch -- $id(path) $outname } msg
 		}
 		
@@ -1364,9 +1368,7 @@ proc convert {} {
 	set sizes [getFinalSizelist]
 	
 	#process Gimp Calligra and inkscape to Tmp files
-	processHandlerFiles g
-	processHandlerFiles k
-	processHandlerFiles i
+	processHandlerFiles
 	
 	pBarUpdate .f3.do.pbar cur max [expr {[getFilesTotal 1]*[llength $sizes]}] current 0
 
