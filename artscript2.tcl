@@ -676,6 +676,7 @@ proc scrollTabs { w i {dir 1} } {
 proc comboBoxEditEvents { w {script {optionOn watsel} }} {
 	bind $w <<ComboboxSelected>> $script
 	bind $w <Button-3> { %W configure -state normal }
+	bind $w <Control-Button-1> { %W configure -state normal }
 	bind $w <KeyRelease> $script
 	bind $w <FocusOut> { %W configure -state readonly }
 }
@@ -1145,10 +1146,10 @@ set suflw [expr {int($suflw+($suflw*.2))}]
 expr { $suflw > 16 ? [set suflw 16] : [set suflw] }
 
 ttk::combobox $ou.efix.pre -width $suflw -state readonly -textvariable ::ouprefix -values $suffixes
-$ou.efix.pre set [lindex $suffixes 0]
+$ou.efix.pre set [lindex $suffixes end]
 comboBoxEditEvents $ou.efix.pre {printOutname %W }
 ttk::combobox $ou.efix.suf -width $suflw -state readonly -textvariable ::ousuffix -values $suffixes
-$ou.efix.suf set [lindex $suffixes end-1]
+$ou.efix.suf set [lindex $suffixes end]
 comboBoxEditEvents $ou.efix.suf {printOutname %W }
 
 # --== Output frame
