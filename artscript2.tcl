@@ -512,10 +512,10 @@ proc removeTreeItem { w i } {
 		set id [$w set $item id]
 		# TODO undo last delete
 		dict set inputfiles $id deleted 1
-		unset ::img::imgid$id
+		# unset ::img::imgid$id
 	}
 	# remove keys from tree
-	$w delete $i
+	$w detach $i
 	updateWinTitle
 }
 
