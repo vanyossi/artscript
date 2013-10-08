@@ -348,7 +348,7 @@ if { [file exists $configfile] } {
 proc getFilesTotal { { all 0} } {
 	global inputfiles
 	
-	set count 0
+	set count {}
 	if { $all == 1 } {
 		dict for {id datas} $inputfiles {
  	 		dict with datas {
@@ -551,7 +551,7 @@ proc updateTextLabel { w gval args } {
 	if {[dict exists $opt textv]} {
 		set tvar [concat $suffix [dict get $opt textv] ]
 	}
-	
+	update
 }
 # Sets a custom value to any key of all members o the dict
 # TODO complete the function. recieves widget, inputdict, key to alter, script
@@ -1309,11 +1309,11 @@ proc processHandlerFiles { handler {outdir "/tmp"} } {
 	# Files to convert
 	set ids [putsHandlers $handler]
 	
-	pBarUpdate .f3.do.pbar cur max [llength $ids]
+	pBarUpdate .f3.do.pbar cur max [llength $ids] current 0
 	set msg {}
 	foreach imgv $ids {
 		array set id [dict get $inputfiles $imgv]
-		updateTextLabel .f3.do.plabel pbtext textv "Converting... $id(name)"
+		updateTextLabel .f3.do.plabel pbtext textv "Extracting... $id(name)"
 		set outname [file join ${outdir} [file root $id(name)]]
 		append outname ".png"
 		
@@ -1368,8 +1368,7 @@ proc convert {} {
 	processHandlerFiles k
 	processHandlerFiles i
 	
-	puts [expr {[getFilesTotal 1]*[llength $sizes]}]
-	pBarUpdate .f3.do.pbar cur max [expr {[getFilesTotal 1]*[llength $sizes]}]
+	pBarUpdate .f3.do.pbar cur max [expr {[getFilesTotal 1]*[llength $sizes]}] current 0
 
 	dict for {id datas} $::inputfiles {
 		dict with datas {
@@ -1391,6 +1390,7 @@ proc convert {} {
 						pBarUpdate .f3.do.pbar cur
 						continue
 					}
+					incr i
 					set cur_w [lindex [split $size {x} ] 0]
 					set dest_w [lindex [split $dimension {x} ] 0]
 					
@@ -1413,13 +1413,15 @@ proc convert {} {
 					# Final resize output
 					set resize [concat $resize -resize ${finalscale}${operator} +repage -colorspace sRGB]
 					
-					updateTextLabel .f3.do.plabel pbtext textv "Converting... ${name}_$dimension"
-					
+					updateTextLabel .f3.do.plabel pbtext textv "Converting... ${name} to $dimension"
+					if {$i == 1} {
+						set dimension {}
+					}
 					set soname [lindex [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] 0]
 					
 					set convertCmd [concat -quiet "$opath" $resize $wmark $unsharp -quality $::iquality "$soname"]
 					exec convert {*}$convertCmd
-					
+
 					pBarUpdate .f3.do.pbar cur
 				}
 				#convert for each size
