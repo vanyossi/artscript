@@ -15,14 +15,12 @@
 #   Or (recomended) make a config file (rename presets.config.presets to presets.config)
 #   File must be in the same directory as the script.
 #
-#--====User variables
-#Extension, define what file tipes artscript should read.
 package require Tk
 ttk::style theme use clam
-
-# Create the namespace
 namespace eval ::img { }
 
+#--====User variables
+#Extension, define what file tipes artscript should read.
 set ::ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
 #set date values
 #Get a different number each run
@@ -45,7 +43,6 @@ set ::watermarks [list \
 	"Artwork: $autor" \
 	"$date" \
 ]
-
 set ::wmsize 10
 set ::wmcol "#000000"
 set ::wmcolswatch {} ; # [list "red" "#f00" "blue" "#00f" "green" "#0f0" "black" "#000" "white" "#fff" ]
@@ -64,11 +61,6 @@ set ::wmimsize "0"
 set ::wmimcomp "Over"
 set ::wmimop 100
 
-set ::watsel 0
-set ::watseltxt 0
-set ::watselimg 0
-
-
 #Sizes
 set ::sizes [list \
 	"1920x1920" \
@@ -78,19 +70,22 @@ set ::sizes [list \
 	"720x720" \
 	"50%" \
 ]
-set ::sizesel 0
-
+#Suffix and prefix ops
 set ::ouprefix {}
 set ::ousuffix {}
-
+#General checkboxes
+set ::watsel 0
+set ::watseltxt 0
+set ::watselimg 0
+set ::sizesel 0
 set ::prefixsel 0
 set ::overwrite 0
 #Extension & output
 set ::outext "png"
 set ::iquality 92
-
 #--=====
 #Don't modify below this line
+
 set ::version "v2.0-alpha"
 set ::lstmsg ""
 # TODO remove this list of global tcl vars. set all user vars in a pair list value, or array.
@@ -100,7 +95,6 @@ proc alert {type icon title msg} {
 		tk_messageBox -type $type -icon $icon -title $title \
 		-message $msg
 }
-
 # TODO: look for binary paths using global $env variable
 proc validate {program} {
 	expr { ![catch {exec which $program}] ? [return 1] : [return 0] }
@@ -502,6 +496,28 @@ proc updateTextLabel { w gval args } {
 	}
 	
 }
+# Sets a custom value to any key of all members o the dict
+# TODO complete the function. recieves widget, inputdict, key to alter, script
+proc treeAlterVal { w column {script {puts $value}} } {
+	global inputfiles
+	
+	foreach id [dict keys $inputfiles] {
+
+		set value [dict get $inputfiles $id $column]
+		set fpath [dict get $inputfiles $id path]
+		set newvalue [uplevel 0 $script]
+		
+		$w set [set ::img::imgid$id] $column $newvalue
+		dict set inputfiles $id $column $newvalue
+	}
+}
+
+proc printOutname { w } {
+	if {$::prefixsel || $w != 0} {
+		bindsetAction 0 0 prefixsel .f2.ac.onam.cbpre
+	}
+	treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0}
+}
 # Attempts to load a thumbnail from thumbnails folder if exists.
 # Creates a thumbnail for files missing Large thumbnail
 proc showPreview { w f {tryprev 1}} {
@@ -606,130 +622,6 @@ proc comboBoxEditEvents { w {script {optionOn watsel} }} {
 	bind $w <KeyRelease> $script
 	bind $w <FocusOut> { %W configure -state readonly }
 }
-
-
-# ----=== Gui Construct ===----
-# TODO Make every frame a procedure to ease movement of the parts
-# Top menu panel
-pack [ttk::frame .f1] -side top -expand 0 -fill x
-ttk::label .f1.title -text "Artscript 2.0alpha"
-ttk::button .f1.add -text "Add files" -command { puts [openFiles] }
-pack .f1.title .f1.add -side left
-
-
-# Paned views, File manager and options
-ttk::panedwindow .f2 -orient vertical
-ttk::frame .f2.fb
-ttk::panedwindow .f2.ac -orient horizontal
-.f2 add .f2.fb
-.f2 add .f2.ac
-
-# --== File manager treeview start ==
-set fileheaders { id input ext size oname }
-ttk::treeview .f2.fb.flist -columns $fileheaders -show headings -yscrollcommand ".f2.fb.sscrl set"
-foreach col $fileheaders {
-	set name [string totitle $col]
-	.f2.fb.flist heading $col -text $name -command [list treeSort .f2.fb.flist $col 0 ]
-}
-.f2.fb.flist column id -width 48 -stretch 0
-.f2.fb.flist column ext -width 48 -stretch 0
-.f2.fb.flist column size -width 86 -stretch 0
-
-#Populate tree
-addTreevalues .f2.fb.flist $inputfiles
-
-bind .f2.fb.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [%W selection] }
-bind .f2.fb.flist <Key-Delete> { removeTreeItem %W [%W selection] }
-ttk::scrollbar .f2.fb.sscrl -orient vertical -command { .f2.fb.flist yview }
-
-# --== Thumbnail
-ttk::labelframe .f2.fb.lprev -width 276 -height 292 -padding 6 -labelanchor n -text "Thumbnail"
-# -labelwidget .f2.ac.checkwm
-ttk::label .f2.fb.lprev.im -anchor center -text "No preview"
-
-
-pack .f2.fb.flist -side left -expand 1 -fill both
-pack .f2.fb.sscrl .f2.fb.lprev -side left -expand 0 -fill both
-pack propagate .f2.fb.lprev 0
-pack .f2.fb.lprev.im -expand 1 -fill both
-
-# --== Option tabs
-ttk::notebook .f2.ac.n
-ttk::notebook::enableTraversal .f2.ac.n
-bind .f2.ac.n <ButtonPress-4> { scrollTabs %W [%W index current] 1 }
-bind .f2.ac.n <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
-
-# Set a var to ease modularization. TODO: procs
-set wt {.f2.ac.n.wm}
-ttk::frame $wt -padding 6
-
-ttk::label $wt.lsel -text "Selection*"
-ttk::label $wt.lsize -text "Size" -width 4
-ttk::label $wt.lpos -text "Position" -width 10
-ttk::label $wt.lop -text "Opacity" -width 10
-
-
-# Text watermark ops
-ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable watseltxt -command { turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
-ttk::label $wt.ltext -text "Text"
-ttk::combobox $wt.watermarks -state readonly -textvariable wmtxt -values $watermarks -width 28
-$wt.watermarks set [lindex $watermarks 0]
-comboBoxEditEvents $wt.watermarks {bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx"}
-
-# font size spinbox
-set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
-ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
-	-validatecommand { string is integer %P }
-$wt.fontsize set $wmsize
-bind $wt.fontsize <ButtonRelease> {bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx"}
-bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx" }
-
-# Text position box
-ttk::combobox $wt.position -state readonly -textvariable wmpos -values $::wmpositions -width 10
-$wt.position set $wmpos
-bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx" }
-
-# Image watermark ops
-ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable watselimg -command {turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
-ttk::label $wt.limg -text "Image"
-# dict get $dic key
-# Get only the name for image list.
-set iwatermarksk [dict keys $::iwatermarks]
-ttk::combobox $wt.iwatermarks -state readonly -values $::iwatermarksk
-$wt.iwatermarks set [lindex $iwatermarksk 0]
-set ::wmimsrc [dict get $::iwatermarks [lindex $iwatermarksk 0]]
-bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel ".f3.rev.checkwm $wt.cbim" }
-
-# Image size box \%
-ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
-	-validatecommand { string is integer %P }
-$wt.imgsize set $wmimsize
-bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] watsel .f3.rev.checkwm }
-bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel ".f3.rev.checkwm $wt.cbim"] }
-
-# Image position
-ttk::combobox $wt.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
-$wt.iposition set $wmimpos
-bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbim" }
-
-# Opacity scales
-# Set a given float as integer, TODO uplevel to set local context variable an not global namespace
-proc progressBarSet { gvar cvar wt cb ft fl } {
-	bindsetAction $gvar [format $ft $fl] $cvar ".f3.rev.checkwm $wt.$cb"
-}
-
-ttk::scale $wt.txop -from 10 -to 100 -variable wmop -value $wmop -orient horizontal -command { progressBarSet wmop watsel $wt cbtx "%.0f" }
-ttk::label $wt.tolab -width 3 -textvariable wmop
-
-ttk::scale $wt.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { progressBarSet wmimop watsel $wt cbim "%.0f" }
-ttk::label $wt.iolab -width 3 -textvariable wmimop
-
-# Style options
-ttk::frame $wt.st
-ttk::label $wt.st.txcol -text "Text Color"
-ttk::label $wt.st.imstyle -text "Image Blending"
-ttk::separator $wt.st.sep -orient vertical
-
 #Convert RGB to HSV, to calculate contrast colors
 proc rgbtohsv { r g b } {
 	set r1 [expr {$r/255.0}]
@@ -868,8 +760,127 @@ proc getswatches { {colist 0} {sortby 1}} {
 	return [dict values $swfinal]
 }
 
+# ----=== Gui Construct ===----
+# TODO Make every frame a procedure to ease movement of the parts
+# Top menu panel
+pack [ttk::frame .f1] -side top -expand 0 -fill x
+ttk::label .f1.title -text "Artscript 2.0alpha"
+ttk::button .f1.add -text "Add files" -command { puts [openFiles] }
+pack .f1.title .f1.add -side left
 
 
+# Paned views, File manager and options
+ttk::panedwindow .f2 -orient vertical
+ttk::frame .f2.fb
+ttk::panedwindow .f2.ac -orient horizontal
+.f2 add .f2.fb
+.f2 add .f2.ac
+
+# --== File manager treeview start ==
+set fileheaders { id input ext size oname }
+ttk::treeview .f2.fb.flist -columns $fileheaders -show headings -yscrollcommand ".f2.fb.sscrl set"
+foreach col $fileheaders {
+	set name [string totitle $col]
+	.f2.fb.flist heading $col -text $name -command [list treeSort .f2.fb.flist $col 0 ]
+}
+.f2.fb.flist column id -width 48 -stretch 0
+.f2.fb.flist column ext -width 48 -stretch 0
+.f2.fb.flist column size -width 86 -stretch 0
+
+#Populate tree
+addTreevalues .f2.fb.flist $inputfiles
+
+bind .f2.fb.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [%W selection] }
+bind .f2.fb.flist <Key-Delete> { removeTreeItem %W [%W selection] }
+ttk::scrollbar .f2.fb.sscrl -orient vertical -command { .f2.fb.flist yview }
+
+# --== Thumbnail
+ttk::labelframe .f2.fb.lprev -width 276 -height 292 -padding 6 -labelanchor n -text "Thumbnail"
+# -labelwidget .f2.ac.checkwm
+ttk::label .f2.fb.lprev.im -anchor center -text "No preview"
+
+
+pack .f2.fb.flist -side left -expand 1 -fill both
+pack .f2.fb.sscrl .f2.fb.lprev -side left -expand 0 -fill both
+pack propagate .f2.fb.lprev 0
+pack .f2.fb.lprev.im -expand 1 -fill both
+
+# --== Option tabs
+ttk::notebook .f2.ac.n
+ttk::notebook::enableTraversal .f2.ac.n
+bind .f2.ac.n <ButtonPress-4> { scrollTabs %W [%W index current] 1 }
+bind .f2.ac.n <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
+
+# Set a var to ease modularization. TODO: procs
+set wt {.f2.ac.n.wm}
+ttk::frame $wt -padding 6
+
+ttk::label $wt.lsel -text "Selection*"
+ttk::label $wt.lsize -text "Size" -width 4
+ttk::label $wt.lpos -text "Position" -width 10
+ttk::label $wt.lop -text "Opacity" -width 10
+
+
+# Text watermark ops
+ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable watseltxt -command { turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
+ttk::label $wt.ltext -text "Text"
+ttk::combobox $wt.watermarks -state readonly -textvariable wmtxt -values $watermarks -width 28
+$wt.watermarks set [lindex $watermarks 0]
+comboBoxEditEvents $wt.watermarks {bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx"}
+
+# font size spinbox
+set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
+ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
+	-validatecommand { string is integer %P }
+$wt.fontsize set $wmsize
+bind $wt.fontsize <ButtonRelease> {bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx"}
+bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx" }
+
+# Text position box
+ttk::combobox $wt.position -state readonly -textvariable wmpos -values $::wmpositions -width 10
+$wt.position set $wmpos
+bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx" }
+
+# Image watermark ops
+ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable watselimg -command {turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
+ttk::label $wt.limg -text "Image"
+# dict get $dic key
+# Get only the name for image list.
+set iwatermarksk [dict keys $::iwatermarks]
+ttk::combobox $wt.iwatermarks -state readonly -values $::iwatermarksk
+$wt.iwatermarks set [lindex $iwatermarksk 0]
+set ::wmimsrc [dict get $::iwatermarks [lindex $iwatermarksk 0]]
+bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel ".f3.rev.checkwm $wt.cbim" }
+
+# Image size box \%
+ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
+	-validatecommand { string is integer %P }
+$wt.imgsize set $wmimsize
+bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] watsel .f3.rev.checkwm }
+bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel ".f3.rev.checkwm $wt.cbim"] }
+
+# Image position
+ttk::combobox $wt.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
+$wt.iposition set $wmimpos
+bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbim" }
+
+# Opacity scales
+# Set a given float as integer, TODO uplevel to set local context variable an not global namespace
+proc progressBarSet { gvar cvar wt cb ft fl } {
+	bindsetAction $gvar [format $ft $fl] $cvar ".f3.rev.checkwm $wt.$cb"
+}
+
+ttk::scale $wt.txop -from 10 -to 100 -variable wmop -value $wmop -orient horizontal -command { progressBarSet wmop watsel $wt cbtx "%.0f" }
+ttk::label $wt.tolab -width 3 -textvariable wmop
+
+ttk::scale $wt.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { progressBarSet wmimop watsel $wt cbim "%.0f" }
+ttk::label $wt.iolab -width 3 -textvariable wmimop
+
+# Style options
+ttk::frame $wt.st
+ttk::label $wt.st.txcol -text "Text Color"
+ttk::label $wt.st.imstyle -text "Image Blending"
+ttk::separator $wt.st.sep -orient vertical
 
 canvas $wt.st.chos  -width 62 -height 26
 set c(main) [$wt.st.chos create rectangle 2 2 26 26 -fill $::wmcol -width 2 -outline [getContrastColor $::wmcol] -tags {main}]
@@ -1083,29 +1094,6 @@ ttk::combobox $ou.efix.suf -width $suflw -state readonly -textvariable ::ousuffi
 $ou.efix.suf set [lindex $suffixes end-1]
 comboBoxEditEvents $ou.efix.suf {printOutname %W }
 
-# Sets a custom value to any key of all members o the dict
-# TODO complete the function. recieves widget, inputdict, key to alter, script
-proc treeAlterVal { w column {script {puts $value}} } {
-	global inputfiles
-	
-	foreach id [dict keys $inputfiles] {
-
-		set value [dict get $inputfiles $id $column]
-		set fpath [dict get $inputfiles $id path]
-		set newvalue [uplevel 0 $script]
-		
-		$w set [set ::img::imgid$id] $column $newvalue
-		dict set inputfiles $id $column $newvalue
-	}
-}
-
-proc printOutname { w } {
-	if {$::prefixsel || $w != 0} {
-		bindsetAction 0 0 prefixsel .f2.ac.onam.cbpre
-	}
-	treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0}
-}
-
 # --== Output frame
 
 ttk::labelframe $ou.f -text "Output & Quality" -padding 8
@@ -1188,8 +1176,8 @@ proc pBarUpdate { w gvar args } {
 	incr cur
 	update
 }
-# TODO adapt all below to new code.
-#Resize: returns the validated entry as wxh or ready true as "-resize wxh\>"
+
+#Resize: returns the validated entry as wxh or N%
 proc getFinalSizelist {} {
 	set sizeprelist [getSizesSel .f2.ac.n.sz.lef]
 	if {$sizeprelist != 0 } {
@@ -1310,7 +1298,7 @@ proc convert {} {
 	#get make resize string
 	set sizes [getFinalSizelist]
 	
-	#process tmp files
+	#process Gimp Calligra and inkscape to Tmp files
 	processHandlerFiles g
 	processHandlerFiles k
 	processHandlerFiles i
@@ -1379,6 +1367,5 @@ proc convert {} {
 	catch {file delete [list $deleteFileList]}
 	pack forget .f3.do.pbar .f3.do.plabel
 	updateTextLabel .f3.do.plabel pbtext textv ""
-	#delete tmp files
 }
 
