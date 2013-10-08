@@ -1304,8 +1304,8 @@ proc processHandlerFiles { handler {outdir "/tmp"} } {
 	pBarUpdate .f3.do.pbar cur max [llength $ids]
 	set msg {}
 	foreach imgv $ids {
-		updateTextLabel .f3.do.plabel pbtext textv "Converting... $id(name)"
 		array set id [dict get $inputfiles $imgv]
+		updateTextLabel .f3.do.plabel pbtext textv "Converting... $id(name)"
 		set outname [file join ${outdir} [file root $id(name)]]
 		append outname ".png"
 		
