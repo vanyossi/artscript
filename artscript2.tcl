@@ -1250,9 +1250,9 @@ proc getFinalSizelist {} {
 #Give original size and destination square.
 proc getOutputSize { w h dw dh } {
 		if { $w > $h } {
-			set dh [ expr {$h*$dw/$w} ]
+			set dh [ expr {round($h*$dw/[format "%0.2f" $w])} ]
 		} else {
-			set dw [ expr {$w*$dh/$h} ]
+			set dw [ expr {round($w*$dh/[format "%0.2f" $h])} ]
 		}
 		return "${dw}x${dh}"
 	}
