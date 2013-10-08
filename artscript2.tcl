@@ -1246,7 +1246,15 @@ proc getFinalSizelist {} {
 	}
 	return $sizelist
 }
-
+#Give original size and destination square.
+proc getOutputSize { w h dw dh } {
+		if { $w > $h } {
+			set dh [ expr {$h*$dw/$w} ]
+		} else {
+			set dw [ expr {$w*$dh/$h} ]
+		}
+		return "${dw}x${dh}"
+	}
 #Preproces functions
 #watermark
 proc watermark {} {
@@ -1393,6 +1401,8 @@ proc convert {} {
 					} else {
 						set operator "\\>"
 					}
+					# We have to get the final size ourselves or else imagick could miss by 1 px
+					set finalscale [getOutputSize {*}[concat [split $size {x} ] [split $dimension {x}]] ]
 					#Add resize filter (better quality)
 					set resize "-colorspace RGB"
 					set resize [concat $resize $filter]
@@ -1401,13 +1411,13 @@ proc convert {} {
 						set resize [concat $resize -resize 80% +repage $unsharp]
 					}
 					# Final resize output
-					set resize [concat $resize -resize ${dimension}${operator} +repage -colorspace sRGB]
+					set resize [concat $resize -resize ${finalscale}${operator} +repage -colorspace sRGB]
 					
 					updateTextLabel .f3.do.plabel pbtext textv "Converting... ${name}_$dimension"
 					
 					set soname [lindex [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] 0]
 					
-					set convertCmd [concat -quiet "$opath" $resize $wmark $unsharp "$soname"]
+					set convertCmd [concat -quiet "$opath" $resize $wmark $unsharp -quality $::iquality "$soname"]
 					exec convert {*}$convertCmd
 					
 					pBarUpdate .f3.do.pbar cur
