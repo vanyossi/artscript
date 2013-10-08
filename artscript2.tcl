@@ -1311,7 +1311,7 @@ proc processHandlerFiles { {outdir "/tmp"} } {
 	set ids [putsHandlers g i k]
 	array set handler $handlers
 	
-	pBarUpdate .f3.do.pbar cur max [llength $ids] current 0
+	pBarUpdate .f3.do.pbar cur max [llength $ids] current -1
 	set msg {}
 	foreach imgv $ids {
 		array set id [dict get $inputfiles $imgv]
@@ -1368,7 +1368,7 @@ proc convert {} {
 	#process Gimp Calligra and inkscape to Tmp files
 	processHandlerFiles
 	
-	pBarUpdate .f3.do.pbar cur max [expr {[getFilesTotal 1]*[llength $sizes]}] current 0
+	pBarUpdate .f3.do.pbar cur max [expr {[getFilesTotal 1]*[llength $sizes]}] current -1
 
 	dict for {id datas} $::inputfiles {
 		dict with datas {
