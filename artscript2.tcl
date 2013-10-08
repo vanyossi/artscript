@@ -1381,8 +1381,8 @@ proc convert {} {
 				set filter "-interpolate bicubic -filter Parzen"
 				# use "-interpolate bicubic -filter Lanczos -define filter:blur=.9891028367558475" SLOW but best
 				# with -distort Resize instead of -resize "or LanczosRadius"
-				set unsharp [string repeat "-unsharp 0.48x0.48+0.75+0.012 " 1]
-				
+				set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
+				set i 0
 				foreach dimension $sizes {
 					updateTextLabel .f3.do.plabel pbtext textv "Converting... $name"
 					set resize {}
