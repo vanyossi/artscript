@@ -161,11 +161,15 @@ proc getWidthHeightSVG { f } {
 	set fl [open $f]
 	set data [read $fl]
 	close $fl
-	set lines [split $data \n]
-	set lines [lrange $lines 11 12]
+	set lines [lrange [split $data \n] 11 12]
 	foreach l $lines {
-		set start [string last "=" $l]
-		lappend size [string range $l $start+2 end-1]
+		set l [lsearch -inline -regexp -all $l {^(width|height)} ]
+		if {[string length $l] > 0} {
+			set start [string last "=" $l]
+			lappend size [string range [subst $l] $start+2 end-1]
+		} else {
+		 return 0 ; # exit if one value is missing
+		}
 	}
 	# Notice, values may be float numbers
 	return [join $size {x}]
@@ -234,18 +238,18 @@ proc listValidate { ltoval {counter 1}} {
 				
 				if { $filext == ".svg" } {
 					set size [getWidthHeightSVG $i]
+					if { $size == 0 } {
+						continue
+					}
 				} else {
 					if { [catch { exec inkscape -S $i | head -n 1 } msg] } {
 						append lstmsg "EE: $i discarted\n"
 						puts $msg
 						continue
 					}
-					# TODO get rid of head cmd
-					set svgcon [exec inkscape -S $i | head -n 1]
-					# Get the last elements of first line == w x h
-					set svgvals [lrange [split $svgcon {,}] end-1 end]
-					# Make float to int. TODO check if format "%.0f" works best here
-					set size [expr {round([lindex $svgvals 0])}]
+					set svgcon [exec inkscape -S $i | head -n 1] ; # TODO get rid of head cmd
+					set svgvals [lrange [split $svgcon {,}] end-1 end] ; # Get the last elements of first line == w x h
+					set size [expr {round([lindex $svgvals 0])}] ; # Make float to int. TODO check if format "%.0f" works best here
 					append size "x" [expr {round([lindex $svgvals 1])}]
 				}
 				setDictEntries $fc $i $size $filext "i"
