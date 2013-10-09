@@ -71,6 +71,11 @@ set ::sizes [list \
 	"50%" \
 ]
 #Suffix and prefix ops
+set ::suffixes [list \
+	"net" \
+	"archive" \
+	"by-[string map -nocase {{ } -} $autor]" \
+]
 set ::ouprefix {}
 set ::ousuffix {}
 #General checkboxes
@@ -161,18 +166,20 @@ proc getWidthHeightSVG { f } {
 	set fl [open $f]
 	set data [read $fl]
 	close $fl
-	set lines [lrange [split $data \n] 11 12]
+	set lines [lrange [split $data \n] 1 30]
 	foreach l $lines {
+		puts $l
 		set l [lsearch -inline -regexp -all $l {^(width|height)} ]
 		if {[string length $l] > 0} {
 			set start [string last "=" $l]
-			lappend size [string range [subst $l] $start+2 end-1]
-		} else {
-		 return 0 ; # exit if one value is missing
+			lappend size [expr {round([string range [subst $l] $start+2 end-1]) }]
 		}
 	}
-	# Notice, values may be float numbers
-	return [join $size {x}]
+	if {[info exists size]} {
+		return [join $size {x}]
+	} else {
+		return 0
+	}
 }
 
 # Checks the files listed in args to be valid files supported
@@ -1166,13 +1173,8 @@ ttk::labelframe $ou.efix -text "Suffix and Prefix" -labelwidget $ou.cbpre -paddi
 ttk::label $ou.lpre -text "Prefix"
 ttk::label $ou.lsuf -text "Suffix"
 
-set ::suffixes [list \
-	"net" \
-	"archive" \
-	"by-[string map -nocase {{ } -} $autor]" \
-	"$date" \
-]
-lappend ::suffixes {} ; # Appends an empty value to allow easy deselect
+lappend ::suffixes "$date" {} ; # Appends an empty value to allow easy deselect
+set ::suffixes [lsort $::suffixes]
 foreach suf $::suffixes {
 	lappend suflw [string length $suf]
 }
@@ -1181,10 +1183,10 @@ set suflw [expr {int($suflw+($suflw*.2))}]
 expr { $suflw > 16 ? [set suflw 16] : [set suflw] }
 
 ttk::combobox $ou.efix.pre -width $suflw -state readonly -textvariable ::ouprefix -values $suffixes
-$ou.efix.pre set [lindex $suffixes end]
+$ou.efix.pre set [lindex $suffixes 0]
 comboBoxEditEvents $ou.efix.pre {printOutname %W }
 ttk::combobox $ou.efix.suf -width $suflw -state readonly -textvariable ::ousuffix -values $suffixes
-$ou.efix.suf set [lindex $suffixes end]
+$ou.efix.suf set [lindex $suffixes 0]
 comboBoxEditEvents $ou.efix.suf {printOutname %W }
 
 # --== Output frame
