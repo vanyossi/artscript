@@ -1044,10 +1044,10 @@ proc convert [list [list argv $argv] ] {
 					set outputfile [file join $origin $outname]
 					puts "outputs $outputfile"
 					#If output is ora we have to use calligraconverter
-					set unsharp [string repeat "-unsharp 0.4x0.4+0.4+0.008 " 3]
+					set unsharp [string repeat "-unsharp 0.48x0.48+0.50+0.012 " 1]
 					if { ![string is boolean $resize] } {
 						
-						set resize "-colorspace RGB -interpolate bicubic -filter Lagrange -resize $resize\\> $unsharp -colorspace sRGB"
+						set resize "-colorspace RGB -interpolate bicubic -filter Lanczos2 -resize $resize\\> $unsharp -colorspace sRGB"
 					}
 					#Run command
 					eval exec convert -quiet {$i} $alpha $resize $watval $unsharp -quality $iquality {$outputfile}
