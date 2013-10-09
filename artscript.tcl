@@ -206,13 +206,16 @@ if { [file exists $configfile] } {
 	set File [open $configfile]
 	#read each line of File and store "key=value"
 	foreach {i} [split [read $File] \n] {
-			set firstc [string index $i 0]
-			if { $firstc != "#" && ![string is space $firstc] } {
-				lappend lista [split $i "="]
-				#lappend ListofResult [lindex [split $i ,] 1]
-			}
+		set firstc [string index $i 0]
+		if { $firstc != "#" && ![string is space $firstc] } {
+			lappend lista [split $i "="]
+			#lappend ListofResult [lindex [split $i ,] 1]
 		}
-		close $File
+	}
+	close $File
+	if {![info exists lista]} {
+		lappend lista {}
+	}
 	#declare default dictionary to add defaut config values
 	 set ::preset "default"
 	 if {[dict exists $ops ":preset"]} {
