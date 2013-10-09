@@ -141,7 +141,37 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} {or
 # Global dictionaries, files values, files who process
 set inputfiles [dict create]
 set handlers [dict create]
-# Checks the files listed in args to be valid files supported	
+
+#get image properties Size, format and path from identify IM
+proc identifyFile { f } {
+	set identify [list identify -quiet -format "%wx%h:%m:%M "]
+	if { [catch {set finfo [exec {*}$identify $f] } msg ] } {
+		return
+	} else {
+		foreach {size ext path} [split [lindex $finfo 0] ":"] {
+			set valist "size $size ext $ext path $path"
+		}
+		return $valist
+	}
+}
+
+# Parse SVG directly as Inkscape gives drawing not page wxh data
+# Works with plain and normal svg saved from inkscape. TODO: testing
+proc getWidthHeightSVG { f } {
+	set fl [open $f]
+	set data [read $fl]
+	close $fl
+	set lines [split $data \n]
+	set lines [lrange $lines 11 12]
+	foreach l $lines {
+		set start [string last "=" $l]
+		lappend size [string range $l $start+2 end-1]
+	}
+	# Notice, values may be float numbers
+	return [join $size {x}]
+}
+
+# Checks the files listed in args to be valid files supported
 proc listValidate { ltoval {counter 1}} {
 	global ext hasinkscape hascalligra hasgimp
 	global identify ops
@@ -201,21 +231,23 @@ proc listValidate { ltoval {counter 1}} {
 				continue
 
 			} elseif { [regexp {.svg|.ai} $filext ] && $hasinkscape } {
-
-				if { [catch { exec inkscape -S $i | head -n 1 } msg] } {
-					append lstmsg "EE: $i discarted\n"
-					puts $msg
-					continue
-				}
 				
-				# TODO get rid of head cmd
-				set svgcon [exec inkscape -S $i | head -n 1]
-				# Get the last elements of first line == w x h
-				set svgvals [lrange [split $svgcon {,}] end-1 end]
-				# Make float to int. TODO check if format "%.0f" works best here
-				set size [expr {round([lindex $svgvals 0])}]
-				append size "x" [expr {round([lindex $svgvals 1])}]
-
+				if { $filext == ".svg" } {
+					set size [getWidthHeightSVG $i]
+				} else {
+					if { [catch { exec inkscape -S $i | head -n 1 } msg] } {
+						append lstmsg "EE: $i discarted\n"
+						puts $msg
+						continue
+					}
+					# TODO get rid of head cmd
+					set svgcon [exec inkscape -S $i | head -n 1]
+					# Get the last elements of first line == w x h
+					set svgvals [lrange [split $svgcon {,}] end-1 end]
+					# Make float to int. TODO check if format "%.0f" works best here
+					set size [expr {round([lindex $svgvals 0])}]
+					append size "x" [expr {round([lindex $svgvals 1])}]
+				}
 				setDictEntries $fc $i $size $filext "i"
 				incr fc
 				continue
