@@ -220,6 +220,7 @@ proc listValidate { ltoval {counter 1}} {
 		# Call itself with directory contents if arg is dir
 		if {[file isdirectory $i]} {
 			listValidate [glob -nocomplain -directory $i -type f *] $fc
+			incr fc
 			continue
 		}
 		set filext [string tolower [file extension $i] ]
@@ -292,11 +293,9 @@ proc listValidate { ltoval {counter 1}} {
 				} else {
 					set size [lindex [split [string trim $finfo "|"] "|"] 0]
 				}
-
 				setDictEntries $fc $i $size $filext "m"
 				incr fc
 			}
-		
 		# When no extension we still check if file is valid image file, this can't tell
 		# if image type is openraster, krita or gimp valid. Need to work with mimes.
 		} elseif { [string is boolean [file extension $i]] && !$options } {
@@ -1410,6 +1409,7 @@ proc convert {} {
 		dict with datas {
 			if {!$deleted} {
 				set opath $path
+				set outpath [file dirname $path]
 
 				if {[dict exists $datas tmp]} {
 					set opath $tmp
@@ -1423,7 +1423,8 @@ proc convert {} {
 					updateTextLabel .f3.do.plabel pbtext textv "Converting... $name"
 					set resize {}
 					if {$dimension == 0} {
-						set convertCmd [concat $opath $resize $wmark $unsharp $oname]
+						set soname [file join $outpath $oname]
+						set convertCmd [concat \"$opath\" $resize $wmark $unsharp \"$soname\"]
 						exec convert {*}$convertCmd
 						pBarUpdate .f3.do.pbar cur
 						continue
@@ -1455,9 +1456,9 @@ proc convert {} {
 					if {$i == 1} {
 						set dimension {}
 					}
-					set soname [lindex [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] 0]
+					set soname [file join $outpath [lindex [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] 0]]
 					
-					set convertCmd [concat -quiet "$opath" $resize $wmark $unsharp -quality $::iquality "$soname"]
+					set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp -quality $::iquality \"$soname\"]
 					exec convert {*}$convertCmd
 
 					pBarUpdate .f3.do.pbar cur
