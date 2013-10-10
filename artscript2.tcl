@@ -22,15 +22,16 @@ set ::tk::dialog::file::showHiddenVar 0
 set ::tk::dialog::file::showHiddenBtn 1
 ttk::style theme use clam
 namespace eval img { }
-namespace eval atku {
-	variable usett
-	set usett [list ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"]
+namespace eval artscript {
+	variable usett [dict create]
+	
+	dict set usett ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
 }
-array set ::usett $::atku::usett
+array set ::usett $::artscript::usett
 puts "array $::usett(ext)"
 #--====User variables
 #Extension, define what file tipes artscript should read.
-set atku::ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
+set artscript::ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
 #set date values
 #Get a different number each run
 set ::raninter [clock seconds]
@@ -205,8 +206,8 @@ proc getWidthHeightSVG { f } {
 
 # Checks the files listed in args to be valid files supported
 proc listValidate { ltoval {counter 1}} {
-	global ::atku::ext hasinkscape hascalligra hasgimp
-	global identify ops
+	global ::artscript::ext hasinkscape hascalligra hasgimp
+	global identify
 	
 	proc setDictEntries { id fpath size ext h} {
 		global inputfiles handlers
@@ -241,7 +242,7 @@ proc listValidate { ltoval {counter 1}} {
 		set filext [string tolower [file extension $i] ]
 		set iname [file tail $i]
 
-		if {[lsearch $::atku::ext $filext ] >= 0 } {
+		if {[lsearch $::artscript::ext $filext ] >= 0 } {
 			if { [regexp {.xcf|.psd} $filext ] && $hasgimp } {
 
 				set size [lindex [exec identify -format "%wx%h " $i ] 0]
@@ -457,7 +458,7 @@ if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 
 proc openFiles {} {
 	global inputfiles
-	set exts [list $::atku::ext]
+	set exts [list $::artscript::ext]
 	set types " \
 	 	\"{Suported Images}  $exts \"
 	{{KRA, ORA}      {.ora .kra}  } \
@@ -1512,4 +1513,4 @@ proc convert {} {
 	pack forget .f3.do.pbar .f3.do.plabel
 	updateTextLabel .f3.do.plabel pbtext textv ""
 }
-puts [info vars atku::*]
+puts [info vars artscript::*]
