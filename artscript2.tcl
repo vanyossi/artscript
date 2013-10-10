@@ -16,11 +16,15 @@
 #   File must be in the same directory as the script.
 #
 package require Tk
+
 # Do not show .dot files by default
 catch {tk_getOpenFile foo bar}
 set ::tk::dialog::file::showHiddenVar 0
 set ::tk::dialog::file::showHiddenBtn 1
-ttk::style theme use clam
+
+#Set default theme to clam if supported
+catch {ttk::style theme use clam}
+
 namespace eval img { }
 namespace eval artscript {
 	variable usett [dict create]
