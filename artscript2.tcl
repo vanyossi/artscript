@@ -1209,81 +1209,92 @@ set ::st [tabResize .f2.ac.n.sz]
 .f2.ac.n add .f2.ac.n.sz -text "Resize" -underline 0
 
 # --== Suffix and prefix ops
-set ou .f2.ac.onam
 proc guiOutput { w } {
+
+	ttk::frame $w
+	ttk::checkbutton $w.cbpre -onvalue 1 -offvalue 0 -variable ::prefixsel -text "Suffix and Prefix" -command {printOutname 0 }
+	ttk::labelframe $w.efix -text "Suffix and Prefix" -labelwidget $w.cbpre -padding 6
+
+	frameSuffix $w.efix
+	# ttk::label $w.lpre -text "Prefix"
+	# ttk::label $w.lsuf -text "Suffix"
 	
+	ttk::separator $w.sep -orient horizontal
+	frameOutput $w.f
+	
+	pack $w.efix $w.sep -side top -fill both -expand 1 -padx 2
+	pack $w.f -side top -fill both -expand 1 -padx 2
+	pack configure $w.sep -padx 24 -pady 6 -expand 0
+	pack configure $w.efix -fill x -expand 0
+	
+	return $w
 }
-ttk::frame $ou
-ttk::checkbutton $ou.cbpre -onvalue 1 -offvalue 0 -variable ::prefixsel -text "Suffix and Prefix" -command {printOutname 0 }
-ttk::labelframe $ou.efix -text "Suffix and Prefix" -labelwidget $ou.cbpre -padding 6
 
-ttk::label $ou.lpre -text "Prefix"
-ttk::label $ou.lsuf -text "Suffix"
+proc frameSuffix { w } {
 
-lappend ::suffixes "$::date" {} ; # Appends an empty value to allow easy deselect
-set ::suffixes [lsort $::suffixes]
-foreach suf $::suffixes {
-	lappend suflw [string length $suf]
+
+	lappend ::suffixes "$::date" {} ; # Appends an empty value to allow easy deselect
+	set ::suffixes [lsort $::suffixes]
+	foreach suf $::suffixes {
+		lappend suflw [string length $suf]
+	}
+	set suflw [lindex [lsort -integer -decreasing $suflw] 0]
+	set suflw [expr {int($suflw+($suflw*.2))}]
+	expr { $suflw > 16 ? [set suflw 16] : [set suflw] }
+
+	ttk::combobox $w.pre -width $suflw -state readonly -textvariable ::ouprefix -values $::suffixes
+	$w.pre set [lindex $::suffixes 0]
+	comboBoxEditEvents $w.pre {printOutname %W }
+	ttk::combobox $w.suf -width $suflw -state readonly -textvariable ::ousuffix -values $::suffixes
+	$w.suf set [lindex $::suffixes 0]
+	comboBoxEditEvents $w.suf {printOutname %W }
+
+	pack $w.pre $w.suf -padx 2 -side left -fill x -expand 1
+
+	return $w
 }
-set suflw [lindex [lsort -integer -decreasing $suflw] 0]
-set suflw [expr {int($suflw+($suflw*.2))}]
-expr { $suflw > 16 ? [set suflw 16] : [set suflw] }
 
-ttk::combobox $ou.efix.pre -width $suflw -state readonly -textvariable ::ouprefix -values $::suffixes
-$ou.efix.pre set [lindex $::suffixes 0]
-comboBoxEditEvents $ou.efix.pre {printOutname %W }
-ttk::combobox $ou.efix.suf -width $suflw -state readonly -textvariable ::ousuffix -values $::suffixes
-$ou.efix.suf set [lindex $::suffixes 0]
-comboBoxEditEvents $ou.efix.suf {printOutname %W }
+proc frameOutput { w } {
+	ttk::labelframe $w -text "Output & Quality" -padding 8
 
-# --== Output frame
+	set formats [list png jpg gif] ; # TODO ora and keep
+	ttk::label $w.lbl -text "Format:"
+	ttk::combobox $w.fmt -state readonly -width 6 -textvariable ::outext -values $formats
+	$w.fmt set [lindex $formats 0]
+	bind $w.fmt <<ComboboxSelected>> { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
 
-ttk::labelframe $ou.f -text "Output & Quality" -padding 8
+	ttk::label $w.qtb -text "Quality:"
+	ttk::scale $w.qal -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }
+	ttk::label $w.qlb -width 4 -textvariable ::iquality
 
-set formats [list png jpg gif] ; # TODO ora and keep
-ttk::label $ou.f.lbl -text "Format:"
-ttk::combobox $ou.f.fmt -state readonly -width 6 -textvariable ::outext -values $formats
-$ou.f.fmt set [lindex $formats 0]
-bind $ou.f.fmt <<ComboboxSelected>> { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
+	ttk::checkbutton $w.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
 
-ttk::label $ou.f.qtb -text "Quality:"
-ttk::scale $ou.f.qal -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }
-ttk::label $ou.f.qlb -width 4 -textvariable ::iquality
-ttk::separator $ou.sep -orient horizontal
-ttk::checkbutton $ou.f.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
+	ttk::separator $w.sep -orient vertical
 
-pack $ou.efix $ou.sep $ou.f -side top -fill both -expand 1 -padx 2
-pack configure $ou.sep -padx 24 -pady 6 -expand 0
-pack configure $ou.efix -fill x -expand 0
+	grid $w.qtb $w.qlb $w.qal -row 1
+	grid configure $w.qtb -column 1
+	grid configure $w.qal -column 2 -columnspan 2 -sticky we
+	grid configure $w.qlb -column 4 -sticky w
+	grid $w.lbl $w.fmt -row 2
+	grid configure $w.lbl -column 2
+	grid configure $w.fmt -column 3	
+	grid $w.ove -row 3 -column 2
+	grid configure $w.fmt $w.qlb -sticky we
+	grid configure $w.qtb $w.lbl -sticky e
 
-pack $ou.efix.pre $ou.efix.suf -padx 2 -side left -fill x -expand 1
+	grid columnconfigure $w {2} -weight 12 -pad 4 
+	grid columnconfigure $w {1} -weight 2 -pad 4
+	grid rowconfigure $w {0 1 2 3} -weight 1 -pad 4
+	return $w
+}
 
-ttk::separator $ou.f.sep -orient vertical
-
-grid $ou.f.qtb $ou.f.qlb $ou.f.qal -row 1
-grid configure $ou.f.qtb -column 1
-grid configure $ou.f.qal -column 2 -columnspan 2 -sticky we
-grid configure $ou.f.qlb -column 4 -sticky w
-grid $ou.f.lbl $ou.f.fmt -row 2
-grid configure $ou.f.lbl -column 2
-grid configure $ou.f.fmt -column 3	
-grid $ou.f.ove -row 3 -column 2
-grid configure $ou.f.fmt $ou.f.qlb -sticky we
-grid configure $ou.f.qtb $ou.f.lbl -sticky e
-
-grid columnconfigure $ou.f {2} -weight 12 -pad 4 
-grid columnconfigure $ou.f {1} -weight 2 -pad 4
-grid rowconfigure $ou.f {0 1 2 3} -weight 1 -pad 4
-
+set ::guiOut [guiOutput .f2.ac.onam]
 
 # Add frame notebook to pane left.
 .f2.ac add .f2.ac.n
 .f2.ac add .f2.ac.onam
 .f2.ac pane .f2.ac.n -weight 6
 .f2.ac pane .f2.ac.onam -weight 2
-
-#pack panned window
-# pack .f2 -side top -expand 1 -fill both
 
 # ----==== Status bar
 pack [ttk::frame .f3] -side top -expand 0 -fill x
