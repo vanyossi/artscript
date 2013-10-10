@@ -767,7 +767,7 @@ proc setColor { w var item col {direct 1} { title "Choose color"} } {
 	# User selected a color and not cancel then
 	if { [expr {$col ne "" ? 1 : 0}] } {
 		$w itemconfigure $item -fill $col
-		$w itemconfigure $::c(main) -outline [getContrastColor $col]
+		$w itemconfigure $::canvasWatermark(main) -outline [getContrastColor $col]
 		set txtcol $col
 	}
 	return $col
@@ -794,9 +794,9 @@ proc drawSwatch { w args } {
 
 	foreach swatch $args {
 		incr i
-		set ::c($i) [$w create rectangle $x $y [expr {$x+$cw}] [expr {$y+$ch-1}] -fill $swatch -width 1 -outline {gray26} -tags {swatch}]
-		set col [lindex [$w itemconfigure $::c($i) -fill] end]
-		$w bind $::c($i) <Button-1> [list setColor $w ::wmcol $::c(main) $col 0 ]
+		set ::canvasWatermark($i) [$w create rectangle $x $y [expr {$x+$cw}] [expr {$y+$ch-1}] -fill $swatch -width 1 -outline {gray26} -tags {swatch}]
+		set col [lindex [$w itemconfigure $::canvasWatermark($i) -fill] end]
+		$w bind $::canvasWatermark($i) <Button-1> [list setColor $w ::wmcol $::canvasWatermark(main) $col 0 ]
 		if { $i == $chal } {
 			incr y $ch
 			set x [expr {$x-($cw*$i)}]
@@ -864,7 +864,7 @@ proc getswatches { {colist 0} {sortby 1}} {
 # ----=== Gui Construct ===----
 # TODO Make every frame a procedure to ease movement of the parts
 # Horizontal panel for placing operations that affect Artscript behaviour
-proc guiTopPanel { w } {
+proc guiTopBar { w } {
 	pack [ttk::frame $w] -side top -expand 0 -fill x
 	ttk::label $w.title -text "Artscript 2.0alpha"
 	ttk::button $w.add -text "Add files" -command { puts [openFiles] }
@@ -879,14 +879,28 @@ proc guiTopPanel { w } {
 	setUserPresets "default"
 	return $w
 }
-guiTopPanel {.f1}
+guiTopBar .f1
 
 # Paned views, File manager and options
-ttk::panedwindow .f2 -orient vertical
+proc guiMakePaned { w orientation } {
+	ttk::panedwindow $w -orient $orientation
+	return $w
+	}
+proc guiAddChildren { w args } {
+	foreach widget $args {
+		$w add ${w}${widget}	
+	}
+}
+
+set paned_father [guiMakePaned .f2 vertical]
+pack $paned_father -side top -expand 1 -fill both
+
+# guiAddChildren
 ttk::frame .f2.fb
 ttk::panedwindow .f2.ac -orient horizontal
-.f2 add .f2.fb
-.f2 add .f2.ac
+guiAddChildren .f2 .fb .ac
+#.f2 add .f2.fb
+#.f2 add .f2.ac
 
 # --== File manager treeview start ==
 set fileheaders { id input ext size oname }
@@ -917,6 +931,7 @@ pack .f2.fb.sscrl .f2.fb.lprev -side left -expand 0 -fill both
 pack propagate .f2.fb.lprev 0
 pack .f2.fb.lprev.im -expand 1 -fill both
 
+
 # --== Option tabs
 ttk::notebook .f2.ac.n
 ttk::notebook::enableTraversal .f2.ac.n
@@ -924,105 +939,111 @@ bind .f2.ac.n <ButtonPress-4> { scrollTabs %W [%W index current] 1 }
 bind .f2.ac.n <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
 
 # Set a var to ease modularization. TODO: procs
-set wt {.f2.ac.n.wm}
-ttk::frame $wt -padding 6
+proc tabWatermark { wt } {
 
-ttk::label $wt.lsel -text "Selection*"
-ttk::label $wt.lsize -text "Size" -width 4
-ttk::label $wt.lpos -text "Position" -width 10
-ttk::label $wt.lop -text "Opacity" -width 10
+	ttk::frame $wt -padding 6
 
+	ttk::label $wt.lsel -text "Selection*"
+	ttk::label $wt.lsize -text "Size" -width 4
+	ttk::label $wt.lpos -text "Position" -width 10
+	ttk::label $wt.lop -text "Opacity" -width 10
 
-# Text watermark ops
-ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable ::watseltxt -command { turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
-ttk::label $wt.ltext -text "Text"
-ttk::combobox $wt.watermarks -state readonly -textvariable ::wmtxt -values $::watermarks -width 28
-$wt.watermarks set [lindex $::watermarks 0]
-comboBoxEditEvents $wt.watermarks {bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx"}
+	# Text watermark ops
+	ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable ::watseltxt -command { turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
+	ttk::label $wt.ltext -text "Text"
+	ttk::combobox $wt.watermarks -state readonly -textvariable ::wmtxt -values $::watermarks -width 28
+	$wt.watermarks set [lindex $::watermarks 0]
+	
+	comboBoxEditEvents $wt.watermarks {bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx"}
 
-# font size spinbox
-set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
-ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
-	-validatecommand { string is integer %P }
-$wt.fontsize set $::wmsize
-bind $wt.fontsize <ButtonRelease> {bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx"}
-bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx" }
+	# font size spinbox
+	set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
+	ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
+		-validatecommand { string is integer %P }
+	$wt.fontsize set $::wmsize
+	bind $wt.fontsize <ButtonRelease> {bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx"}
+	bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx" }
 
-# Text position box
-ttk::combobox $wt.position -state readonly -textvariable ::wmpos -values $::wmpositions -width 10
-$wt.position set $::wmpos
-bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx" }
+	# Text position box
+	ttk::combobox $wt.position -state readonly -textvariable ::wmpos -values $::wmpositions -width 10
+	$wt.position set $::wmpos
+	bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx" }
 
-# Image watermark ops
-ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable ::watselimg -command {turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
-ttk::label $wt.limg -text "Image"
-# dict get $dic key
-# Get only the name for image list.
-set iwatermarksk [dict keys $::iwatermarks]
-ttk::combobox $wt.iwatermarks -state readonly -values $::iwatermarksk
-$wt.iwatermarks set [lindex $::iwatermarksk 0]
-set ::wmimsrc [dict get $::iwatermarks [lindex $::iwatermarksk 0]]
-bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel ".f3.rev.checkwm $wt.cbim" }
+	# Image watermark ops
+	ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable ::watselimg -command {turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
+	ttk::label $wt.limg -text "Image"
+	# dict get $dic key
+	# Get only the name for image list.
+	set iwatermarksk [dict keys $::iwatermarks]
+	ttk::combobox $wt.iwatermarks -state readonly -values $iwatermarksk
+	$wt.iwatermarks set [lindex $iwatermarksk 0]
+	set ::wmimsrc [dict get $::iwatermarks [lindex $iwatermarksk 0]]
+	bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel ".f3.rev.checkwm $wt.cbim" }
 
-# Image size box \%
-ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
-	-validatecommand { string is integer %P }
-$wt.imgsize set $::wmimsize
-bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] watsel .f3.rev.checkwm }
-bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel ".f3.rev.checkwm $wt.cbim"] }
+	# Image size box \%
+	ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
+		-validatecommand { string is integer %P }
+	$wt.imgsize set $::wmimsize
+	bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] watsel .f3.rev.checkwm }
+	bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel ".f3.rev.checkwm $wt.cbim"] }
 
-# Image position
-ttk::combobox $wt.iposition -state readonly -textvariable ::wmimpos -values $::wmpositions -width 10
-$wt.iposition set $::wmimpos
-bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbim" }
+	# Image position
+	ttk::combobox $wt.iposition -state readonly -textvariable ::wmimpos -values $::wmpositions -width 10
+	$wt.iposition set $::wmimpos
+	bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbim" }
 
-# Opacity scales
-# Set a given float as integer, TODO uplevel to set local context variable an not global namespace
-proc progressBarSet { gvar cvar wt cb ft fl } {
-	bindsetAction $gvar [format $ft $fl] $cvar ".f3.rev.checkwm $wt.$cb"
+	# Opacity scales
+	# Set a given float as integer, TODO uplevel to set local context variable an not global namespace
+	proc progressBarSet { gvar cvar wt cb ft fl } {
+		bindsetAction $gvar [format $ft $fl] $cvar ".f3.rev.checkwm $wt.$cb"
+	}
+
+	ttk::scale $wt.txop -from 10 -to 100 -variable ::wmop -value $::wmop -orient horizontal -command { progressBarSet ::wmop ::watsel $wt cbtx "%.0f" }
+	ttk::label $wt.tolab -width 3 -textvariable ::wmop
+
+	ttk::scale $wt.imop -from 10 -to 100 -variable ::wmimop -value $::wmimop -orient horizontal -command { progressBarSet ::wmimop ::watsel $wt cbim "%.0f" }
+	ttk::label $wt.iolab -width 3 -textvariable ::wmimop
+
+	# Style options
+	ttk::frame $wt.st
+	ttk::label $wt.st.txcol -text "Text Color"
+	ttk::label $wt.st.imstyle -text "Image Blending"
+	ttk::separator $wt.st.sep -orient vertical
+
+	canvas $wt.st.chos  -width 62 -height 26
+	
+	set ::canvasWatermark(main) [$wt.st.chos create rectangle 2 2 26 26 -fill $::wmcol -width 2 -outline [getContrastColor $::wmcol] -tags {main}]
+	$wt.st.chos bind main <Button-1> { setColor %W wmcol $::canvasWatermark(main) [%W itemconfigure $::canvasWatermark(main) -fill] }
+
+	set wmswatch [getswatches $::wmcolswatch]
+	drawSwatch $wt.st.chos $wmswatch
+
+	set iblendmodes [list Bumpmap ColorBurn ColorDodge Darken Exclusion HardLight Hue Lighten LinearBurn LinearDodge LinearLight Multiply Overlay Over Plus Saturate Screen SoftLight VividLight]
+	ttk::combobox $wt.st.iblend -state readonly -textvariable ::wmimcomp -values $iblendmodes -width 12
+	$wt.st.iblend set $::wmimcomp
+	bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] watsel ".f3.rev.checkwm $wt.cbim" }
+
+	set wtpadding 2
+	grid $wt.lsize $wt.lpos $wt.lop -row 1 -sticky ws
+	grid $wt.cbtx $wt.ltext $wt.watermarks $wt.fontsize $wt.position $wt.txop $wt.tolab -row 2 -sticky we -padx $wtpadding -pady $wtpadding
+	grid $wt.cbim $wt.limg $wt.iwatermarks $wt.imgsize $wt.iposition $wt.imop $wt.iolab -row 3 -sticky we -padx $wtpadding -pady $wtpadding
+	grid $wt.cbtx $wt.cbim -column 1 -padx 0 -ipadx 0
+	grid $wt.ltext $wt.limg -column 2
+	grid $wt.watermarks $wt.iwatermarks -column 3
+	grid $wt.lsize $wt.fontsize $wt.imgsize -column 4
+	grid $wt.lpos $wt.position $wt.iposition -column 5
+	grid $wt.lop $wt.txop $wt.imop -column 6
+	grid $wt.tolab $wt.iolab -column 7
+	grid $wt.st -row 4 -column 3 -columnspan 4 -sticky we -pady 4
+	grid columnconfigure $wt {3} -weight 1
+
+	pack $wt.st.txcol $wt.st.chos $wt.st.sep $wt.st.imstyle $wt.st.iblend -expand 1 -side left -fill x
+	pack configure $wt.st.txcol $wt.st.chos $wt.st.imstyle -expand 0
+	
+	return $wt
 }
-
-ttk::scale $wt.txop -from 10 -to 100 -variable ::wmop -value $::wmop -orient horizontal -command { progressBarSet ::wmop ::watsel $wt cbtx "%.0f" }
-ttk::label $wt.tolab -width 3 -textvariable ::wmop
-
-ttk::scale $wt.imop -from 10 -to 100 -variable ::wmimop -value $::wmimop -orient horizontal -command { progressBarSet ::wmimop ::watsel $wt cbim "%.0f" }
-ttk::label $wt.iolab -width 3 -textvariable ::wmimop
-
-# Style options
-ttk::frame $wt.st
-ttk::label $wt.st.txcol -text "Text Color"
-ttk::label $wt.st.imstyle -text "Image Blending"
-ttk::separator $wt.st.sep -orient vertical
-
-canvas $wt.st.chos  -width 62 -height 26
-set c(main) [$wt.st.chos create rectangle 2 2 26 26 -fill $::wmcol -width 2 -outline [getContrastColor $::wmcol] -tags {main}]
-$wt.st.chos bind main <Button-1> { setColor %W wmcol $c(main) [%W itemconfigure $c(main) -fill] }
-
-set wmswatch [getswatches $::wmcolswatch]
-drawSwatch $wt.st.chos $wmswatch
-
-set iblendmodes [list Bumpmap ColorBurn ColorDodge Darken Exclusion HardLight Hue Lighten LinearBurn LinearDodge LinearLight Multiply Overlay Over Plus Saturate Screen SoftLight VividLight]
-ttk::combobox $wt.st.iblend -state readonly -textvariable ::wmimcomp -values $iblendmodes -width 12
-$wt.st.iblend set $::wmimcomp
-bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] watsel ".f3.rev.checkwm $wt.cbim" }
-
-set wtp 2 ; # Padding value
-
-grid $wt.lsize $wt.lpos $wt.lop -row 1 -sticky ws
-grid $wt.cbtx $wt.ltext $wt.watermarks $wt.fontsize $wt.position $wt.txop $wt.tolab -row 2 -sticky we -padx $wtp -pady $wtp
-grid $wt.cbim $wt.limg $wt.iwatermarks $wt.imgsize $wt.iposition $wt.imop $wt.iolab -row 3 -sticky we -padx $wtp -pady $wtp
-grid $wt.cbtx $wt.cbim -column 1 -padx 0 -ipadx 0
-grid $wt.ltext $wt.limg -column 2
-grid $wt.watermarks $wt.iwatermarks -column 3
-grid $wt.lsize $wt.fontsize $wt.imgsize -column 4
-grid $wt.lpos $wt.position $wt.iposition -column 5
-grid $wt.lop $wt.txop $wt.imop -column 6
-grid $wt.tolab $wt.iolab -column 7
-grid $wt.st -row 4 -column 3 -columnspan 4 -sticky we -pady 4
-grid columnconfigure $wt {3} -weight 1
-
-pack $wt.st.txcol $wt.st.chos $wt.st.sep $wt.st.imstyle $wt.st.iblend -expand 1 -side left -fill x
-pack configure $wt.st.txcol $wt.st.chos $wt.st.imstyle -expand 0
+# All varibles in events need to be global
+set ::wt [tabWatermark .f2.ac.n.wm]
 
 # --== Size options
 proc tabResize {st} {
@@ -1168,12 +1189,13 @@ proc tabResize {st} {
 		}
 		return $szgrid
 	}
+	return $st
 }
 
 tabResize .f2.ac.n.sz
 
 # Add frames to tabs in notebook
-.f2.ac.n add $wt -text "Watermark" -underline 0
+.f2.ac.n add .f2.ac.n.wm -text "Watermark" -underline 0
 .f2.ac.n add .f2.ac.n.sz -text "Resize" -underline 0
 
 # --== Suffix and prefix ops
@@ -1217,11 +1239,11 @@ ttk::label $ou.f.qlb -width 4 -textvariable ::iquality
 ttk::separator $ou.sep -orient horizontal
 ttk::checkbutton $ou.f.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
 
-pack $ou.efix $ou.sep $ou.f -side top -fill both -expand 1 -padx $wtp
+pack $ou.efix $ou.sep $ou.f -side top -fill both -expand 1 -padx 2
 pack configure $ou.sep -padx 24 -pady 6 -expand 0
 pack configure $ou.efix -fill x -expand 0
 
-pack $ou.efix.pre $ou.efix.suf -padx $wtp -side left -fill x -expand 1
+pack $ou.efix.pre $ou.efix.suf -padx 2 -side left -fill x -expand 1
 
 ttk::separator $ou.f.sep -orient vertical
 
@@ -1248,7 +1270,7 @@ grid rowconfigure $ou.f {0 1 2 3} -weight 1 -pad 4
 .f2.ac pane .f2.ac.onam -weight 2
 
 #pack panned window
-pack .f2 -side top -expand 1 -fill both
+# pack .f2 -side top -expand 1 -fill both
 
 # ----==== Status bar
 pack [ttk::frame .f3] -side top -expand 0 -fill x
