@@ -171,12 +171,12 @@ set ::hascalligra [validate "calligraconverter"]
 proc identifyFile { f } {
 	set identify [list identify -quiet -format "%wx%h:%m:%M "]
 	if { [catch {set finfo [exec {*}$identify $f] } msg ] } {
-		return
+		return -code error "$msg"
 	} else {
 		foreach {size ext path} [split [lindex $finfo 0] ":"] {
-			set valist "size $size ext $ext path $path"
+			set valist "size $size ext [string tolower $ext] path $path"
 		}
-		return $valist
+		return [dict merge $valist]
 	}
 }
 
@@ -223,10 +223,6 @@ proc listValidate { ltoval {counter 1}} {
 	}
 	# Keep $fc adding up if proc is called a second time. TODO (perhaps make global)
 	set fc $counter
-	
-	# TODO make functions work with a single identify format { identify -quiet -format "%wx%h:%m:%M " }
-	# Last returns a list of (n) nunber of layers the image has
-	set identify "identify -quiet -format %wx%h\|%m\|%M\|"
 
 	foreach i $ltoval {
 		
@@ -299,38 +295,31 @@ proc listValidate { ltoval {counter 1}} {
 
 			# Catch magick errors. Some files have the extension but are not valid types
 			} else {
-				if { [catch {set finfo [exec {*}[split $identify " "] $i ] } msg ] } {
+				if { [catch {set finfo [identifyFile $i ] } msg ] } {
 					puts $msg
 					append ::lstmsg "EE: $i discarted\n"
 					continue
-				} else {
-					set size [lindex [split [string trim $finfo "|"] "|"] 0]
 				}
+				set size [dict get $finfo size]
 				setDictEntries $fc $i $size $filext "m"
 				incr fc
 			}
 		# When no extension we still check if file is valid image file, this can't tell
 		# if image type is openraster, krita or gimp valid. Need to work with mimes.
-		} elseif { [string is boolean [file extension $i]] && !$options } {
-			if { [catch { set f [exec {*}[split $identify " "] $i ] } msg ] } {
+		} else {
+			if { [catch {set finfo [identifyFile $i ] } msg ] } {
 				puts $msg
-			} else {
-				if { [catch {set finfo [exec {*}[split $identify " "] $i ] } msg ] } {
-					puts $msg
-					append ::lstmsg "EE: $i discarted\n"
-					continue
-				}
-
-				set iminfo [split [string trim $finfo "|"] "|"]
-				set size [lindex $iminfo 0]
-				set filext [string tolower [lindex $iminfo 1]]
-
-				setDictEntries $fc $i $size $filext "m"
-				incr fc
+				append ::lstmsg "EE: $i discarted\n"
+				continue
 			}
+			set size [dict get $finfo size]
+			set filext [dict get $finfo ext]
+			setDictEntries $fc $i $size $filext "m"
+			incr fc
 		}
 	}
 }
+
 # Validate input filetypes
 set argvnops [lrange $argv [llength $::ops] end]
 listValidate $argvnops
