@@ -235,86 +235,74 @@ proc listValidate { ltoval {counter 1}} {
 		set filext [string tolower [file extension $i] ]
 		set iname [file tail $i]
 
-		if {[lsearch $::artscript::ext $filext ] >= 0 } {
-			if { [regexp {.xcf|.psd} $filext ] && $::hasgimp } {
+		if { [regexp {.xcf|.psd} $filext ] && $::hasgimp } {
 
-				set size [lindex [exec identify -format "%wx%h " $i ] 0]
+			set size [lindex [exec identify -format "%wx%h " $i ] 0]
 
-				setDictEntries $fc $i $size $filext "g"
-				incr fc
-				continue
+			setDictEntries $fc $i $size $filext "g"
+			incr fc
+			continue
 
-			} elseif { [regexp {.svg|.ai} $filext ] && $::hasinkscape } {
-				
-				if { $filext == ".svg" } {
-					set size [getWidthHeightSVG $i]
-					if { $size == 0 } {
-						continue
-					}
-				} else {
-					if { [catch { exec inkscape -S $i | head -n 1 } msg] } {
-						append ::lstmsg "EE: $i discarted\n"
-						puts $msg
-						continue
-					}
-					set svgcon [exec inkscape -S $i | head -n 1] ; # TODO get rid of head cmd
-					set svgvals [lrange [split $svgcon {,}] end-1 end] ; # Get the last elements of first line == w x h
-					set size [expr {round([lindex $svgvals 0])}] ; # Make float to int. TODO check if format "%.0f" works best here
-					append size "x" [expr {round([lindex $svgvals 1])}]
-				}
-				setDictEntries $fc $i $size $filext "i"
-				incr fc
-				continue
-
-			} elseif { [regexp {.kra|.ora|.xcf|.psd} $filext ] && $::hascalligra } {
-				set size "N/A"
-				# TODO Simplify
-				# Get contents from file and parse them into Size values.
-				if { $filext == ".ora" } {
-					if { [catch { set zipcon [exec unzip -p $i stack.xml | grep image | head -n 1] } msg] } {
-						continue
-					}
-					set zipcon [exec unzip -p $i stack.xml | grep image | head -n 1]
-					set zipkey [lreverse [ string trim $zipcon "image<> " ] ]
-					set size [string trim [lindex [split [lindex $zipkey 0] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 1] "="] 1] {"\""}]
-					unset zipcon zipkey
-
-				} elseif { $filext == ".kra" } {
-					if { [catch { set zipcon [exec unzip -p $i maindoc.xml | grep -i IMAGE | head -n1] } msg] } {
-						continue
-					}
-						set zipcon [exec unzip -p $i maindoc.xml | grep -i IMAGE | head -n1]
-						set zipkey [lsearch -inline -regexp -all $zipcon {^(width|height)} ]
-						set size [string trim [lindex [split [lindex $zipkey 0] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 1] "="] 1] {"\""}]
-						unset zipcon zipkey
-				}
-
-				setDictEntries $fc $i $size $filext "k"
-				incr fc
-				continue
-
-			# Catch magick errors. Some files have the extension but are not valid types
-			} else {
-				if { [catch {set finfo [identifyFile $i ] } msg ] } {
-					puts $msg
-					append ::lstmsg "EE: $i discarted\n"
+		} elseif { [regexp {.svg|.ai} $filext ] && $::hasinkscape } {
+			
+			if { $filext == ".svg" } {
+				set size [getWidthHeightSVG $i]
+				if { $size == 0 } {
 					continue
 				}
-				set size [dict get $finfo size]
-				setDictEntries $fc $i $size $filext "m"
-				incr fc
+			} else {
+				if { [catch { exec inkscape -S $i | head -n 1 } msg] } {
+					append ::lstmsg "EE: $i discarted\n"
+					puts $msg
+					continue
+				}
+				set svgcon [exec inkscape -S $i | head -n 1] ; # TODO get rid of head cmd
+				set svgvals [lrange [split $svgcon {,}] end-1 end] ; # Get the last elements of first line == w x h
+				set size [expr {round([lindex $svgvals 0])}] ; # Make float to int. TODO check if format "%.0f" works best here
+				append size "x" [expr {round([lindex $svgvals 1])}]
 			}
-		# When no extension we still check if file is valid image file, this can't tell
-		# if image type is openraster, krita or gimp valid. Need to work with mimes.
-		} else {
+			setDictEntries $fc $i $size $filext "i"
+			incr fc
+			continue
+
+		} elseif { [regexp {.kra|.ora|.xcf|.psd} $filext ] && $::hascalligra } {
+			set size "N/A"
+			# TODO Simplify
+			# Get contents from file and parse them into Size values.
+			if { $filext == ".ora" } {
+				if { [catch { set zipcon [exec unzip -p $i stack.xml | grep image | head -n 1] } msg] } {
+					continue
+				}
+				set zipcon [exec unzip -p $i stack.xml | grep image | head -n 1]
+				set zipkey [lreverse [ string trim $zipcon "image<> " ] ]
+				set size [string trim [lindex [split [lindex $zipkey 0] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 1] "="] 1] {"\""}]
+				unset zipcon zipkey
+
+			} elseif { $filext == ".kra" } {
+				if { [catch { set zipcon [exec unzip -p $i maindoc.xml | grep -i IMAGE | head -n1] } msg] } {
+					continue
+				}
+					set zipcon [exec unzip -p $i maindoc.xml | grep -i IMAGE | head -n1]
+					set zipkey [lsearch -inline -regexp -all $zipcon {^(width|height)} ]
+					set size [string trim [lindex [split [lindex $zipkey 0] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 1] "="] 1] {"\""}]
+					unset zipcon zipkey
+			}
+
+			setDictEntries $fc $i $size $filext "k"
+			incr fc
+			continue
+
+		# Catch magick errors. Some files have the extension but are not valid types
+		# And check for files with no extension with IM identify
+		} elseif { [lsearch $::artscript::ext $filext ] >= 0 || [string equal $filext {}] } {
 			if { [catch {set finfo [identifyFile $i ] } msg ] } {
 				puts $msg
 				append ::lstmsg "EE: $i discarted\n"
 				continue
 			}
 			set size [dict get $finfo size]
-			set filext [dict get $finfo ext]
-			setDictEntries $fc $i $size $filext "m"
+			set ext [dict get $finfo ext]
+			setDictEntries $fc $i $size $ext "m"
 			incr fc
 		}
 	}
