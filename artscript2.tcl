@@ -115,8 +115,6 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} {or
 		set prefix {}
 		set suffix {}
 	}
-	# if {$tmprun} { set suffix "" } else { set tmpsuffix $::suffix }
-	
 	if {$orloc != 0 } {
 		set iname $orloc
 	}
@@ -160,7 +158,8 @@ set ::hasgimp [validate "gimp"]
 set ::hasinkscape [validate "inkscape"]
 set ::hascalligra [validate "calligraconverter"]
 
-#get image properties Size, format and path from identify IM
+# Get image properties Size, format and path from identify IM
+# Receives an absolute file path
 proc identifyFile { f } {
 	set identify [list identify -quiet -format "%wx%h:%m:%M "]
 	if { [catch {set finfo [exec {*}$identify $f] } msg ] } {
@@ -195,9 +194,8 @@ proc getWidthHeightSVG { f } {
 	}
 }
 
-# Checks the files listed in args to be valid files supported
+# Checks the files listed in args to be Filetypes supported from a path list
 proc listValidate { ltoval {counter 1}} {
-	global identify
 	
 	proc setDictEntries { id fpath size ext h} {
 		global inputfiles handlers
@@ -228,7 +226,7 @@ proc listValidate { ltoval {counter 1}} {
 		set filext [string tolower [file extension $i] ]
 		set iname [file tail $i]
 
-		if { [regexp {.xcf|.psd} $filext ] && $::hasgimp } {
+		if { [regexp {^(.xcf|.psd)$} $filext ] && $::hasgimp } {
 
 			set size [lindex [exec identify -format "%wx%h " $i ] 0]
 
@@ -236,7 +234,7 @@ proc listValidate { ltoval {counter 1}} {
 			incr fc
 			continue
 
-		} elseif { [regexp {.svg|.ai} $filext ] && $::hasinkscape } {
+		} elseif { [regexp {^(.svg|.ai)$} $filext ] && $::hasinkscape } {
 			
 			if { $filext == ".svg" } {
 				set size [getWidthHeightSVG $i]
@@ -258,7 +256,7 @@ proc listValidate { ltoval {counter 1}} {
 			incr fc
 			continue
 
-		} elseif { [regexp {.kra|.ora|.xcf|.psd} $filext ] && $::hascalligra } {
+		} elseif { [regexp {^(.kra|.ora|.xcf|.psd)$} $filext ] && $::hascalligra } {
 			set size "N/A"
 			# TODO Simplify
 			# Get contents from file and parse them into Size values.
@@ -280,7 +278,6 @@ proc listValidate { ltoval {counter 1}} {
 					set size [string trim [lindex [split [lindex $zipkey 0] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 1] "="] 1] {"\""}]
 					unset zipcon zipkey
 			}
-
 			setDictEntries $fc $i $size $filext "k"
 			incr fc
 			continue
@@ -380,7 +377,7 @@ proc setUserPresets { s } {
 }
 getUserPresets
 # Returns total of files in dict except for flagged as deleted.
-# TODO all boolean is reversed.
+# TODO all boolean is reversed. use incr to count
 proc getFilesTotal { { all 0} } {
 	global inputfiles
 	
@@ -506,18 +503,6 @@ proc turnOffChildCB { w args } {
 	}
 }
 
-# Sets a custom value to any key of all members o the dict
-# TODO complete the function. recieves widget, inputdict, key to alter, script
-proc changeval {} {
-	global inputfiles
-	foreach arg [dict keys $inputfiles] {
-		global imgid$arg
-		set setval [.m2.ac.conv.size.sizes item [.m2.ac.conv.size.sizes selection] -text]
-		set oname "[dict get $inputfiles $arg name]_$setval"
-		dict set inputfiles $arg oname $oname
-		.m1.flist set [set imgid$arg] output $oname
-	}
-}
 # Get nested dict values and place them in the tree $w
 proc addTreevalues { w fdict } {
 	# .f2.fb.flist
@@ -612,34 +597,31 @@ proc printOutname { w } {
 }
 
 # First define subprocesses
-	# TODO, set a rename proc "" to delete process and make it trully local (or lambas?)
-	# makeThumb creates a thumbnail based on path (file type) makes requested sizes.
-	proc makeThumb { path tsize } {
-		set cmd [dict create]
-		dict set cmd .ora {Thumbnails/thumbnail.png}
-		dict set cmd .kra {preview.png}
+# makeThumb creates a thumbnail based on path (file type) makes requested sizes.
+proc makeThumb { path tsize } {
+	set cmd [dict create]
+	dict set cmd .ora {Thumbnails/thumbnail.png}
+	dict set cmd .kra {preview.png}
 
-		set filext [string tolower [file extension $path] ]
+	set filext [string tolower [file extension $path] ]
 
-		if { [regexp {.ora|.kra} $filext ] } {
-			set container [dict get $cmd $filext]
-			#unzip to location tmp$container
-			catch {exec unzip $path $container -d /tmp/}
-			set tmpfile "/tmp/$container"
-			set path $tmpfile
+	if { [regexp {.ora|.kra} $filext ] } {
+		set container [dict get $cmd $filext]
+		#unzip to location tmp$container
+		catch {exec unzip $path $container -d /tmp/}
+		set tmpfile "/tmp/$container"
+		set path $tmpfile
 
-		# Remove gimp and psd thumnail if we cannot figure it out how to keep GUI responsive
-		# Or: force use of tmp file from convert (faster) instead of savind a preview.
-		} elseif {[regexp {.xcf|.psd} $filext ]} {
-			# TODO: Break appart preview function to allow loading thumbs from tmp folder
-			.f2.fb.lprev.im configure -compound text -text "No preview"
-			return 0
-		}
-		foreach {size dest} $tsize {
-			catch {exec convert $path -thumbnail [append size x $size] -flatten PNG32:$dest} msg
-		}
-		catch {file delete $tmpfile}
+	} elseif {[regexp {.xcf|.psd} $filext ]} {
+		# TODO: Break appart preview function to allow loading thumbs from tmp folder
+		.f2.fb.lprev.im configure -compound text -text "No preview"
+		return 0
 	}
+	foreach {size dest} $tsize {
+		catch {exec convert $path -thumbnail [append size x $size] -flatten PNG32:$dest} msg
+	}
+	catch {file delete $tmpfile}
+}
 	
 # Attempts to load a thumbnail from thumbnails folder if exists.
 # Creates a thumbnail for files missing Large thumbnail
@@ -762,6 +744,7 @@ proc setColor { w var item col {direct 1} { title "Choose color"} } {
 	}
 	return $col
 }
+
 proc getContrastColor { color } {
 	set rgbs [winfo rgb . $color]
 	set luma [lindex [rgbtohsv {*}$rgbs ] 4]
@@ -922,7 +905,7 @@ proc guiFileList { w } {
 	$w.flist column size -width 86 -stretch 0
 	bind $w.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [%W selection] }
 	bind $w.flist <Key-Delete> { removeTreeItem %W [%W selection] }
-	ttk::scrollbar $w.sscrl -orient vertical -command { $w.flist yview }
+	ttk::scrollbar $w.sscrl -orient vertical -command [list $w.flist yview ]
 	return $w
 }
 
@@ -1141,9 +1124,6 @@ proc tabResize {st} {
 		} elseif { [llength $sizesels] == 0 } {
 			.f3.rev.checksz invoke
 		}
-		
-		# set fname [getOutputName $f $::outext $::ouprefix $::ousuffix]
-		# puts $fname
 	}
 	
 	proc addSizecol {st id row {state normal}} {
@@ -1174,8 +1154,8 @@ proc tabResize {st} {
 		$st.add configure -command [list addSizecol $st $id $row]
 		
 		eventSize $st 0
-		
 	}
+
 	proc delSizecol { st id } {
 		# grid forget $st.del$id $st.wid$id $st.xmul$id $st.hei$id
 		destroy $st.del$id $st.wid$id $st.xmu$id $st.hei$id
