@@ -859,23 +859,23 @@ proc getswatches { {colist 0} {sortby 1}} {
 
 # ----=== Gui Construct ===----
 # TODO Make every frame a procedure to ease movement of the parts
-# Top menu panel
-pack [ttk::frame .f1] -side top -expand 0 -fill x
-ttk::label .f1.title -text "Artscript 2.0alpha"
-ttk::button .f1.add -text "Add files" -command { puts [openFiles] }
-pack .f1.title .f1.add  -side left
+# Horizontal panel for placing operations that affect Artscript behaviour
+proc guiTopPanel { w } {
+	pack [ttk::frame $w] -side top -expand 0 -fill x
+	ttk::label $w.title -text "Artscript 2.0alpha"
+	ttk::button $w.add -text "Add files" -command { puts [openFiles] }
+	pack $w.title $w.add  -side left
 
-if {[info exists presets]} {
-	puts [dict keys $presets]
-	ttk::combobox .f1.preset -state readonly -values [dict keys $presets] ; # -width 10
-	.f1.preset set "default"
-	bind .f1.preset <<ComboboxSelected>> { changePreset [%W get] }
-	pack .f1.preset -after .f1.add -side left
+	if {[info exists presets]} {
+		ttk::combobox $w.preset -state readonly -values [dict keys $presets]
+		$w.preset set "default"
+		bind $w.preset <<ComboboxSelected>> { setUserPresets [%W get] }
+		pack $w.preset -after $w.add -side left
+	}
+	setUserPresets "default"
+	return $w
 }
-proc changePreset { s } {
-	setUserPresets $s
-}
-setUserPresets "default"
+guiTopPanel {.f1}
 
 # Paned views, File manager and options
 ttk::panedwindow .f2 -orient vertical
