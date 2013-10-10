@@ -621,11 +621,8 @@ proc printOutname { w } {
 	}
 	treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0}
 }
-# Attempts to load a thumbnail from thumbnails folder if exists.
-# Creates a thumbnail for files missing Large thumbnail
-proc showPreview { w f {tryprev 1}} {
 
-	# First define subprocesses
+# First define subprocesses
 	# TODO, set a rename proc "" to delete process and make it trully local (or lambas?)
 	# makeThumb creates a thumbnail based on path (file type) makes requested sizes.
 	proc makeThumb { path tsize } {
@@ -654,7 +651,10 @@ proc showPreview { w f {tryprev 1}} {
 		}
 		catch {file delete $tmpfile}
 	}
-
+	
+# Attempts to load a thumbnail from thumbnails folder if exists.
+# Creates a thumbnail for files missing Large thumbnail
+proc showPreview { w f {tryprev 1}} {
 	global inputfiles env
 
 	# Do not process if selection is multiple
@@ -663,6 +663,7 @@ proc showPreview { w f {tryprev 1}} {
 	}
 	# TODO, get value with no lindex: .t set $f id
 	set id [lindex [.f2.fb.flist item $f -values] 0]
+	
 	set path [dict get $inputfiles $id path]
 	# Creates md5 checksum from text string: TODO avoid using echo
 	# exec md5sum << "string" and string trim $hash {- }
@@ -888,55 +889,58 @@ proc guiMakePaned { w orientation } {
 	}
 proc guiAddChildren { w args } {
 	foreach widget $args {
-		$w add ${w}${widget}	
+		$w add $widget	
 	}
 }
 
-set paned_father [guiMakePaned .f2 vertical]
-pack $paned_father -side top -expand 1 -fill both
+proc guiMiddle { w } {
+	
+	set paned_big [guiMakePaned $w vertical]
+	pack $paned_big -side top -expand 1 -fill both
 
-# guiAddChildren
-ttk::frame .f2.fb
-ttk::panedwindow .f2.ac -orient horizontal
-guiAddChildren .f2 .fb .ac
-#.f2 add .f2.fb
-#.f2 add .f2.ac
+	set file_pane $paned_big.fb
+	ttk::frame $file_pane
+	set paned_botom [guiMakePaned $paned_big.ac horizontal]
+	guiAddChildren $paned_big $file_pane $paned_botom
 
-# --== File manager treeview start ==
-set fileheaders { id input ext size oname }
-ttk::treeview .f2.fb.flist -columns $fileheaders -show headings -yscrollcommand ".f2.fb.sscrl set"
-foreach col $fileheaders {
-	set name [string totitle $col]
-	.f2.fb.flist heading $col -text $name -command [list treeSort .f2.fb.flist $col 0 ]
+	guiFileList $file_pane
+	guiThumbnail $file_pane
+	
+	pack $file_pane.flist -side left -expand 1 -fill both
+	pack $file_pane.sscrl $file_pane.lprev -side left -expand 0 -fill both
+	pack propagate $file_pane.lprev 0
+	pack $file_pane.lprev.im -expand 1 -fill both
+	
+	return $w
 }
-.f2.fb.flist column id -width 48 -stretch 0
-.f2.fb.flist column ext -width 48 -stretch 0
-.f2.fb.flist column size -width 86 -stretch 0
+
+proc guiFileList { w } {
+	set fileheaders { id input ext size oname }
+	ttk::treeview $w.flist -columns $fileheaders -show headings -yscrollcommand "$w.sscrl set"
+	foreach col $fileheaders {
+		set name [string totitle $col]
+		$w.flist heading $col -text $name -command [list treeSort $w.flist $col 0 ]
+	}
+	$w.flist column id -width 48 -stretch 0
+	$w.flist column ext -width 48 -stretch 0
+	$w.flist column size -width 86 -stretch 0
+	bind $w.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [%W selection] }
+	bind $w.flist <Key-Delete> { removeTreeItem %W [%W selection] }
+	ttk::scrollbar $w.sscrl -orient vertical -command { $w.flist yview }
+	return $w
+}
+
+proc guiThumbnail { w } {
+	ttk::labelframe $w.lprev -width 276 -height 292 -padding 6 -labelanchor n -text "Thumbnail"
+	# -labelwidget .f2.ac.checkwm
+	ttk::label $w.lprev.im -anchor center -text "No preview"
+}
+
+guiMiddle .f2
+# --== File manager treeview start ==
 
 #Populate tree
 addTreevalues .f2.fb.flist $inputfiles
-
-bind .f2.fb.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [%W selection] }
-bind .f2.fb.flist <Key-Delete> { removeTreeItem %W [%W selection] }
-ttk::scrollbar .f2.fb.sscrl -orient vertical -command { .f2.fb.flist yview }
-
-# --== Thumbnail
-ttk::labelframe .f2.fb.lprev -width 276 -height 292 -padding 6 -labelanchor n -text "Thumbnail"
-# -labelwidget .f2.ac.checkwm
-ttk::label .f2.fb.lprev.im -anchor center -text "No preview"
-
-
-pack .f2.fb.flist -side left -expand 1 -fill both
-pack .f2.fb.sscrl .f2.fb.lprev -side left -expand 0 -fill both
-pack propagate .f2.fb.lprev 0
-pack .f2.fb.lprev.im -expand 1 -fill both
-
-
-# --== Option tabs
-ttk::notebook .f2.ac.n
-ttk::notebook::enableTraversal .f2.ac.n
-bind .f2.ac.n <ButtonPress-4> { scrollTabs %W [%W index current] 1 }
-bind .f2.ac.n <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
 
 # Set a var to ease modularization. TODO: procs
 proc tabWatermark { wt } {
@@ -1042,8 +1046,6 @@ proc tabWatermark { wt } {
 	
 	return $wt
 }
-# All varibles in events need to be global
-set ::wt [tabWatermark .f2.ac.n.wm]
 
 # --== Size options
 proc tabResize {st} {
@@ -1192,7 +1194,15 @@ proc tabResize {st} {
 	return $st
 }
 
-tabResize .f2.ac.n.sz
+# --== Option tabs
+ttk::notebook .f2.ac.n
+ttk::notebook::enableTraversal .f2.ac.n
+bind .f2.ac.n <ButtonPress-4> { scrollTabs %W [%W index current] 1 }
+bind .f2.ac.n <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
+
+# All varibles in events need to be global
+set ::wt [tabWatermark .f2.ac.n.wm]
+set ::st [tabResize .f2.ac.n.sz]
 
 # Add frames to tabs in notebook
 .f2.ac.n add .f2.ac.n.wm -text "Watermark" -underline 0
@@ -1200,6 +1210,9 @@ tabResize .f2.ac.n.sz
 
 # --== Suffix and prefix ops
 set ou .f2.ac.onam
+proc guiOutput { w } {
+	
+}
 ttk::frame $ou
 ttk::checkbutton $ou.cbpre -onvalue 1 -offvalue 0 -variable ::prefixsel -text "Suffix and Prefix" -command {printOutname 0 }
 ttk::labelframe $ou.efix -text "Suffix and Prefix" -labelwidget $ou.cbpre -padding 6
@@ -1500,11 +1513,6 @@ proc convert {} {
 
 					pBarUpdate .f3.do.pbar cur
 				}
-				#convert for each size
-				#depend on size do quality unsharp
-				#general unsharp value
-				# -unsharp 0x6+0.5+0
-				#extra quality x3 smashing
 			}
 		}
 	}
