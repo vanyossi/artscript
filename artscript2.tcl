@@ -151,9 +151,22 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} {or
 	return [lappend olist $outname $dir]
 }
 
+# Parses the list $argv for :key value elements. returns list
+proc getUserOps { l } {
+	foreach f $l {
+		if { [file exists $f] } {
+			break
+		}
+		lappend el $f
+	}
+	if { [info exists el] } {
+		return $el
+	}
+}
 # Global dictionaries, files values, files who process
 set inputfiles [dict create]
 set handlers [dict create]
+set ::ops [getUserOps $argv]
 
 #get image properties Size, format and path from identify IM
 proc identifyFile { f } {
@@ -216,22 +229,9 @@ proc listValidate { ltoval {counter 1}} {
 	# TODO make functions work with a single identify format { identify -quiet -format "%wx%h:%m:%M " }
 	# Last returns a list of (n) nunber of layers the image has
 	set identify "identify -quiet -format %wx%h\|%m\|%M\|"
-	# Variable to store option arguments:ex :p xx.preset
-	set ops [dict create]
-	set options true
-	set lops 1
-	#We validate sort arguments into options and filelists
+
 	foreach i $ltoval {
-		# TODO inset while to avoid evaluating this when options is set to false
-		incr c
-		if { [string index $i 0] == ":" && $options} {
-			dict set ops $i [lindex $argv $c]
-			set lops [expr {[llength $ops]+1}]
-			continue
-		} elseif { $options && $lops == $c } {
-			set options false
-		}
-		# from here vars are not options but files
+		
 		# Call itself with directory contents if arg is dir
 		if {[file isdirectory $i]} {
 			listValidate [glob -nocomplain -directory $i -type f *] $fc
@@ -334,7 +334,8 @@ proc listValidate { ltoval {counter 1}} {
 	}
 }
 # Validate input filetypes
-listValidate $argv
+set argvnops [lrange $argv [llength $::ops] end]
+listValidate $argvnops
 
 #configuration an presets
 proc getUserPresets {} {
