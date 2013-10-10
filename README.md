@@ -1,7 +1,7 @@
 artscriptk
 ==========
 
-Artscript is a GUI wrapper for Imagemagick actions (Watermarking, Resize, Collages) that allos to work with KRA, ORA, XCF, aiming for clarity in use while obtaining high quality results.
+Artscript is a GUI wrapper for Imagemagick actions (Watermarking, Resize, Collages) that allows to work with KRA, ORA, XCF, aiming for clarity in use while obtaining high quality results.
 
 #About
 *Script originally inspired by David Revoy (www.davidrevoy.com , info@davidrevoy.com )*

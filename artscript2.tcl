@@ -1,21 +1,22 @@
 #!/usr/bin/wish
 #
-#----------------:::: ArtscriptTk ::::----------------------
-# Version: 2.0-alpha
-# Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
-# Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
-# License: GPLv3 
-#-----------------------------------------------------------
-# Goal : Batch convert any image file supported by imagemagick, calligra & Inkscape.
-# Dependencies: >=imagemagick-6.7.5, tk 8.5 zip
-# Optional deps: calligraconverter, inkscape, gimp
+# ---------------:::: ArtscriptTk ::::-----------------------
+#  Version: 2.0-alpha
+#  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
+#  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
+#  License: GPLv3 
+# -----------------------------------------------------------
+#  Goal : Aid in the deploy of digital artwork for media with the best possible quality
+#   Dependencies: >=imagemagick-6.7.5, tk 8.5 zip md5
+#   Optional deps: calligraconverter, inkscape, gimp
 #
-# __Customize:__
-#   You can modify any variable between "#--=====" markers
-#   Or (recomended) make a config file (rename presets.config.presets to presets.config)
+#  Customize:__
+#   Make a config file (rename presets.config.presets to presets.config)
 #   File must be in the same directory as the script.
 #
+# ---------------------::::::::::::::------------------------
 package require Tk
+set ::version "v2.0-alpha"
 
 # Do not show .dot files by default
 catch {tk_getOpenFile foo bar}
@@ -24,89 +25,77 @@ set ::tk::dialog::file::showHiddenBtn 1
 
 #Set default theme to clam if supported
 catch {ttk::style theme use clam}
-
 namespace eval img { }
-namespace eval artscript {
-	variable usett [dict create]
+
+# array set ::settings $::artscript::usett
+# puts "array $::settings(ext)"
+
+proc artscriptSettings {} {
+	# Date values
+	set seconds [clock seconds]
+	set now [split [clock format $seconds -format %Y/%m/%d/%u] "/"]
+	lassign $now year month day
+	set ::date [join [list $year $month $day] "-"]
 	
-	dict set usett ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
+	#--==== Artscript Default Settings
+	set mis_settings [dict create \
+		ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm" \
+		autor "Autor" \
+	]
+	# Watermark options
+	set wat_settings [dict create \
+		wmtxt           { }                 \
+		watermarks      [list {Copyright (c) $::autor} {http://www.yourwebsite.com} {Artwork: $::autor} {$::date}] \
+		wmsize          10                  \
+		wmcol           "#000000"           \
+		wmcolswatch     { }                 \
+		wmop            80                  \
+		wmpos           "BottomRight"       \
+		wmimsrc         { }                 \
+		iwatermarks     [dict create        \
+			"Logo" "/Path/to/logo"          \
+			"Client Watermark" "/path/to/watermarkimg" \
+		] \
+		wmimpos         "Center"            \
+		wmimsize        "0"                 \
+		wmimcomp        "Over"              \
+		wmimop          100                 \
+		]
+	#Sizes
+	set siz_settings [dict create \
+		sizes       [list "1920x1920" "1650x1650" "1280x1280" "1024x1024" "720x720" "50%"] \
+	]
+	#Suffix and prefix ops
+	set suf_settings [dict create   \
+		suffixes    [list "net" "archive" {by-[string map -nocase {{ } -} $::autor]}] \
+		ouprefix    {}              \
+		ousuffix    {}              \
+	]
+			#General checkboxes
+	set bool_settings [dict create  \
+		watsel      0               \
+		watseltxt   0               \
+		watselimg   0               \
+		sizesel     0               \
+		prefixsel   0               \
+		overwrite   0               \
+	]
+	#Extension & output
+	set out_settings [dict create \
+		outext      "png"   \
+		iquality    92      \
+	]
+	#--==== END of Artscript Default Settings
+	set settings [dict merge $mis_settings $wat_settings $siz_settings $suf_settings $bool_settings $out_settings]
+	dict for {key value} $settings {
+		set ::$key [subst $value]
+	}
+    return $settings
 }
-array set ::usett $::artscript::usett
-puts "array $::usett(ext)"
-#--====User variables
-#Extension, define what file tipes artscript should read.
-set artscript::ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
-#set date values
-#Get a different number each run
-set ::raninter [clock seconds]
-set ::now [split [clock format $::raninter -format %Y/%m/%d/%u] "/"]
-set ::year [lindex $now 0]
-set ::month [lindex $now 1]
-set ::day [lindex $now 2]
-set ::date [join [list $::year $::month $::day] "-"]
-#set autor name
-set ::autor "Autor"
-#Initialize variables for presets
-
-#Watermark options
-set ::wmtxt {}
-set ::watermarks [list \
-	"Copyright (c) $::autor" \
-	"Copyright (c) $::autor / $::date" \
-	"http://www.yourwebsite.com" \
-	"Artwork: $::autor" \
-	"$::date" \
-]
-set ::wmsize 10
-set ::wmcol "#000000"
-set ::wmcolswatch {} ; # [list "red" "#f00" "blue" "#00f" "green" "#0f0" "black" "#000" "white" "#fff" ]
-set ::wmop 80
-set ::wmpos "BottomRight"
-set ::wmpositions [list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom" "BottomRight"]
-#Place image watermark URL. /home/user/image
-set ::wmimsrc ""
-# Set name path of your watermark images. Path must be absolute
-set ::iwatermarks [dict create \
-	"Logo" "/Path/to/logo" \
-	"Client Watermark" "/path/to/watermarkimg" \
-]
-set ::wmimpos "Center"
-set ::wmimsize "0"
-set ::wmimcomp "Over"
-set ::wmimop 100
-
-#Sizes
-set ::sizes [list \
-	"1920x1920" \
-	"1650x1650" \
-	"1280x1280" \
-	"1024x1024" \
-	"720x720" \
-	"50%" \
-]
-#Suffix and prefix ops
-set ::suffixes [list \
-	"net" \
-	"archive" \
-	"by-[string map -nocase {{ } -} $::autor]" \
-]
-set ::ouprefix {}
-set ::ousuffix {}
-#General checkboxes
-set ::watsel 0
-set ::watseltxt 0
-set ::watselimg 0
-set ::sizesel 0
-set ::prefixsel 0
-set ::overwrite 0
-#Extension & output
-set ::outext "png"
-set ::iquality 92
 #--=====
 #Don't modify below this line
-
-set ::version "v2.0-alpha"
-set ::lstmsg ""
+array set ::settings [artscriptSettings]
+#puts $settings(sizes)
 
 #Function to send message boxes
 proc alert {type icon title msg} {
@@ -298,7 +287,7 @@ proc listValidate { ltoval {counter 1}} {
 
 		# Catch magick errors. Some files have the extension but are not valid types
 		# And check for files with no extension with IM identify
-		} elseif { [lsearch $::artscript::ext $filext ] >= 0 || [string equal $filext {}] } {
+		} elseif { [lsearch $::ext $filext ] >= 0 || [string equal $filext {}] } {
 			if { [catch {set finfo [identifyFile $i ] } msg ] } {
 				puts $msg
 				append ::lstmsg "EE: $i discarted\n"
@@ -436,7 +425,7 @@ if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 
 proc openFiles {} {
 	global inputfiles
-	set exts [list $::artscript::ext]
+	set exts [list $::ext]
 	set types " \
 	 	\"{Suported Images}  $exts \"
 	{{KRA, ORA}      {.ora .kra}  } \
@@ -985,8 +974,9 @@ proc tabWatermark { wt } {
 	bind $wt.fontsize <ButtonRelease> {bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx"}
 	bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx" }
 
+	set wmpositions	[list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"]
 	# Text position box
-	ttk::combobox $wt.position -state readonly -textvariable ::wmpos -values $::wmpositions -width 10
+	ttk::combobox $wt.position -state readonly -textvariable ::wmpos -values $wmpositions -width 10
 	$wt.position set $::wmpos
 	bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx" }
 
@@ -1009,7 +999,7 @@ proc tabWatermark { wt } {
 	bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel ".f3.rev.checkwm $wt.cbim"] }
 
 	# Image position
-	ttk::combobox $wt.iposition -state readonly -textvariable ::wmimpos -values $::wmpositions -width 10
+	ttk::combobox $wt.iposition -state readonly -textvariable ::wmimpos -values $wmpositions -width 10
 	$wt.iposition set $::wmimpos
 	bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbim" }
 
@@ -1540,4 +1530,3 @@ proc convert {} {
 	pack forget .f3.do.pbar .f3.do.plabel
 	updateTextLabel .f3.do.plabel pbtext textv ""
 }
-puts [info vars artscript::*]
