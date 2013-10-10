@@ -113,12 +113,6 @@ proc alert {type icon title msg} {
 proc validate {program} {
 	expr { ![catch {exec which $program}] ? [return 1] : [return 0] }
 }
-#Gimp path
-set hasgimp [validate "gimp"]
-#Inkscape path, if true converts using inkscape to /tmp/*.png
-set hasinkscape [validate "inkscape"]
-#calligraconvert path, if true converts using calligra to /tmp/*.png
-set hascalligra [validate "calligraconverter"]
 
 #Prepares output name adding Suffix or Prefix
 #Checks if destination file exists and adds a standard suffix
@@ -165,9 +159,13 @@ proc getUserOps { l } {
 	}
 }
 # Global dictionaries, files values, files who process
-set inputfiles [dict create]
-set handlers [dict create]
+set ::inputfiles [dict create]
+set ::handlers [dict create]
 set ::ops [getUserOps $argv]
+# Find Optional dependencies (as global to search file only once)
+set ::hasgimp [validate "gimp"]
+set ::hasinkscape [validate "inkscape"]
+set ::hascalligra [validate "calligraconverter"]
 
 #get image properties Size, format and path from identify IM
 proc identifyFile { f } {
@@ -206,7 +204,6 @@ proc getWidthHeightSVG { f } {
 
 # Checks the files listed in args to be valid files supported
 proc listValidate { ltoval {counter 1}} {
-	global ::artscript::ext hasinkscape hascalligra hasgimp
 	global identify
 	
 	proc setDictEntries { id fpath size ext h} {
@@ -243,7 +240,7 @@ proc listValidate { ltoval {counter 1}} {
 		set iname [file tail $i]
 
 		if {[lsearch $::artscript::ext $filext ] >= 0 } {
-			if { [regexp {.xcf|.psd} $filext ] && $hasgimp } {
+			if { [regexp {.xcf|.psd} $filext ] && $::hasgimp } {
 
 				set size [lindex [exec identify -format "%wx%h " $i ] 0]
 
@@ -251,7 +248,7 @@ proc listValidate { ltoval {counter 1}} {
 				incr fc
 				continue
 
-			} elseif { [regexp {.svg|.ai} $filext ] && $hasinkscape } {
+			} elseif { [regexp {.svg|.ai} $filext ] && $::hasinkscape } {
 				
 				if { $filext == ".svg" } {
 					set size [getWidthHeightSVG $i]
@@ -273,7 +270,7 @@ proc listValidate { ltoval {counter 1}} {
 				incr fc
 				continue
 
-			} elseif { [regexp {.kra|.ora|.xcf|.psd} $filext ] && $hascalligra } {
+			} elseif { [regexp {.kra|.ora|.xcf|.psd} $filext ] && $::hascalligra } {
 				set size "N/A"
 				# TODO Simplify
 				# Get contents from file and parse them into Size values.
