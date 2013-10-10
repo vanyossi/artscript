@@ -880,9 +880,7 @@ proc guiTopBar { w } {
 	setUserPresets "default"
 	return $w
 }
-guiTopBar .f1
 
-# Paned views, File manager and options
 proc guiMakePaned { w orientation } {
 	ttk::panedwindow $w -orient $orientation
 	return $w
@@ -905,6 +903,15 @@ proc guiMiddle { w } {
 
 	guiFileList $file_pane
 	guiThumbnail $file_pane
+	
+	# Add frame notebook to pane left.
+
+	set option_tab [guiOptionTabs $paned_botom.n]
+	set gui_out [guiOutput $paned_botom.onam]
+	
+	guiAddChildren $paned_botom $option_tab $gui_out
+	$paned_botom pane $option_tab -weight 6
+	$paned_botom pane $gui_out -weight 2
 	
 	pack $file_pane.flist -side left -expand 1 -fill both
 	pack $file_pane.sscrl $file_pane.lprev -side left -expand 0 -fill both
@@ -936,12 +943,22 @@ proc guiThumbnail { w } {
 	ttk::label $w.lprev.im -anchor center -text "No preview"
 }
 
-guiMiddle .f2
-# --== File manager treeview start ==
-
-#Populate tree
-addTreevalues .f2.fb.flist $inputfiles
-
+# --== Option tabs
+proc guiOptionTabs { w } {
+	ttk::notebook $w
+	ttk::notebook::enableTraversal $w
+	
+	bind $w <ButtonPress-4> { scrollTabs %W [%W index current] 1 }
+	bind $w <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
+	
+	set ::wt [tabWatermark $w.wm]
+	set ::st [tabResize $w.sz]
+	
+	$w add $::wt -text "Watermark" -underline 0
+	$w add $::st -text "Resize" -underline 0
+	
+	return $w
+}
 # Set a var to ease modularization. TODO: procs
 proc tabWatermark { wt } {
 
@@ -1194,20 +1211,6 @@ proc tabResize {st} {
 	return $st
 }
 
-# --== Option tabs
-ttk::notebook .f2.ac.n
-ttk::notebook::enableTraversal .f2.ac.n
-bind .f2.ac.n <ButtonPress-4> { scrollTabs %W [%W index current] 1 }
-bind .f2.ac.n <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
-
-# All varibles in events need to be global
-set ::wt [tabWatermark .f2.ac.n.wm]
-set ::st [tabResize .f2.ac.n.sz]
-
-# Add frames to tabs in notebook
-.f2.ac.n add .f2.ac.n.wm -text "Watermark" -underline 0
-.f2.ac.n add .f2.ac.n.sz -text "Resize" -underline 0
-
 # --== Suffix and prefix ops
 proc guiOutput { w } {
 
@@ -1231,8 +1234,6 @@ proc guiOutput { w } {
 }
 
 proc frameSuffix { w } {
-
-
 	lappend ::suffixes "$::date" {} ; # Appends an empty value to allow easy deselect
 	set ::suffixes [lsort $::suffixes]
 	foreach suf $::suffixes {
@@ -1288,17 +1289,9 @@ proc frameOutput { w } {
 	return $w
 }
 
-set ::guiOut [guiOutput .f2.ac.onam]
-
-# Add frame notebook to pane left.
-.f2.ac add .f2.ac.n
-.f2.ac add .f2.ac.onam
-.f2.ac pane .f2.ac.n -weight 6
-.f2.ac pane .f2.ac.onam -weight 2
-
 # ----==== Status bar
 proc guiStatusBar { w } {
-	ttk::frame $w
+	pack [ttk::frame $w] -side top -expand 0 -fill x
 	
 	ttk::frame $w.rev
 	ttk::frame $w.do
@@ -1318,8 +1311,15 @@ proc guiStatusBar { w } {
 	return $w
 }
 
-set status_bar [guiStatusBar .f3]
-pack $status_bar -side top -expand 0 -fill x
+# ---=== Construct GUI
+# Pack Top: menubar. Middle: File, thumbnail, options, suffix output.
+# Bottom: status bar
+guiTopBar .f1
+guiMiddle .f2
+guiStatusBar .f3
+
+#Populate tree
+addTreevalues .f2.fb.flist $inputfiles
 
 proc pBarUpdate { w gvar args } {
 	upvar #0 $gvar cur
