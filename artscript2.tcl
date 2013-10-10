@@ -1297,22 +1297,29 @@ set ::guiOut [guiOutput .f2.ac.onam]
 .f2.ac pane .f2.ac.onam -weight 2
 
 # ----==== Status bar
-pack [ttk::frame .f3] -side top -expand 0 -fill x
-ttk::frame .f3.rev
-ttk::frame .f3.do
+proc guiStatusBar { w } {
+	ttk::frame $w
+	
+	ttk::frame $w.rev
+	ttk::frame $w.do
+	
+	ttk::checkbutton $w.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable ::watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
+	ttk::checkbutton $w.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable ::sizesel
 
+	ttk::progressbar $w.do.pbar -maximum [getFilesTotal 1] -variable ::cur -length "300"
+	ttk::label $w.do.plabel -text "Converting: " -textvariable pbtext
+	ttk::button $w.do.bconvert -text "Convert" -command {convert}
 
-ttk::checkbutton .f3.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable ::watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
-ttk::checkbutton .f3.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable ::sizesel
+	pack $w.rev.checkwm $w.rev.checksz -side left
+	pack $w.rev -side left
+	pack $w.do -side right
+	pack $w.do.bconvert -side right -fill x -padx 6 -pady 8
 
-ttk::progressbar .f3.do.pbar -maximum [getFilesTotal 1] -variable ::cur -length "300"
-ttk::label .f3.do.plabel -text "Converting: " -textvariable pbtext
-ttk::button .f3.do.bconvert -text "Convert" -command {convert}
+	return $w
+}
 
-pack .f3.rev.checkwm .f3.rev.checksz -side left
-pack .f3.rev -side left
-pack .f3.do -side right
-pack .f3.do.bconvert -side right -fill x -padx 6 -pady 8
+set status_bar [guiStatusBar .f3]
+pack $status_bar -side top -expand 0 -fill x
 
 proc pBarUpdate { w gvar args } {
 	upvar #0 $gvar cur
