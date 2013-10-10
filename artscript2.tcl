@@ -195,7 +195,9 @@ proc getWidthHeightSVG { f } {
 }
 
 # Checks the files listed in args to be Filetypes supported from a path list
-proc listValidate { ltoval {counter 1}} {
+set ::fc 1 ; # Global counter TODO: separate delete to a list
+proc listValidate { ltoval } {
+	global fc
 	
 	proc setDictEntries { id fpath size ext h} {
 		global inputfiles handlers
@@ -213,14 +215,13 @@ proc listValidate { ltoval {counter 1}} {
 		dict set handlers $id $h
 	}
 	# Keep $fc adding up if proc is called a second time. TODO (perhaps make global)
-	set fc $counter
 
 	foreach i $ltoval {
 		
 		# Call itself with directory contents if arg is dir
 		if {[file isdirectory $i]} {
-			listValidate [glob -nocomplain -directory $i -type f *] $fc
-			incr fc
+			listValidate [glob -nocomplain -directory $i -type f *]
+			incr ::fc
 			continue
 		}
 		set filext [string tolower [file extension $i] ]
@@ -230,8 +231,8 @@ proc listValidate { ltoval {counter 1}} {
 
 			set size [lindex [exec identify -format "%wx%h " $i ] 0]
 
-			setDictEntries $fc $i $size $filext "g"
-			incr fc
+			setDictEntries $::fc $i $size $filext "g"
+			incr ::fc
 			continue
 
 		} elseif { [regexp {^(.svg|.ai)$} $filext ] && $::hasinkscape } {
@@ -252,8 +253,8 @@ proc listValidate { ltoval {counter 1}} {
 				set size [expr {round([lindex $svgvals 0])}] ; # Make float to int. TODO check if format "%.0f" works best here
 				append size "x" [expr {round([lindex $svgvals 1])}]
 			}
-			setDictEntries $fc $i $size $filext "i"
-			incr fc
+			setDictEntries $::fc $i $size $filext "i"
+			incr ::fc
 			continue
 
 		} elseif { [regexp {^(.kra|.ora|.xcf|.psd)$} $filext ] && $::hascalligra } {
@@ -278,8 +279,8 @@ proc listValidate { ltoval {counter 1}} {
 					set size [string trim [lindex [split [lindex $zipkey 0] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 1] "="] 1] {"\""}]
 					unset zipcon zipkey
 			}
-			setDictEntries $fc $i $size $filext "k"
-			incr fc
+			setDictEntries $::fc $i $size $filext "k"
+			incr ::fc
 			continue
 
 		# Catch magick errors. Some files have the extension but are not valid types
@@ -292,8 +293,8 @@ proc listValidate { ltoval {counter 1}} {
 			}
 			set size [dict get $finfo size]
 			set ext [dict get $finfo ext]
-			setDictEntries $fc $i $size $ext "m"
-			incr fc
+			setDictEntries $::fc $i $size $ext "m"
+			incr ::fc
 		}
 	}
 }
@@ -378,26 +379,25 @@ proc setUserPresets { s } {
 getUserPresets
 # Returns total of files in dict except for flagged as deleted.
 # TODO all boolean is reversed. use incr to count
-proc getFilesTotal { { all 0} } {
+proc getFilesTotal { { get_del 0} } {
 	global inputfiles
 	
-	set count {}
-	if { $all == 1 } {
-		dict for {id datas} $inputfiles {
- 	 		dict with datas {
-				if { $deleted == 0 } {
-					lappend count $id
-				}
- 	 		}
+	set count 0
+	set deleted 0
+	dict for {id datas} $inputfiles {
+		incr count
+		if {[dict get $inputfiles $id deleted]} {
+			incr deleted
 		}
-	} else {
-		set count [dict keys $inputfiles]
 	}
-	return [llength $count]
+	if { $get_del == 1 } {
+		return $count
+	}
+	return [expr {$count - $deleted}]
 }
 
-proc updateWinTitle {} {
-	wm title . "Artscript $::version -- [getFilesTotal 1] Files selected"
+proc updateWinTitle { } {
+	wm title . "Artscript $::version -- [getFilesTotal] Files selected"
 }
 
 # Returns a list with all keys that match value == c
@@ -433,7 +433,7 @@ proc openFiles {} {
 	"
 	set files [tk_getOpenFile -filetypes $types -initialdir $::env(HOME) -multiple 1]
 	
-	listValidate $files [expr {[getFilesTotal]+1}] ; # Add 1 to keep global counter id in sync
+	listValidate $files ; # Add 1 to keep global counter id in sync
 	# TODO Instead of using global inputfiles we could create a trasition dict and append to it.
 	addTreevalues .f2.fb.flist $inputfiles 
 	updateWinTitle
@@ -1269,7 +1269,7 @@ proc guiStatusBar { w } {
 	ttk::checkbutton $w.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable ::watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
 	ttk::checkbutton $w.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable ::sizesel
 
-	ttk::progressbar $w.do.pbar -maximum [getFilesTotal 1] -variable ::cur -length "300"
+	ttk::progressbar $w.do.pbar -maximum [getFilesTotal] -variable ::cur -length "300"
 	ttk::label $w.do.plabel -text "Converting: " -textvariable pbtext
 	ttk::button $w.do.bconvert -text "Convert" -command {convert}
 
@@ -1440,7 +1440,7 @@ proc convert {} {
 	#process Gimp Calligra and inkscape to Tmp files
 	processHandlerFiles
 	
-	pBarUpdate .f3.do.pbar cur max [expr {[getFilesTotal 1]*[llength $sizes]}] current -1
+	pBarUpdate .f3.do.pbar cur max [expr {[getFilesTotal]*[llength $sizes]}] current -1
 
 	dict for {id datas} $::inputfiles {
 		dict with datas {
