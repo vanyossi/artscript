@@ -1474,63 +1474,64 @@ proc convert {} {
 
 	dict for {id datas} $::inputfiles {
 		dict with datas {
-			if {!$deleted} {
-				set opath $path
-				set outpath [file dirname $path]
+			if {$deleted} {
+				continue
+			}
+			set opath $path
+			set outpath [file dirname $path]
 
-				if {[dict exists $datas tmp]} {
-					set opath $tmp
-				}
-				set filter "-interpolate bicubic -filter Parzen"
-				# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
-				# use "-interpolate bicubic -filter Lanczos -define filter:blur=.9891028367558475" SLOW but best
-				# with -distort Resize instead of -resize "or LanczosRadius"
-				set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
-				set i 0
-				foreach dimension $sizes {
-					updateTextLabel .f3.do.plabel pbtext textv "Converting... $name"
-					set resize {}
-					if {$dimension == 0} {
-						set soname [file join $outpath $oname]
-						set convertCmd [concat \"$opath\" $resize $wmark $unsharp \"$soname\"]
-						exec convert {*}$convertCmd
-						pBarUpdate .f3.do.pbar cur
-						continue
-					}
-					incr i
-					set cur_w [lindex [split $size {x} ] 0]
-					set dest_w [lindex [split $dimension {x} ] 0]
-					
-					if {[string range $dimension end end] == "%"} {
-						set dest_w [string trim 50% {%}]
-						set dest_w [expr {round($cur_w * ($dest_w / 100.0))} ]
-						set operator {}
-					} else {
-						set operator "\\>"
-					}
-					# We have to get the final size ourselves or else imagick could miss by 1 px
-					set finalscale [getOutputSize {*}[concat [split $size {x} ] [split $dimension {x}]] ]
-					#Add resize filter (better quality)
-					set resize "-colorspace RGB"
-					set resize [concat $resize $filter]
-					while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
-						set cur_w [expr {round($cur_w * 0.8)}]
-						set resize [concat $resize -resize 80% +repage $unsharp]
-					}
-					# Final resize output
-					set resize [concat $resize -resize ${finalscale}${operator} +repage -colorspace sRGB]
-					
-					updateTextLabel .f3.do.plabel pbtext textv "Converting... ${name} to $dimension"
-					if {$i == 1} {
-						set dimension {}
-					}
-					set soname [file join $outpath [lindex [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] 0]]
-					
-					set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp -quality $::iquality \"$soname\"]
+			if {[dict exists $datas tmp]} {
+				set opath $tmp
+			}
+			set filter "-interpolate bicubic -filter Parzen"
+			# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
+			# use "-interpolate bicubic -filter Lanczos -define filter:blur=.9891028367558475" SLOW but best
+			# with -distort Resize instead of -resize "or LanczosRadius"
+			set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
+			set i 0
+			foreach dimension $sizes {
+				updateTextLabel .f3.do.plabel pbtext textv "Converting... $name"
+				set resize {}
+				if {$dimension == 0} {
+					set soname [file join $outpath $oname]
+					set convertCmd [concat \"$opath\" $resize $wmark $unsharp \"$soname\"]
 					exec convert {*}$convertCmd
-
 					pBarUpdate .f3.do.pbar cur
+					continue
 				}
+				incr i
+				set cur_w [lindex [split $size {x} ] 0]
+				set dest_w [lindex [split $dimension {x} ] 0]
+				
+				if {[string range $dimension end end] == "%"} {
+					set dest_w [string trim 50% {%}]
+					set dest_w [expr {round($cur_w * ($dest_w / 100.0))} ]
+					set operator {}
+				} else {
+					set operator "\\>"
+				}
+				# We have to get the final size ourselves or else imagick could miss by 1 px
+				set finalscale [getOutputSize {*}[concat [split $size {x} ] [split $dimension {x}]] ]
+				#Add resize filter (better quality)
+				set resize "-colorspace RGB"
+				set resize [concat $resize $filter]
+				while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
+					set cur_w [expr {round($cur_w * 0.8)}]
+					set resize [concat $resize -resize 80% +repage $unsharp]
+				}
+				# Final resize output
+				set resize [concat $resize -resize ${finalscale}${operator} +repage -colorspace sRGB]
+				
+				updateTextLabel .f3.do.plabel pbtext textv "Converting... ${name} to $dimension"
+				if {$i == 1} {
+					set dimension {}
+				}
+				set soname [file join $outpath [lindex [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] 0]]
+				
+				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp -quality $::iquality \"$soname\"]
+				exec convert {*}$convertCmd
+
+				pBarUpdate .f3.do.pbar cur
 			}
 		}
 	}
