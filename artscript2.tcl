@@ -21,19 +21,24 @@ catch {tk_getOpenFile foo bar}
 set ::tk::dialog::file::showHiddenVar 0
 set ::tk::dialog::file::showHiddenBtn 1
 ttk::style theme use clam
-namespace eval ::img { }
-
+namespace eval img { }
+namespace eval atku {
+	variable usett
+	set usett [list ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"]
+}
+array set ::usett $::atku::usett
+puts "array $::usett(ext)"
 #--====User variables
 #Extension, define what file tipes artscript should read.
-set ::ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
+set atku::ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm"
 #set date values
 #Get a different number each run
 set ::raninter [clock seconds]
-set ::now [split [clock format $raninter -format %Y/%m/%d/%u] "/"]
+set ::now [split [clock format $::raninter -format %Y/%m/%d/%u] "/"]
 set ::year [lindex $now 0]
 set ::month [lindex $now 1]
 set ::day [lindex $now 2]
-set ::date [join [list $year $month $day] "-"]
+set ::date [join [list $::year $::month $::day] "-"]
 #set autor name
 set ::autor "Autor"
 #Initialize variables for presets
@@ -41,11 +46,11 @@ set ::autor "Autor"
 #Watermark options
 set ::wmtxt {}
 set ::watermarks [list \
-	"Copyright (c) $autor" \
-	"Copyright (c) $autor / $date" \
+	"Copyright (c) $::autor" \
+	"Copyright (c) $::autor / $::date" \
 	"http://www.yourwebsite.com" \
-	"Artwork: $autor" \
-	"$date" \
+	"Artwork: $::autor" \
+	"$::date" \
 ]
 set ::wmsize 10
 set ::wmcol "#000000"
@@ -78,7 +83,7 @@ set ::sizes [list \
 set ::suffixes [list \
 	"net" \
 	"archive" \
-	"by-[string map -nocase {{ } -} $autor]" \
+	"by-[string map -nocase {{ } -} $::autor]" \
 ]
 set ::ouprefix {}
 set ::ousuffix {}
@@ -187,7 +192,7 @@ proc getWidthHeightSVG { f } {
 
 # Checks the files listed in args to be valid files supported
 proc listValidate { ltoval {counter 1}} {
-	global ext hasinkscape hascalligra hasgimp
+	global ::atku::ext hasinkscape hascalligra hasgimp
 	global identify ops
 	
 	proc setDictEntries { id fpath size ext h} {
@@ -236,7 +241,7 @@ proc listValidate { ltoval {counter 1}} {
 		set filext [string tolower [file extension $i] ]
 		set iname [file tail $i]
 
-		if {[lsearch $ext $filext ] >= 0 } {
+		if {[lsearch $::atku::ext $filext ] >= 0 } {
 			if { [regexp {.xcf|.psd} $filext ] && $hasgimp } {
 
 				set size [lindex [exec identify -format "%wx%h " $i ] 0]
@@ -254,7 +259,7 @@ proc listValidate { ltoval {counter 1}} {
 					}
 				} else {
 					if { [catch { exec inkscape -S $i | head -n 1 } msg] } {
-						append lstmsg "EE: $i discarted\n"
+						append ::lstmsg "EE: $i discarted\n"
 						puts $msg
 						continue
 					}
@@ -333,10 +338,7 @@ listValidate $argv
 
 #configuration an presets
 proc getUserPresets {} {
-	global ops
-	
-	# TODO remove this list of global tcl vars. set all user vars in a pair list value, or array.
-	set gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_pkgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
+	global ops presets
 	
 	set configfile "presets.config"
 	set configfile [file join [file dirname [info script]] $configfile]
@@ -376,29 +378,36 @@ proc getUserPresets {} {
 			}
 			dict set presets $condict [lindex $i 0] [lindex $i 1]
 		}
-		#set values according to preset
-		foreach i $presets {
-			if {[dict exists $presets $i]} {
-				dict for {key value} [dict get $presets $i] {
-					if {[info exists ::$key] != [regexp $gvars $key ] } {
-						# Dirty fix: TODO we should set preset on an array
-						set value [string map {{$} {$::}} $value]
-						if { [catch {set keyval [eval list [string trim $value]] } msg] } {
-							puts $msg
-						} else {
-							if {[llength $keyval] > 1} { 
-								set ::$key $keyval
-							} else {
-								set ::$key [string trim $keyval "{}"]
-							}
-						}
-					#puts [eval list [set $key] ]
-					#set ::$key [eval concat $tmpkey]
-					}
+	}
+}
+proc setUserPresets { s } {
+	global presets
+	if {![info exists presets]} {
+		return 0
+	}
+
+	# TODO remove this list of global tcl vars. set all user vars in a pair list value, or array.
+	set gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_pkgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
+	
+	#set values according to preset
+	dict for {key value} [dict get $presets $s] {
+		if {[info exists ::$key] != [regexp $gvars $key ] } {
+			# Dirty fix: TODO we should set preset on an array
+			set value [string map {{$} {$::}} $value]
+			if { [catch {set keyval [eval list [string trim $value]] } msg] } {
+				puts $msg
+			} else {
+				if {[llength $keyval] > 1} { 
+					set ::$key $keyval
+				} else {
+					set ::$key [string trim $keyval "{}"]
 				}
 			}
+		#puts [eval list [set $key] ]
+		#set ::$key [eval concat $tmpkey]
 		}
 	}
+	return
 }
 getUserPresets
 # Returns total of files in dict except for flagged as deleted.
@@ -437,7 +446,7 @@ proc putsHandlers {args} {
 }
 
 #--- Window options
-wm title . "Artscript $version -- [getFilesTotal] Files selected"
+wm title . "Artscript $::version -- [getFilesTotal] Files selected"
 
 # We test if icon exist before addin it to the wm
 set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
@@ -447,7 +456,7 @@ if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 
 proc openFiles {} {
 	global inputfiles
-	set exts [list $::ext]
+	set exts [list $::atku::ext]
 	set types " \
 	 	\"{Suported Images}  $exts \"
 	{{KRA, ORA}      {.ora .kra}  } \
@@ -807,7 +816,7 @@ proc drawSwatch { w args } {
 		incr i
 		set ::c($i) [$w create rectangle $x $y [expr {$x+$cw}] [expr {$y+$ch-1}] -fill $swatch -width 1 -outline {gray26} -tags {swatch}]
 		set col [lindex [$w itemconfigure $::c($i) -fill] end]
-		$w bind $::c($i) <Button-1> [list setColor $w wmcol $::c(main) $col 0 ]
+		$w bind $::c($i) <Button-1> [list setColor $w ::wmcol $::c(main) $col 0 ]
 		if { $i == $chal } {
 			incr y $ch
 			set x [expr {$x-($cw*$i)}]
@@ -878,8 +887,19 @@ proc getswatches { {colist 0} {sortby 1}} {
 pack [ttk::frame .f1] -side top -expand 0 -fill x
 ttk::label .f1.title -text "Artscript 2.0alpha"
 ttk::button .f1.add -text "Add files" -command { puts [openFiles] }
-pack .f1.title .f1.add -side left
+pack .f1.title .f1.add  -side left
 
+if {[info exists presets]} {
+	puts [dict keys $presets]
+	ttk::combobox .f1.preset -state readonly -values [dict keys $presets] ; # -width 10
+	.f1.preset set "default"
+	bind .f1.preset <<ComboboxSelected>> { changePreset [%W get] }
+	pack .f1.preset -after .f1.add -side left
+}
+proc changePreset { s } {
+	setUserPresets $s
+}
+setUserPresets "default"
 
 # Paned views, File manager and options
 ttk::panedwindow .f2 -orient vertical
@@ -934,46 +954,46 @@ ttk::label $wt.lop -text "Opacity" -width 10
 
 
 # Text watermark ops
-ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable watseltxt -command { turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
+ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable ::watseltxt -command { turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
 ttk::label $wt.ltext -text "Text"
-ttk::combobox $wt.watermarks -state readonly -textvariable wmtxt -values $watermarks -width 28
-$wt.watermarks set [lindex $watermarks 0]
+ttk::combobox $wt.watermarks -state readonly -textvariable ::wmtxt -values $::watermarks -width 28
+$wt.watermarks set [lindex $::watermarks 0]
 comboBoxEditEvents $wt.watermarks {bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx"}
 
 # font size spinbox
 set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
 ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
 	-validatecommand { string is integer %P }
-$wt.fontsize set $wmsize
+$wt.fontsize set $::wmsize
 bind $wt.fontsize <ButtonRelease> {bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx"}
 bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx" }
 
 # Text position box
-ttk::combobox $wt.position -state readonly -textvariable wmpos -values $::wmpositions -width 10
-$wt.position set $wmpos
+ttk::combobox $wt.position -state readonly -textvariable ::wmpos -values $::wmpositions -width 10
+$wt.position set $::wmpos
 bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx" }
 
 # Image watermark ops
-ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable watselimg -command {turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
+ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable ::watselimg -command {turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
 ttk::label $wt.limg -text "Image"
 # dict get $dic key
 # Get only the name for image list.
 set iwatermarksk [dict keys $::iwatermarks]
 ttk::combobox $wt.iwatermarks -state readonly -values $::iwatermarksk
-$wt.iwatermarks set [lindex $iwatermarksk 0]
-set ::wmimsrc [dict get $::iwatermarks [lindex $iwatermarksk 0]]
+$wt.iwatermarks set [lindex $::iwatermarksk 0]
+set ::wmimsrc [dict get $::iwatermarks [lindex $::iwatermarksk 0]]
 bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel ".f3.rev.checkwm $wt.cbim" }
 
 # Image size box \%
 ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
 	-validatecommand { string is integer %P }
-$wt.imgsize set $wmimsize
+$wt.imgsize set $::wmimsize
 bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] watsel .f3.rev.checkwm }
 bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel ".f3.rev.checkwm $wt.cbim"] }
 
 # Image position
-ttk::combobox $wt.iposition -state readonly -textvariable wmimpos -values $wmpositions -width 10
-$wt.iposition set $wmimpos
+ttk::combobox $wt.iposition -state readonly -textvariable ::wmimpos -values $::wmpositions -width 10
+$wt.iposition set $::wmimpos
 bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbim" }
 
 # Opacity scales
@@ -982,11 +1002,11 @@ proc progressBarSet { gvar cvar wt cb ft fl } {
 	bindsetAction $gvar [format $ft $fl] $cvar ".f3.rev.checkwm $wt.$cb"
 }
 
-ttk::scale $wt.txop -from 10 -to 100 -variable wmop -value $wmop -orient horizontal -command { progressBarSet wmop watsel $wt cbtx "%.0f" }
-ttk::label $wt.tolab -width 3 -textvariable wmop
+ttk::scale $wt.txop -from 10 -to 100 -variable ::wmop -value $::wmop -orient horizontal -command { progressBarSet ::wmop ::watsel $wt cbtx "%.0f" }
+ttk::label $wt.tolab -width 3 -textvariable ::wmop
 
-ttk::scale $wt.imop -from 10 -to 100 -variable wmimop -value $wmimop -orient horizontal -command { progressBarSet wmimop watsel $wt cbim "%.0f" }
-ttk::label $wt.iolab -width 3 -textvariable wmimop
+ttk::scale $wt.imop -from 10 -to 100 -variable ::wmimop -value $::wmimop -orient horizontal -command { progressBarSet ::wmimop ::watsel $wt cbim "%.0f" }
+ttk::label $wt.iolab -width 3 -textvariable ::wmimop
 
 # Style options
 ttk::frame $wt.st
@@ -1002,8 +1022,8 @@ set wmswatch [getswatches $::wmcolswatch]
 drawSwatch $wt.st.chos $wmswatch
 
 set iblendmodes [list Bumpmap ColorBurn ColorDodge Darken Exclusion HardLight Hue Lighten LinearBurn LinearDodge LinearLight Multiply Overlay Over Plus Saturate Screen SoftLight VividLight]
-ttk::combobox $wt.st.iblend -state readonly -textvariable wmimcomp -values $iblendmodes -width 12
-$wt.st.iblend set $wmimcomp
+ttk::combobox $wt.st.iblend -state readonly -textvariable ::wmimcomp -values $iblendmodes -width 12
+$wt.st.iblend set $::wmimcomp
 bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] watsel ".f3.rev.checkwm $wt.cbim" }
 
 set wtp 2 ; # Padding value
@@ -1179,13 +1199,13 @@ tabResize .f2.ac.n.sz
 # --== Suffix and prefix ops
 set ou .f2.ac.onam
 ttk::frame $ou
-ttk::checkbutton $ou.cbpre -onvalue 1 -offvalue 0 -variable prefixsel -text "Suffix and Prefix" -command {printOutname 0 }
+ttk::checkbutton $ou.cbpre -onvalue 1 -offvalue 0 -variable ::prefixsel -text "Suffix and Prefix" -command {printOutname 0 }
 ttk::labelframe $ou.efix -text "Suffix and Prefix" -labelwidget $ou.cbpre -padding 6
 
 ttk::label $ou.lpre -text "Prefix"
 ttk::label $ou.lsuf -text "Suffix"
 
-lappend ::suffixes "$date" {} ; # Appends an empty value to allow easy deselect
+lappend ::suffixes "$::date" {} ; # Appends an empty value to allow easy deselect
 set ::suffixes [lsort $::suffixes]
 foreach suf $::suffixes {
 	lappend suflw [string length $suf]
@@ -1194,11 +1214,11 @@ set suflw [lindex [lsort -integer -decreasing $suflw] 0]
 set suflw [expr {int($suflw+($suflw*.2))}]
 expr { $suflw > 16 ? [set suflw 16] : [set suflw] }
 
-ttk::combobox $ou.efix.pre -width $suflw -state readonly -textvariable ::ouprefix -values $suffixes
-$ou.efix.pre set [lindex $suffixes 0]
+ttk::combobox $ou.efix.pre -width $suflw -state readonly -textvariable ::ouprefix -values $::suffixes
+$ou.efix.pre set [lindex $::suffixes 0]
 comboBoxEditEvents $ou.efix.pre {printOutname %W }
-ttk::combobox $ou.efix.suf -width $suflw -state readonly -textvariable ::ousuffix -values $suffixes
-$ou.efix.suf set [lindex $suffixes 0]
+ttk::combobox $ou.efix.suf -width $suflw -state readonly -textvariable ::ousuffix -values $::suffixes
+$ou.efix.suf set [lindex $::suffixes 0]
 comboBoxEditEvents $ou.efix.suf {printOutname %W }
 
 # --== Output frame
@@ -1207,15 +1227,15 @@ ttk::labelframe $ou.f -text "Output & Quality" -padding 8
 
 set formats [list png jpg gif] ; # TODO ora and keep
 ttk::label $ou.f.lbl -text "Format:"
-ttk::combobox $ou.f.fmt -state readonly -width 6 -textvariable outext -values $formats
+ttk::combobox $ou.f.fmt -state readonly -width 6 -textvariable ::outext -values $formats
 $ou.f.fmt set [lindex $formats 0]
 bind $ou.f.fmt <<ComboboxSelected>> { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
 
 ttk::label $ou.f.qtb -text "Quality:"
-ttk::scale $ou.f.qal -from 10 -to 100 -variable iquality -value $::iquality -orient horizontal -command { progressBarSet iquality 0 0 0 "%.0f" }
-ttk::label $ou.f.qlb -width 4 -textvariable iquality
+ttk::scale $ou.f.qal -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }
+ttk::label $ou.f.qlb -width 4 -textvariable ::iquality
 ttk::separator $ou.sep -orient horizontal
-ttk::checkbutton $ou.f.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable overwrite -command { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
+ttk::checkbutton $ou.f.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
 
 pack $ou.efix $ou.sep $ou.f -side top -fill both -expand 1 -padx $wtp
 pack configure $ou.sep -padx 24 -pady 6 -expand 0
@@ -1256,8 +1276,8 @@ ttk::frame .f3.rev
 ttk::frame .f3.do
 
 
-ttk::checkbutton .f3.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
-ttk::checkbutton .f3.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable sizesel
+ttk::checkbutton .f3.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable ::watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
+ttk::checkbutton .f3.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable ::sizesel
 
 ttk::progressbar .f3.do.pbar -maximum [getFilesTotal 1] -variable ::cur -length "300"
 ttk::label .f3.do.plabel -text "Converting: " -textvariable pbtext
@@ -1491,4 +1511,4 @@ proc convert {} {
 	pack forget .f3.do.pbar .f3.do.plabel
 	updateTextLabel .f3.do.plabel pbtext textv ""
 }
-
+puts [info vars atku::*]
