@@ -34,8 +34,8 @@ proc artscriptSettings {} {
 	# Date values
 	set seconds [clock seconds]
 	set now [split [clock format $seconds -format %Y/%m/%d/%u] "/"]
-	lassign $now year month day
-	set ::date [join [list $year $month $day] "-"]
+	lassign $now ::year ::month ::day
+	set ::date [join [list $::year $::month $::day] "-"]
 	
 	#--==== Artscript Default Settings
 	set mis_settings [dict create \
@@ -94,8 +94,6 @@ proc artscriptSettings {} {
 }
 #--=====
 #Don't modify below this line
-array set ::settings [artscriptSettings]
-#puts $settings(sizes)
 
 #Function to send message boxes
 proc alert {type icon title msg} {
@@ -149,6 +147,10 @@ proc getUserOps { l } {
 		return $el
 	}
 }
+
+# Global variable declaration
+array set ::settings [artscriptSettings]
+#puts $settings(sizes)
 # Global dictionaries, files values, files who process
 set ::inputfiles [dict create]
 set ::handlers [dict create]
@@ -194,30 +196,30 @@ proc getWidthHeightSVG { f } {
 	}
 }
 
+proc setDictEntries { id fpath size ext h} {
+	global inputfiles handlers
+
+	set iname [file tail $fpath]
+	set apath [file normalize $fpath]
+	set ext [string trim $ext {.}]
+	
+	dict set inputfiles $id name $iname
+	dict set inputfiles $id oname [lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0]
+	dict set inputfiles $id size $size
+	dict set inputfiles $id ext $ext
+	dict set inputfiles $id path $apath
+	dict set inputfiles $id deleted 0
+	dict set handlers $id $h
+	
+	addTreevalues .f2.fb.flist $id ; # TODO set widget name as global
+}
+
 # Checks the files listed in args to be Filetypes supported from a path list
 set ::fc 1 ; # Global counter TODO: separate delete to a list
 proc listValidate { ltoval } {
 	global fc
-	
-	proc setDictEntries { id fpath size ext h} {
-		global inputfiles handlers
-
-		set iname [file tail $fpath]
-		set apath [file normalize $fpath]
-		set ext [string trim $ext {.}]
-		
-		dict set inputfiles $id name $iname
-		dict set inputfiles $id oname [lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0]
-		dict set inputfiles $id size $size
-		dict set inputfiles $id ext $ext
-		dict set inputfiles $id path $apath
-		dict set inputfiles $id deleted 0
-		dict set handlers $id $h
-	}
-	# Keep $fc adding up if proc is called a second time. TODO (perhaps make global)
 
 	foreach i $ltoval {
-		
 		# Call itself with directory contents if arg is dir
 		if {[file isdirectory $i]} {
 			listValidate [glob -nocomplain -directory $i -type f *]
@@ -299,10 +301,6 @@ proc listValidate { ltoval } {
 	}
 }
 
-# Validate input filetypes
-set argvnops [lrange $argv [llength $::ops] end]
-listValidate $argvnops
-
 #configuration an presets
 proc getUserPresets {} {
 	global ops presets
@@ -376,7 +374,11 @@ proc setUserPresets { s } {
 	}
 	return
 }
+
+# ---=== Get user presets from file
 getUserPresets
+setUserPresets "default"
+	
 # Returns total of files in dict except for flagged as deleted.
 # TODO all boolean is reversed. use incr to count
 proc getFilesTotal { { get_del 0} } {
@@ -411,15 +413,6 @@ proc putsHandlers {args} {
 	#or puts [dict keys [subst $${c}fdict]]
 }
 
-#--- Window options
-wm title . "Artscript $::version -- [getFilesTotal] Files selected"
-
-# We test if icon exist before addin it to the wm
-set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
-if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
-	wm iconphoto . -default $wmicon
-}
-
 proc openFiles {} {
 	global inputfiles
 	set exts [list $::ext]
@@ -435,7 +428,6 @@ proc openFiles {} {
 	
 	listValidate $files ; # Add 1 to keep global counter id in sync
 	# TODO Instead of using global inputfiles we could create a trasition dict and append to it.
-	addTreevalues .f2.fb.flist $inputfiles 
 	updateWinTitle
 }
 
@@ -503,21 +495,17 @@ proc turnOffChildCB { w args } {
 	}
 }
 
-# Get nested dict values and place them in the tree $w
-proc addTreevalues { w fdict } {
-	# .f2.fb.flist
-	#puts [dict keys [set ${c}fdict]]
-	#or puts [dict keys [subst $${c}fdict]]
-	dict for {id datas} $fdict {
-		#check to see if id exists to avoid duplication
-		if { [info exists ::img::imgid$id] || [dict get $fdict $id deleted] } {
-			continue
-		}
- 	  dict with datas {
-				set values [list $id $name $ext $size $oname]
-				set ::img::imgid$id [$w insert {} end -values $values]
- 	  }
+# Add key values into new treeview item id
+# Receives w=widget name and id= key name of global dict
+proc addTreevalues { w id } {
+	global inputfiles
+	
+	dict with ::inputfiles $id {
+		set values [list $id $name $ext $size $oname]
+		set ::img::imgid$id [$w insert {} end -values $values]
 	}
+	#Keep Gui with fresh news
+	update
 }
 
 # Deletes the keys from tree(w), and sets deletes value to 1
@@ -849,7 +837,6 @@ proc guiTopBar { w } {
 		bind $w.preset <<ComboboxSelected>> { setUserPresets [%W get] }
 		pack $w.preset -after $w.add -side left
 	}
-	setUserPresets "default"
 	return $w
 }
 
@@ -1281,16 +1268,6 @@ proc guiStatusBar { w } {
 	return $w
 }
 
-# ---=== Construct GUI
-# Pack Top: menubar. Middle: File, thumbnail, options, suffix output.
-# Bottom: status bar
-guiTopBar .f1
-guiMiddle .f2
-guiStatusBar .f3
-
-#Populate tree
-addTreevalues .f2.fb.flist $inputfiles
-
 proc pBarUpdate { w gvar args } {
 	upvar #0 $gvar cur
 	set opt [dict create]
@@ -1510,3 +1487,28 @@ proc convert {} {
 	pack forget .f3.do.pbar .f3.do.plabel
 	updateTextLabel .f3.do.plabel pbtext textv ""
 }
+
+# ---=== Window options
+wm title . "Artscript $::version -- [getFilesTotal] Files selected"
+
+# We test if icon exist before addin it to the wm
+set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
+if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
+	wm iconphoto . -default $wmicon
+}
+
+# ---=== Construct GUI
+# Pack Top: menubar. Middle: File, thumbnail, options, suffix output.
+# Bottom: status bar
+guiTopBar .f1
+guiMiddle .f2
+guiStatusBar .f3
+
+# ---=== Validate input filetypes
+set argvnops [lrange $argv [llength $::ops] end]
+listValidate $argvnops
+
+
+
+
+
