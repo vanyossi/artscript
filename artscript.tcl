@@ -1,7 +1,7 @@
 #!/usr/bin/wish
 #
 #----------------:::: ArtscriptTk ::::----------------------
-# Version: 1.8.2
+# Version: 1.8.4
 # Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 # Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 # License: GPLv3 
@@ -99,7 +99,7 @@ set ::prefixsel false
 
 #--=====
 #Don't modify below this line
-set ::version "v1.8.2"
+set ::version "v1.8.4"
 set ::lstmsg ""
 set ::gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_pkgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
 #Function to send message boxes
@@ -730,9 +730,22 @@ proc collage { olist path imcat} {
 		}
 		return $rangelists
 	}
+	proc getRange { tile } {
+		set col_row [split $tile {x}]
+		if { [catch { set range [expr [join $col_row *]] }] } {
+			return
+		}
+		return $range
+	}
 	#Check if range is selected to produce a list of lists
-	if { [string length $mrange] > 0 } {
-		set clist [range $olist $mrange]
+	set frange [expr {[string equal $mrange {}] ? 0 : $mrange}]
+	set tilerange [getRange $tileval]
+	
+	if {($frange == 0) && ([llength $olist] > $tilerange) } {
+		set frange $tilerange
+	}
+	if { $frange > 1 } {
+		set clist [range $olist $frange]
 	} else {
 		lappend clist $olist
 	}
