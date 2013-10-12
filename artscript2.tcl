@@ -741,7 +741,7 @@ proc getContrastColor { color } {
 
 proc drawSwatch { w args } {
 	set args {*}$args
-	set chal [expr {([llength $args]/2)+1}] ; # Half swatch list
+	set chal [expr {ceil([llength $args]/2.0)}] ; # Half swatch list
 
 	set gap 10
 	set height 26
