@@ -269,7 +269,7 @@ proc listValidate { ltoval } {
 				}
 				set zipcon [exec unzip -p $i stack.xml | grep image | head -n 1]
 				set zipkey [lreverse [ string trim $zipcon "image<> " ] ]
-				set size [string trim [lindex [split [lindex $zipkey 0] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 1] "="] 1] {"\""}]
+				set size [string trim [lindex [split [lindex $zipkey 1] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 0] "="] 1] {"\""}]
 				unset zipcon zipkey
 
 			} elseif { $filext == ".kra" } {
@@ -887,7 +887,7 @@ proc guiFileList { w } {
 		set name [string totitle $col]
 		$w.flist heading $col -text $name -command [list treeSort $w.flist $col 0 ]
 	}
-	$w.flist column id -width 48 -stretch 0
+	$w.flist column id -width 32 -stretch 0
 	$w.flist column ext -width 48 -stretch 0
 	$w.flist column size -width 86 -stretch 0
 	bind $w.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [%W selection] }
