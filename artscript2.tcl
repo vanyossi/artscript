@@ -131,8 +131,7 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} {or
 		}
 		unset tmpname
 	}
-	set olist [list]
-	return [lappend olist $outname $dir]
+	return $outname
 }
 
 # Parses the list $argv for :key value elements. returns list
@@ -204,7 +203,7 @@ proc setDictEntries { id fpath size ext h} {
 	set ext [string trim $ext {.}]
 	
 	dict set inputfiles $id name $iname
-	dict set inputfiles $id oname [lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0]
+	dict set inputfiles $id output [getOutputName $fpath $::outext $::ouprefix $::ousuffix]
 	dict set inputfiles $id size $size
 	dict set inputfiles $id osize $size
 	dict set inputfiles $id ext $ext
@@ -502,7 +501,7 @@ proc addTreevalues { w id } {
 	global inputfiles
 	
 	dict with ::inputfiles $id {
-		set values [list $id $ext $name $size $oname $osize]
+		set values [list $id $ext $name $size $output $osize]
 		set ::img::imgid$id [$w insert {} end -values $values]
 	}
 	#Keep Gui with fresh news
@@ -563,32 +562,27 @@ proc updateTextLabel { w gval args } {
 	}
 	update
 }
-# Sets a custom value to any key of all members o the dict
-# TODO complete the function. recieves widget, inputdict, key to alter, script
-# TODO args:"script, widget, read, write" order.
-proc treeAlterVal { w column key {script {puts $value}} } {
+# Transform a value with the supplied script and writes it to dict and treeview
+# Script: script to run, w = widget read = dict readkey, write = key to write
+proc treeAlterVal { {script {puts $value}} w read write  } {
 	global inputfiles
 	
 	foreach id [dict keys $inputfiles] {
 
-		set value [dict get $inputfiles $id $key]
-		set fpath [dict get $inputfiles $id path]
-		set fsize [dict get $inputfiles $id size]
+		set value [dict get $inputfiles $id $read]
 		set newvalue [uplevel 0 $script]
 		
-		$w set [set ::img::imgid$id] $column $newvalue
-		if {$column == "output" } {
-			puts "is output"
-			set fpath [file dirname $fpath]
-			if {[file exists [file join $fpath "$newvalue"] ]} {
-				puts "exists"
+		$w set [set ::img::imgid$id] $write $newvalue
+		dict set inputfiles $id $write $newvalue
+		
+		if { $read == "path" } {
+			set path [file dirname $value]
+			if {[file exists [file join $path "$newvalue"] ]} {
 				$w item [set ::img::imgid$id] -tags {exists}
-				puts [$w item [set ::img::imgid$id] ]
 			} else {
 				$w item [set ::img::imgid$id] -tags {}
 			}
 		}
-		dict set inputfiles $id $key $newvalue
 	}
 }
 
@@ -596,7 +590,8 @@ proc printOutname { w } {
 	if {$::prefixsel || $w != 0} {
 		bindsetAction 0 0 prefixsel $::widget_name(cb-prefix)
 	}
-	treeAlterVal $::widget_name(flist) output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0}
+	treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output
+	
 }
 
 # First define subprocesses
@@ -1123,9 +1118,9 @@ proc tabResize {st} {
 		}
 
 		if { [llength $sizesels] > 1 } {
-			treeAlterVal $::widget_name(flist) osize osize {getOutputSizesForTree $fsize 1}
+			treeAlterVal {getOutputSizesForTree $value 1} $::widget_name(flist) size osize
 		} elseif { [llength $sizesels] == 1 } {
-			treeAlterVal $::widget_name(flist) osize osize {getOutputSizesForTree $fsize}
+			treeAlterVal {getOutputSizesForTree $value} $::widget_name(flist) size osize
 			bindsetAction 0 0 sizesel $::widget_name(check-sz)
 		} elseif { [llength $sizesels] == 0 } {
 			$::widget_name(check-sz) invoke
@@ -1238,13 +1233,13 @@ proc frameOutput { w } {
 	ttk::label $w.lbl -text "Format:"
 	ttk::combobox $w.fmt -state readonly -width 6 -textvariable ::outext -values $formats
 	$w.fmt set [lindex $formats 0]
-	bind $w.fmt <<ComboboxSelected>> { treeAlterVal $::widget_name(flist) output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
+	bind $w.fmt <<ComboboxSelected>> { treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output }
 
 	ttk::label $w.qtb -text "Quality:"
 	ttk::scale $w.qal -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }
 	ttk::label $w.qlb -width 4 -textvariable ::iquality
 
-	ttk::checkbutton $w.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal $::widget_name(flist) output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
+	ttk::checkbutton $w.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output }
 
 	ttk::separator $w.sep -orient vertical
 
@@ -1489,7 +1484,7 @@ proc convert {} {
 				updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... $name"
 				set resize {}
 				if {$dimension == 0} {
-					set soname [file join $outpath $oname]
+					set soname [file join $outpath $output]
 					set convertCmd [concat \"$opath\" $resize $wmark $unsharp \"$soname\"]
 					exec convert {*}$convertCmd
 					pBarUpdate $::widget_name(pbar-main) cur
@@ -1522,7 +1517,7 @@ proc convert {} {
 				if {$i == 1} {
 					set dimension {}
 				}
-				set soname [file join $outpath [lindex [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] 0]]
+				set soname [file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]
 				
 				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp -quality $::iquality \"$soname\"]
 				exec convert {*}$convertCmd
