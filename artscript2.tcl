@@ -182,7 +182,6 @@ proc getWidthHeightSVG { f } {
 	close $fl
 	set lines [lrange [split $data \n] 1 30]
 	foreach l $lines {
-		puts $l
 		set l [lsearch -inline -regexp -all $l {^(width|height)} ]
 		if {[string length $l] > 0} {
 			set start [string last "=" $l]
@@ -1110,7 +1109,7 @@ proc tabResize {st} {
 		}
 
 		if { [llength $sizesels] > 1 } {
-			treeAlterVal .f2.fb.flist osize osize {getOutputSizesForTree $fsize}
+			treeAlterVal .f2.fb.flist osize osize {getOutputSizesForTree $fsize 1}
 		} elseif { [llength $sizesels] == 1 } {
 			treeAlterVal .f2.fb.flist osize osize {getOutputSizesForTree $fsize}
 			bindsetAction 0 0 sizesel .f3.rev.checksz
@@ -1314,9 +1313,9 @@ proc getOutputSize { w h dw dh } {
 	}
 
 # Calculates scaling destination for size in respect of chosen sizes
-# size, string WidthxHeight, the original file size
-# Returns a list of wxh elements
-proc getOutputSizesForTree { size } {
+# size, string WidthxHeight, the original file size,
+# Returns a list of wxh elements, Bool returns formated list
+proc getOutputSizesForTree { size {formated 0}} {
 	set cur_w [lindex [split $size {x} ] 0]
 	set cur_h [lindex [split $size {x} ] 1]
 	
@@ -1335,6 +1334,9 @@ proc getOutputSizesForTree { size } {
 		set finalscale [getOutputSize $cur_w $cur_h $dest_w $dest_h]
 		#Add resize filter (better quality)
 		lappend fsizes $finalscale
+	}
+	if {$formated} {
+		return [join $fsizes {, }]
 	}
 	return $fsizes
 }
