@@ -577,6 +577,17 @@ proc treeAlterVal { w column key {script {puts $value}} } {
 		set newvalue [uplevel 0 $script]
 		
 		$w set [set ::img::imgid$id] $column $newvalue
+		if {$column == "output" } {
+			puts "is output"
+			set fpath [file dirname $fpath]
+			if {[file exists [file join $fpath "$newvalue"] ]} {
+				puts "exists"
+				$w item [set ::img::imgid$id] -tags {exists}
+				puts [$w item [set ::img::imgid$id] ]
+			} else {
+				$w item [set ::img::imgid$id] -tags {}
+			}
+		}
 		dict set inputfiles $id $key $newvalue
 	}
 }
@@ -898,6 +909,7 @@ proc guiFileList { w } {
 	bind $w.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [%W selection] }
 	bind $w.flist <Key-Delete> { removeTreeItem %W [%W selection] }
 	ttk::scrollbar $w.sscrl -orient vertical -command [list $w.flist yview ]
+	$::widget_name(flist) tag configure exists -foreground #f00
 	return $w
 }
 
