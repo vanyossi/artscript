@@ -1299,7 +1299,7 @@ proc getFinalSizelist {} {
 	} else {
 		set sizelist 0
 	}
-	return $sizelist
+	return [lreverse $sizelist]
 }
 # Returns scaled size fitting in destination measures
 # w xh = original dimension dw x dh = Destination size
@@ -1319,7 +1319,7 @@ proc getOutputSizesForTree { size {formated 0}} {
 	set cur_w [lindex [split $size {x} ] 0]
 	set cur_h [lindex [split $size {x} ] 1]
 	
-	set sizelist [lreverse [getFinalSizelist]]
+	set sizelist [getFinalSizelist]
 	foreach dimension $sizelist {
 		if {[string range $dimension end end] == "%"} {
 			set ratio [string trim $dimension {%}]
