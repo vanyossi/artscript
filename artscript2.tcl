@@ -150,6 +150,7 @@ proc getUserOps { l } {
 
 # Global variable declaration
 array set ::settings [artscriptSettings]
+array set ::widget_name {}
 #puts $settings(sizes)
 # Global dictionaries, files values, files who process
 set ::inputfiles [dict create]
@@ -211,7 +212,7 @@ proc setDictEntries { id fpath size ext h} {
 	dict set inputfiles $id deleted 0
 	dict set handlers $id $h
 	
-	addTreevalues .f2.fb.flist $id ; # TODO set widget name as global
+	addTreevalues $::widget_name(flist) $id ; # TODO set widget name as global
 }
 
 # Checks the files listed in args to be Filetypes supported from a path list
@@ -581,9 +582,9 @@ proc treeAlterVal { w column key {script {puts $value}} } {
 
 proc printOutname { w } {
 	if {$::prefixsel || $w != 0} {
-		bindsetAction 0 0 prefixsel .f2.ac.onam.cbpre
+		bindsetAction 0 0 prefixsel $::widget_name(cb-prefix)
 	}
-	treeAlterVal .f2.fb.flist output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0}
+	treeAlterVal $::widget_name(flist) output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0}
 }
 
 # First define subprocesses
@@ -604,7 +605,7 @@ proc makeThumb { path tsize } {
 
 	} elseif {[regexp {.xcf|.psd} $filext ]} {
 		# TODO: Break appart preview function to allow loading thumbs from tmp folder
-		.f2.fb.lprev.im configure -compound text -text "No preview"
+		$::widget_name(thumb-im) configure -compound text -text "No preview"
 		return 0
 	}
 	foreach {size dest} $tsize {
@@ -623,7 +624,7 @@ proc showPreview { w f {tryprev 1}} {
 		return -code 3
 	}
 	# TODO, get value with no lindex: .t set $f id
-	set id [lindex [.f2.fb.flist item $f -values] 0]
+	set id [lindex [$::widget_name(flist) item $f -values] 0]
 	
 	set path [dict get $inputfiles $id path]
 	# Creates md5 checksum from text string: TODO avoid using echo
@@ -642,7 +643,7 @@ proc showPreview { w f {tryprev 1}} {
 		catch {set oldimg $img}
 		set img [image create photo -file /tmp/atkpreview.gif ]
 
-		.f2.fb.lprev.im configure -compound image -image $img
+		$::widget_name(thumb-im) configure -compound image -image $img
 		catch {image delete $oldimg}
 
 		catch {file delete $prevgif}
@@ -884,7 +885,7 @@ proc guiMiddle { w } {
 
 proc guiFileList { w } {
 	set fileheaders { id ext input size output osize }
-	ttk::treeview $w.flist -columns $fileheaders -show headings -yscrollcommand "$w.sscrl set"
+	set ::widget_name(flist) [ttk::treeview $w.flist -columns $fileheaders -show headings -yscrollcommand "$w.sscrl set"]
 	foreach col $fileheaders {
 		set name [string totitle $col]
 		$w.flist heading $col -text $name -command [list treeSort $w.flist $col 0 ]
@@ -902,7 +903,7 @@ proc guiFileList { w } {
 proc guiThumbnail { w } {
 	ttk::labelframe $w.lprev -width 276 -height 292 -padding 6 -labelanchor n -text "Thumbnail"
 	# -labelwidget .f2.ac.checkwm
-	ttk::label $w.lprev.im -anchor center -text "No preview"
+	set ::widget_name(thumb-im) [ttk::label $w.lprev.im -anchor center -text "No preview"]
 }
 
 # --== Option tabs
@@ -932,54 +933,54 @@ proc tabWatermark { wt } {
 	ttk::label $wt.lop -text "Opacity" -width 10
 
 	# Text watermark ops
-	ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable ::watseltxt -command { turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
+	ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable ::watseltxt -command { turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
 	ttk::label $wt.ltext -text "Text"
 	ttk::combobox $wt.watermarks -state readonly -textvariable ::wmtxt -values $::watermarks -width 28
 	$wt.watermarks set [lindex $::watermarks 0]
 	
-	comboBoxEditEvents $wt.watermarks {bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx"}
+	comboBoxEditEvents $wt.watermarks {bindsetAction 0 0 watsel "$::widget_name(check-wm) $wt.cbtx"}
 
 	# font size spinbox
 	set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
 	ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
 		-validatecommand { string is integer %P }
 	$wt.fontsize set $::wmsize
-	bind $wt.fontsize <ButtonRelease> {bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx"}
-	bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel ".f3.rev.checkwm $wt.cbtx" }
+	bind $wt.fontsize <ButtonRelease> {bindsetAction wmsize [%W get] watsel "$::widget_name(check-wm) $wt.cbtx"}
+	bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel "$::widget_name(check-wm) $wt.cbtx" }
 
 	set wmpositions	[list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"]
-	# Text position box
-	ttk::combobox $wt.position -state readonly -textvariable ::wmpos -values $wmpositions -width 10
+	# Text position box 
+	set ::widget_name(wmpos) [ttk::combobox $wt.position -state readonly -textvariable ::wmpos -values $wmpositions -width 10]
 	$wt.position set $::wmpos
-	bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbtx" }
+	bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 watsel "$::widget_name(check-wm) $wt.cbtx" }
 
 	# Image watermark ops
-	ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable ::watselimg -command {turnOffParentCB .f3.rev.checkwm $wt.cbtx $wt.cbim}
+	ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable ::watselimg -command {turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
 	ttk::label $wt.limg -text "Image"
 	# dict get $dic key
 	# Get only the name for image list.
 	set iwatermarksk [dict keys $::iwatermarks]
-	ttk::combobox $wt.iwatermarks -state readonly -values $iwatermarksk
+	set ::widget_name(wmipos) [ttk::combobox $wt.iwatermarks -state readonly -values $iwatermarksk]
 	$wt.iwatermarks set [lindex $iwatermarksk 0]
 	set ::wmimsrc [dict get $::iwatermarks [lindex $iwatermarksk 0]]
-	bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel ".f3.rev.checkwm $wt.cbim" }
+	bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel "$::widget_name(check-wm) $wt.cbim" }
 
 	# Image size box \%
 	ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
 		-validatecommand { string is integer %P }
 	$wt.imgsize set $::wmimsize
-	bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] watsel .f3.rev.checkwm }
-	bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel ".f3.rev.checkwm $wt.cbim"] }
+	bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] watsel $::widget_name(check-wm) }
+	bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel "$::widget_name(check-wm) $wt.cbim"] }
 
 	# Image position
 	ttk::combobox $wt.iposition -state readonly -textvariable ::wmimpos -values $wmpositions -width 10
 	$wt.iposition set $::wmimpos
-	bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel ".f3.rev.checkwm $wt.cbim" }
+	bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel "$::widget_name(check-wm) $wt.cbim" }
 
 	# Opacity scales
 	# Set a given float as integer, TODO uplevel to set local context variable an not global namespace
 	proc progressBarSet { gvar cvar wt cb ft fl } {
-		bindsetAction $gvar [format $ft $fl] $cvar ".f3.rev.checkwm $wt.$cb"
+		bindsetAction $gvar [format $ft $fl] $cvar "$::widget_name(check-wm) $wt.$cb"
 	}
 
 	ttk::scale $wt.txop -from 10 -to 100 -variable ::wmop -value $::wmop -orient horizontal -command { progressBarSet ::wmop ::watsel $wt cbtx "%.0f" }
@@ -1005,7 +1006,7 @@ proc tabWatermark { wt } {
 	set iblendmodes [list Bumpmap ColorBurn ColorDodge Darken Exclusion HardLight Hue Lighten LinearBurn LinearDodge LinearLight Multiply Overlay Over Plus Saturate Screen SoftLight VividLight]
 	ttk::combobox $wt.st.iblend -state readonly -textvariable ::wmimcomp -values $iblendmodes -width 12
 	$wt.st.iblend set $::wmimcomp
-	bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] watsel ".f3.rev.checkwm $wt.cbim" }
+	bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] watsel "$::widget_name(check-wm) $wt.cbim" }
 
 	set wtpadding 2
 	grid $wt.lsize $wt.lpos $wt.lop -row 1 -sticky ws
@@ -1043,7 +1044,7 @@ proc tabResize {st} {
 	
 	ttk::frame $st -padding 6
 	
-	ttk::frame $st.lef
+	set ::widget_name(tabsize-left) [ttk::frame $st.lef]
 	ttk::labelframe $st.rgt -text "Options"
 	
 	grid $st.lef -column 1 -row 1 -sticky nesw
@@ -1109,12 +1110,12 @@ proc tabResize {st} {
 		}
 
 		if { [llength $sizesels] > 1 } {
-			treeAlterVal .f2.fb.flist osize osize {getOutputSizesForTree $fsize 1}
+			treeAlterVal $::widget_name(flist) osize osize {getOutputSizesForTree $fsize 1}
 		} elseif { [llength $sizesels] == 1 } {
-			treeAlterVal .f2.fb.flist osize osize {getOutputSizesForTree $fsize}
-			bindsetAction 0 0 sizesel .f3.rev.checksz
+			treeAlterVal $::widget_name(flist) osize osize {getOutputSizesForTree $fsize}
+			bindsetAction 0 0 sizesel $::widget_name(check-sz)
 		} elseif { [llength $sizesels] == 0 } {
-			.f3.rev.checksz invoke
+			$::widget_name(check-sz) invoke
 		}
 	}
 	
@@ -1177,7 +1178,7 @@ proc tabResize {st} {
 proc guiOutput { w } {
 
 	ttk::frame $w
-	ttk::checkbutton $w.cbpre -onvalue 1 -offvalue 0 -variable ::prefixsel -text "Suffix and Prefix" -command {printOutname 0 }
+	set ::widget_name(cb-prefix) [ttk::checkbutton $w.cbpre -onvalue 1 -offvalue 0 -variable ::prefixsel -text "Suffix and Prefix" -command {printOutname 0 } ]
 	ttk::labelframe $w.efix -text "Suffix and Prefix" -labelwidget $w.cbpre -padding 6
 
 	frameSuffix $w.efix
@@ -1224,13 +1225,13 @@ proc frameOutput { w } {
 	ttk::label $w.lbl -text "Format:"
 	ttk::combobox $w.fmt -state readonly -width 6 -textvariable ::outext -values $formats
 	$w.fmt set [lindex $formats 0]
-	bind $w.fmt <<ComboboxSelected>> { treeAlterVal .f2.fb.flist output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
+	bind $w.fmt <<ComboboxSelected>> { treeAlterVal $::widget_name(flist) output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
 
 	ttk::label $w.qtb -text "Quality:"
 	ttk::scale $w.qal -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }
 	ttk::label $w.qlb -width 4 -textvariable ::iquality
 
-	ttk::checkbutton $w.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal .f2.fb.flist output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
+	ttk::checkbutton $w.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal $::widget_name(flist) output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
 
 	ttk::separator $w.sep -orient vertical
 
@@ -1258,11 +1259,11 @@ proc guiStatusBar { w } {
 	ttk::frame $w.rev
 	ttk::frame $w.do
 	
-	ttk::checkbutton $w.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable ::watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }
-	ttk::checkbutton $w.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable ::sizesel
+	set ::widget_name(check-wm) [ttk::checkbutton $w.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable ::watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }]
+	set ::widget_name(check-sz) [ttk::checkbutton $w.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable ::sizesel]
 
-	ttk::progressbar $w.do.pbar -maximum [getFilesTotal] -variable ::cur -length "300"
-	ttk::label $w.do.plabel -text "Converting: " -textvariable pbtext
+	set ::widget_name(pbar-main) [ttk::progressbar $w.do.pbar -maximum [getFilesTotal] -variable ::cur -length "300"]
+	set ::widget_name(pbar-label) [ttk::label $w.do.plabel -text "Converting: " -textvariable pbtext]
 	ttk::button $w.do.bconvert -text "Convert" -command {convert}
 
 	pack $w.rev.checkwm $w.rev.checksz -side left
@@ -1291,7 +1292,7 @@ proc pBarUpdate { w gvar args } {
 
 #Resize: returns the validated entry as wxh or N%
 proc getFinalSizelist {} {
-	set sizeprelist [getSizesSel .f2.ac.n.sz.lef]
+	set sizeprelist [getSizesSel $::widget_name(tabsize-left)]
 	if {$sizeprelist != 0 } {
 		foreach {size} $sizeprelist {
 			lappend sizelist [join $size {x}]
@@ -1348,8 +1349,8 @@ proc watermark {} {
 	
 	# Positions list correspond to $::watemarkpos, but names as imagemagick needs
 	set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
-	set wmpossel   [lindex $magickpos [.f2.ac.n.wm.position current] ]
-	set wmimpossel [lindex $magickpos [.f2.ac.n.wm.iposition current] ]
+	set wmpossel   [lindex $magickpos [$::widget_name(wmpos) current] ]
+	set wmimpossel [lindex $magickpos [$::widget_name(wmipos) current] ]
 	# wmtxt watermarks wmsize wmcol wmcolswatch wmop wmpositions wmimsrc iwatermarks wmimpos wmimsize wmimcomp wmimop watsel watseltxt watselimg
 	#Watermarks, check if checkboxes selected
 	if { $::watseltxt } {
@@ -1395,11 +1396,11 @@ proc processHandlerFiles { {outdir "/tmp"} } {
 	set ids [putsHandlers g i k]
 	array set handler $handlers
 	
-	pBarUpdate .f3.do.pbar cur max [llength $ids] current -1
+	pBarUpdate $::widget_name(pbar-main) cur max [llength $ids] current -1
 	set msg {}
 	foreach imgv $ids {
 		array set id [dict get $inputfiles $imgv]
-		updateTextLabel .f3.do.plabel pbtext textv "Extracting... $id(name)"
+		updateTextLabel $::widget_name(pbar-label) pbtext textv "Extracting... $id(name)"
 		set outname [file join ${outdir} [file root $id(name)]]
 		append outname ".png"
 		
@@ -1433,7 +1434,7 @@ proc processHandlerFiles { {outdir "/tmp"} } {
 		lappend deleteFileList $outname
 		# puts [dict get $inputfiles $imgv]
 		
-	pBarUpdate .f3.do.pbar cur
+	pBarUpdate $::widget_name(pbar-main) cur
 	}	
 	return 0
 }
@@ -1442,7 +1443,7 @@ proc convert {} {
 	global inputfiles deleteFileList
 	
 	#Create progressbar
-	pack .f3.do.plabel .f3.do.pbar -side left -fill x -padx 2 -pady 0
+	pack $::widget_name(pbar-label) $::widget_name(pbar-main) -side left -fill x -padx 2 -pady 0
 	
 	#get watermark value
 	set wmark [watermark]
@@ -1452,7 +1453,7 @@ proc convert {} {
 	#process Gimp Calligra and inkscape to Tmp files
 	processHandlerFiles
 	
-	pBarUpdate .f3.do.pbar cur max [expr {[getFilesTotal]*[llength $sizes]}] current -1
+	pBarUpdate $::widget_name(pbar-main) cur max [expr {[getFilesTotal]*[llength $sizes]}] current -1
 
 	dict for {id datas} $::inputfiles {
 		dict with datas {
@@ -1472,13 +1473,13 @@ proc convert {} {
 			set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
 			set i 0
 			foreach dimension $sizes {
-				updateTextLabel .f3.do.plabel pbtext textv "Converting... $name"
+				updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... $name"
 				set resize {}
 				if {$dimension == 0} {
 					set soname [file join $outpath $oname]
 					set convertCmd [concat \"$opath\" $resize $wmark $unsharp \"$soname\"]
 					exec convert {*}$convertCmd
-					pBarUpdate .f3.do.pbar cur
+					pBarUpdate $::widget_name(pbar-main) cur
 					continue
 				}
 				incr i
@@ -1504,7 +1505,7 @@ proc convert {} {
 				# Final resize output
 				set resize [concat $resize -resize ${finalscale}${operator} +repage -colorspace sRGB]
 				
-				updateTextLabel .f3.do.plabel pbtext textv "Converting... ${name} to $dimension"
+				updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... ${name} to $dimension"
 				if {$i == 1} {
 					set dimension {}
 				}
@@ -1513,14 +1514,14 @@ proc convert {} {
 				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp -quality $::iquality \"$soname\"]
 				exec convert {*}$convertCmd
 
-				pBarUpdate .f3.do.pbar cur
+				pBarUpdate $::widget_name(pbar-main) cur
 			}
 		}
 	}
-	updateTextLabel .f3.do.plabel pbtext textv "Deleting Temporary Files..."
+	updateTextLabel $::widget_name(pbar-label) pbtext textv "Deleting Temporary Files..."
 	catch {file delete [list $deleteFileList]}
-	pack forget .f3.do.pbar .f3.do.plabel
-	updateTextLabel .f3.do.plabel pbtext textv ""
+	pack forget $::widget_name(pbar-main) $::widget_name(pbar-label)
+	updateTextLabel $::widget_name(pbar-label) pbtext textv ""
 }
 
 # ---=== Window options
