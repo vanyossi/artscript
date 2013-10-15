@@ -506,6 +506,7 @@ proc addTreevalues { w id } {
 		set ::img::imgid$id [$w insert {} end -values $values]
 	}
 	#Keep Gui with fresh news
+	updateWinTitle
 	update
 }
 
