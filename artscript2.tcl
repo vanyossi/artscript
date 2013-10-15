@@ -206,6 +206,7 @@ proc setDictEntries { id fpath size ext h} {
 	dict set inputfiles $id name $iname
 	dict set inputfiles $id oname [lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0]
 	dict set inputfiles $id size $size
+	dict set inputfiles $id osize $size
 	dict set inputfiles $id ext $ext
 	dict set inputfiles $id path $apath
 	dict set inputfiles $id deleted 0
@@ -501,7 +502,7 @@ proc addTreevalues { w id } {
 	global inputfiles
 	
 	dict with ::inputfiles $id {
-		set values [list $id $name $ext $size $oname]
+		set values [list $id $ext $name $size $oname $osize]
 		set ::img::imgid$id [$w insert {} end -values $values]
 	}
 	#Keep Gui with fresh news
@@ -563,17 +564,19 @@ proc updateTextLabel { w gval args } {
 }
 # Sets a custom value to any key of all members o the dict
 # TODO complete the function. recieves widget, inputdict, key to alter, script
-proc treeAlterVal { w column {script {puts $value}} } {
+# TODO args:"script, widget, read, write" order.
+proc treeAlterVal { w column key {script {puts $value}} } {
 	global inputfiles
 	
 	foreach id [dict keys $inputfiles] {
 
-		set value [dict get $inputfiles $id $column]
+		set value [dict get $inputfiles $id $key]
 		set fpath [dict get $inputfiles $id path]
+		set fsize [dict get $inputfiles $id size]
 		set newvalue [uplevel 0 $script]
 		
 		$w set [set ::img::imgid$id] $column $newvalue
-		dict set inputfiles $id $column $newvalue
+		dict set inputfiles $id $key $newvalue
 	}
 }
 
@@ -581,7 +584,7 @@ proc printOutname { w } {
 	if {$::prefixsel || $w != 0} {
 		bindsetAction 0 0 prefixsel .f2.ac.onam.cbpre
 	}
-	treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0}
+	treeAlterVal .f2.fb.flist output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0}
 }
 
 # First define subprocesses
@@ -881,7 +884,7 @@ proc guiMiddle { w } {
 }
 
 proc guiFileList { w } {
-	set fileheaders { id input ext size oname }
+	set fileheaders { id ext input size output osize }
 	ttk::treeview $w.flist -columns $fileheaders -show headings -yscrollcommand "$w.sscrl set"
 	foreach col $fileheaders {
 		set name [string totitle $col]
@@ -890,6 +893,7 @@ proc guiFileList { w } {
 	$w.flist column id -width 32 -stretch 0
 	$w.flist column ext -width 48 -stretch 0
 	$w.flist column size -width 86 -stretch 0
+	$w.flist column osize -width 86
 	bind $w.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [%W selection] }
 	bind $w.flist <Key-Delete> { removeTreeItem %W [%W selection] }
 	ttk::scrollbar $w.sscrl -orient vertical -command [list $w.flist yview ]
@@ -1105,8 +1109,9 @@ proc tabResize {st} {
 		}
 
 		if { [llength $sizesels] > 1 } {
-			# treeAlterVal .f2.fb.flist oname {lindex [getOutputName $value $::outext $::oupreffix $::ousuffix] 0}
+			treeAlterVal .f2.fb.flist osize osize {getOutputSizesForTree $fsize}
 		} elseif { [llength $sizesels] == 1 } {
+			treeAlterVal .f2.fb.flist osize osize {getOutputSizesForTree $fsize}
 			bindsetAction 0 0 sizesel .f3.rev.checksz
 		} elseif { [llength $sizesels] == 0 } {
 			.f3.rev.checksz invoke
@@ -1219,13 +1224,13 @@ proc frameOutput { w } {
 	ttk::label $w.lbl -text "Format:"
 	ttk::combobox $w.fmt -state readonly -width 6 -textvariable ::outext -values $formats
 	$w.fmt set [lindex $formats 0]
-	bind $w.fmt <<ComboboxSelected>> { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
+	bind $w.fmt <<ComboboxSelected>> { treeAlterVal .f2.fb.flist output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
 
 	ttk::label $w.qtb -text "Quality:"
 	ttk::scale $w.qal -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }
 	ttk::label $w.qlb -width 4 -textvariable ::iquality
 
-	ttk::checkbutton $w.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal .f2.fb.flist oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
+	ttk::checkbutton $w.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal .f2.fb.flist output oname {lindex [getOutputName $fpath $::outext $::ouprefix $::ousuffix] 0} }
 
 	ttk::separator $w.sep -orient vertical
 
@@ -1296,15 +1301,42 @@ proc getFinalSizelist {} {
 	}
 	return $sizelist
 }
-#Give original size and destination square.
+# Returns scaled size fitting in destination measures
+# w xh = original dimension dw x dh = Destination size
 proc getOutputSize { w h dw dh } {
 		if { $w > $h } {
-			set dh [ expr {round($h*$dw/[format "%0.2f" $w])} ]
+			set dh [ expr {round($h * $dw / [format "%0.2f" $w])} ]
 		} else {
-			set dw [ expr {round($w*$dh/[format "%0.2f" $h])} ]
+			set dw [ expr {round($w * $dh / [format "%0.2f" $h])} ]
 		}
 		return "${dw}x${dh}"
 	}
+
+# Calculates scaling destination for size in respect of chosen sizes
+# size, string WidthxHeight, the original file size
+# Returns a list of wxh elements
+proc getOutputSizesForTree { size } {
+	set cur_w [lindex [split $size {x} ] 0]
+	set cur_h [lindex [split $size {x} ] 1]
+	
+	set sizelist [lreverse [getFinalSizelist]]
+	foreach dimension $sizelist {
+		if {[string range $dimension end end] == "%"} {
+			set ratio [string trim $dimension {%}]
+			set dest_w [expr {round($cur_w * ($ratio / 100.0))} ]
+			set dest_h [expr {round($cur_h * ($ratio / 100.0))} ]
+		} else {
+			set dest_w [lindex [split $dimension {x} ] 0]
+			set dest_h [lindex [split $dimension {x} ] 1]
+		}
+		# get final size
+		#set finalscale [getOutputSize {*}[concat [split $size {x} ] [split $dimension {x}]] ]
+		set finalscale [getOutputSize $cur_w $cur_h $dest_w $dest_h]
+		#Add resize filter (better quality)
+		lappend fsizes $finalscale
+	}
+	return $fsizes
+}
 #Preproces functions
 #watermark
 proc watermark {} {
@@ -1402,7 +1434,7 @@ proc processHandlerFiles { {outdir "/tmp"} } {
 	}	
 	return 0
 }
-
+# TODO, use new function "getOutputSizesForTree"
 proc convert {} {
 	global inputfiles deleteFileList
 	
