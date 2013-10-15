@@ -63,7 +63,7 @@ proc artscriptSettings {} {
 		]
 	#Sizes
 	set siz_settings [dict create \
-		sizes       [list "1920x1920" "1650x1650" "1280x1280" "1024x1024" "720x720" "50%"] \
+		sizes       [list "1920x1080" "1680x1050" "1280x1024" "1024x768" "80%" "720x720" "50%"] \
 	]
 	#Suffix and prefix ops
 	set suf_settings [dict create   \
@@ -1037,10 +1037,10 @@ proc tabResize {st} {
 		} else {
 			set size [split $size {x}]
 			lappend wList [lindex $size 0]
-			lappend hList [lindex $size 0]
+			lappend hList [lindex $size 1]
 		}
 	}
-	lappend wList $pList 
+	lappend wList {*}$pList
 	
 	ttk::frame $st -padding 6
 	
@@ -1094,11 +1094,12 @@ proc tabResize {st} {
 		if {![string is boolean $wc]} {
 			set sel [$wc get]
 			set id [string range $wc end end]
-			set pref [string range $wc 0 end-4]
+			set pref "$w."; #[string range $wc 0 end-4]
 			append hei $pref "hei" $id
-			$hei set $sel
+			# Select height original pair for width
+			catch {$hei current [$wc current]} ; # $hei set $sel
 			if { [string range $sel end end] == {%} } {
-				$hei set {} ; # set to not to avoid sizes like 50%x50% no supported
+				$hei set {} ; # avoid sizes like 50%x50%, not supported
 				grid forget $hei
 				${pref}xmu$id configure -text "%"
 			} elseif { [lindex [${pref}xmu$id configure -text] end] == "%" } {
