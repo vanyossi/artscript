@@ -1402,6 +1402,27 @@ proc watermark {} {
 	return $wmcmd
 }
 
+proc getResize { size dsize filter unsharp} {
+	# Use processed scale from getOuputSizeForTree
+	set finalscale $dsize
+	# Operator is force size (!)
+	set operator "\\!"
+	set cur_w [lindex [split $size {x} ] 0]
+	set dest_w [lindex [split $dsize {x} ] 0]
+	
+	# Create string Colospace, filter, resize x N, original Colorspace
+	set resize "-colorspace RGB"
+	set resize [concat $resize $filter]
+	while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
+		set cur_w [expr {round($cur_w * 0.8)}]
+		set resize [concat $resize -resize 80% +repage $unsharp]
+	}
+	# Final resize output
+	set resize [concat $resize -resize ${finalscale}${operator} +repage "-colorspace sRGB"]
+	
+	return $resize
+}
+
 #Calligra, gimp and inkscape converter
 proc processHandlerFiles { {outdir "/tmp"} } {
 	global inputfiles handlers deleteFileList
@@ -1452,7 +1473,7 @@ proc processHandlerFiles { {outdir "/tmp"} } {
 	}	
 	return 0
 }
-# TODO, use new function "getOutputSizesForTree"
+# TODO Clean funtion, comment
 proc convert {} {
 	global inputfiles deleteFileList
 	
@@ -1461,13 +1482,11 @@ proc convert {} {
 	
 	#get watermark value
 	set wmark [watermark]
-	#get make resize string
-	set sizes [getFinalSizelist]
 	
 	#process Gimp Calligra and inkscape to Tmp files
 	processHandlerFiles
 	
-	pBarUpdate $::widget_name(pbar-main) cur max [expr {[getFilesTotal]*[llength $sizes]}] current -1
+	pBarUpdate $::widget_name(pbar-main) cur max [expr {[getFilesTotal]*[llength [getFinalSizelist]]}] current -1
 
 	dict for {id datas} $::inputfiles {
 		dict with datas {
@@ -1486,10 +1505,14 @@ proc convert {} {
 			# with -distort Resize instead of -resize "or LanczosRadius"
 			set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
 			set i 0
+			# get make resize string
+			set sizes [getOutputSizesForTree $size]	
+			set nsizes [llength $sizes]
+			
 			foreach dimension $sizes {
-				updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... $name"
 				set resize {}
-				if {$dimension == 0} {
+				if {$nsizes == 0} {
+					updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... $name"
 					set soname [file join $outpath $output]
 					set convertCmd [concat \"$opath\" $resize $wmark $unsharp \"$soname\"]
 					exec convert {*}$convertCmd
@@ -1497,27 +1520,8 @@ proc convert {} {
 					continue
 				}
 				incr i
-				set cur_w [lindex [split $size {x} ] 0]
-				set dest_w [lindex [split $dimension {x} ] 0]
-				
-				if {[string range $dimension end end] == "%"} {
-					set dest_w [string trim 50% {%}]
-					set dest_w [expr {round($cur_w * ($dest_w / 100.0))} ]
-					set operator {}
-				} else {
-					set operator "\\!"
-				}
-				# We have to get the final size ourselves or else imagick could miss by 1 px
-				set finalscale [getOutputSize {*}[concat [split $size {x} ] [split $dimension {x}]] ]
-				#Add resize filter (better quality)
-				set resize "-colorspace RGB"
-				set resize [concat $resize $filter]
-				while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
-					set cur_w [expr {round($cur_w * 0.8)}]
-					set resize [concat $resize -resize 80% +repage $unsharp]
-				}
-				# Final resize output
-				set resize [concat $resize -resize ${finalscale}${operator} +repage -colorspace sRGB]
+
+				set resize [getResize $size $dimension $filter $unsharp]
 				
 				updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... ${name} to $dimension"
 				if {$i == 1} {
