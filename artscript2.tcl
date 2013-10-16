@@ -1313,13 +1313,19 @@ proc getFinalSizelist {} {
 # Returns scaled size fitting in destination measures
 # w xh = original dimension dw x dh = Destination size
 proc getOutputSize { w h dw dh } {
-		if { $w > $h } {
-			set dh [ expr {round($h * $dw / [format "%0.2f" $w])} ]
-		} else {
-			set dw [ expr {round($w * $dh / [format "%0.2f" $h])} ]
-		}
-		return "${dw}x${dh}"
+	set ratio [expr { $h / [format "%0.2f" $w]} ]
+	set dratio [expr { $dh / [format "%0.2f" $dw]} ]
+	if { $dratio > $ratio } {
+		set dh [ expr {round($h * $dw / [format "%0.2f" $w])} ]
+	} else {
+		set dw [ expr {round($w * $dh / [format "%0.2f" $h])} ]
 	}
+	# Do not allow to grow, at the moment is not supported
+	if { $dw > $w } {
+		return "${w}x${h}"
+	}
+	return "${dw}x${dh}"
+}
 
 # Calculates scaling destination for size in respect of chosen sizes
 # size, string WidthxHeight, the original file size,
@@ -1499,7 +1505,7 @@ proc convert {} {
 					set dest_w [expr {round($cur_w * ($dest_w / 100.0))} ]
 					set operator {}
 				} else {
-					set operator "\\>"
+					set operator "\\!"
 				}
 				# We have to get the final size ourselves or else imagick could miss by 1 px
 				set finalscale [getOutputSize {*}[concat [split $size {x} ] [split $dimension {x}]] ]
