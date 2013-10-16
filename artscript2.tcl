@@ -1340,6 +1340,9 @@ proc getOutputSizesForTree { size {formated 0}} {
 			set ratio [string trim $dimension {%}]
 			set dest_w [expr {round($cur_w * ($ratio / 100.0))} ]
 			set dest_h [expr {round($cur_h * ($ratio / 100.0))} ]
+		} elseif {$dimension == 0} {	
+			set dest_w $cur_w	
+			set dest_h $cur_h
 		} else {
 			set dest_w [lindex [split $dimension {x} ] 0]
 			set dest_h [lindex [split $dimension {x} ] 1]
@@ -1422,6 +1425,17 @@ proc getResize { size dsize filter unsharp} {
 	
 	return $resize
 }
+# set quality options
+# png compression -type TrueColorMatte -define png:format=png32 -define png:compression-level=9 -define png:compresion-filter=5
+# gif dither
+proc getQuality { ext } {
+	switch -glob -- $ext {
+		jpg	{ set quality "-sampling-factor 1x1,1x,1x1 -quality $::iquality" }
+		png	{ set quality "-quality $::iquality" }
+		gif	{ set quality "-quality $::iquality" }
+	}
+	return $quality
+}
 
 #Calligra, gimp and inkscape converter
 proc processHandlerFiles { {outdir "/tmp"} } {
@@ -1482,6 +1496,7 @@ proc convert {} {
 	
 	#get watermark value
 	set wmark [watermark]
+	set quality [getQuality $::outext]
 	
 	#process Gimp Calligra and inkscape to Tmp files
 	processHandlerFiles
@@ -1506,7 +1521,7 @@ proc convert {} {
 			set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
 			set i 0
 			# get make resize string
-			set sizes [getOutputSizesForTree $size]	
+			set sizes [getOutputSizesForTree $size]
 			set nsizes [llength $sizes]
 			
 			foreach dimension $sizes {
@@ -1514,7 +1529,7 @@ proc convert {} {
 				if {$nsizes == 0} {
 					updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... $name"
 					set soname [file join $outpath $output]
-					set convertCmd [concat \"$opath\" $resize $wmark $unsharp \"$soname\"]
+					set convertCmd [concat \"$opath\" $resize $wmark $unsharp $quality \"$soname\"]
 					exec convert {*}$convertCmd
 					pBarUpdate $::widget_name(pbar-main) cur
 					continue
@@ -1523,13 +1538,14 @@ proc convert {} {
 
 				set resize [getResize $size $dimension $filter $unsharp]
 				
+				
 				updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... ${name} to $dimension"
 				if {$i == 1} {
 					set dimension {}
 				}
 				set soname [file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]
 				
-				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp -quality $::iquality \"$soname\"]
+				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp $quality \"$soname\"]
 				exec convert {*}$convertCmd
 
 				pBarUpdate $::widget_name(pbar-main) cur
