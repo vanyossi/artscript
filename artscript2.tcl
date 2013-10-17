@@ -1104,12 +1104,21 @@ proc tabResize {st} {
 			set id [string range $wc end end]
 			set pref "$w."; #[string range $wc 0 end-4]
 			append hei $pref "hei" $id
+			
+			# String is emptu if they are editing, do nothing in that case
+			if { $sel eq "" } {
+				return
+			}
 			# Select height original pair for width
-			catch {$hei current [$wc current]} ; # $hei set $sel
+			if { [catch {$hei current [$wc current]} ]} {
+				 $hei set $sel
+			}
+			# If size is percentage, remove height. 50%x50% values not supported
 			if { [string range $sel end end] == {%} } {
-				$hei set {} ; # avoid sizes like 50%x50%, not supported
+				$hei set {} 
 				grid forget $hei
 				${pref}xmu$id configure -text "%"
+			# If size does not end like that bue text of label is %, pack height
 			} elseif { [lindex [${pref}xmu$id configure -text] end] == "%" } {
 				array set info [grid info $wc]
 				grid $hei -column 4 -row $info(-row) -sticky we
