@@ -1194,7 +1194,7 @@ proc guiOutput { w } {
 	# ttk::label $w.lsuf -text "Suffix"
 	
 	ttk::separator $w.sep -orient horizontal
-	frameOutput $w.f
+	set ::widget_name(frame-output) [frameOutput $w.f]
 	
 	pack $w.efix $w.sep -side top -fill both -expand 1 -padx 2
 	pack $w.f -side top -fill both -expand 1 -padx 2
@@ -1227,9 +1227,9 @@ proc frameSuffix { w } {
 }
 
 proc frameOutput { w } {
-	ttk::labelframe $w -text "Output & Quality" -padding 8
+	ttk::labelframe $w -text "Output & Quality" -padding 6
 
-	set formats [list png jpg gif] ; # TODO ora and keep
+	set formats [list png jpg gif ora] ; # TODO ora and keep
 	ttk::label $w.lbl -text "Format:"
 	ttk::combobox $w.fmt -state readonly -width 6 -textvariable ::outext -values $formats
 	$w.fmt set [lindex $formats 0]
@@ -1238,7 +1238,6 @@ proc frameOutput { w } {
 	ttk::label $w.qtb -text "Quality:"
 	ttk::scale $w.qal -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }
 	ttk::label $w.qlb -width 4 -textvariable ::iquality
-	setFormatOptions $w
 
 	ttk::checkbutton $w.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output }
 
@@ -1251,7 +1250,7 @@ proc frameOutput { w } {
 	grid $w.lbl $w.fmt -row 2
 	grid configure $w.lbl -column 2
 	grid configure $w.fmt -column 3	
-	grid $w.ove -row 3 -column 2 -columnspan 2 -sticky e
+	grid $w.ove -row 3 -column 1 -columnspan 2 -sticky we
 	grid configure $w.fmt $w.qlb -sticky we
 	grid configure $w.qtb $w.lbl -sticky e
 
@@ -1264,7 +1263,7 @@ proc frameOutput { w } {
 proc setFormatOptions { w } {
 	# update listname
 	treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output
-	
+	$::widget_name(convert-but) configure -text "Convert" -command {convert}
 	switch -glob -- $::outext {
 		jpg	{
 			set ::iquality 92 
@@ -1278,9 +1277,14 @@ proc setFormatOptions { w } {
 		}
 		gif	{
 			set ::iquality 256
-			puts $::iquality
 			$w.qtb configure -text "Colors:"
 			$w.qal configure -from 1 -to 256
+		}
+		ora	{
+			set ::iquality 0
+			$w.qtb configure -text "Quality:"
+			$w.qal configure -from 0 -to 0
+			$::widget_name(convert-but) configure -text "Make ORA" -command {makeOra}
 		}
 	}
 }
@@ -1297,7 +1301,8 @@ proc guiStatusBar { w } {
 
 	set ::widget_name(pbar-main) [ttk::progressbar $w.do.pbar -maximum [getFilesTotal] -variable ::cur -length "300"]
 	set ::widget_name(pbar-label) [ttk::label $w.do.plabel -text "Converting: " -textvariable pbtext]
-	ttk::button $w.do.bconvert -text "Convert" -command {convert}
+	set ::widget_name(convert-but) [ttk::button $w.do.bconvert -text "Convert" -command {convert}]
+	setFormatOptions $::widget_name(frame-output)
 
 	pack $w.rev.checkwm $w.rev.checksz -side left
 	pack $w.rev -side left
@@ -1309,7 +1314,7 @@ proc guiStatusBar { w } {
 
 proc pBarUpdate { w gvar args } {
 	upvar #0 $gvar cur
-	set opt [dict create]
+	# set opt [dict create]
 	set opt [dict create {*}$args]
 	
 	if {[dict exists $opt max]} {
@@ -1321,6 +1326,23 @@ proc pBarUpdate { w gvar args } {
 	}
 	incr cur
 	update
+}
+
+# Controls the basic operation of create update and forget from main progressbar
+proc pBarControl { itext {action none} { delay 0 } {max 0} } {
+	updateTextLabel $::widget_name(pbar-label) pbtext textv $itext
+	after $delay
+	switch -- $action {
+		"create" { 
+			pack $::widget_name(pbar-label) $::widget_name(pbar-main) -side left -fill x -padx 2 -pady 0
+			pBarUpdate $::widget_name(pbar-main) cur max $max current -1
+		}
+		"forget" { 
+			pack forget $::widget_name(pbar-main) $::widget_name(pbar-label)
+			updateTextLabel $::widget_name(pbar-label) pbtext textv ""
+		 }
+		"update"  { pBarUpdate $::widget_name(pbar-main) cur }
+	}
 }
 
 #Resize: returns the validated entry as wxh or N%
@@ -1460,6 +1482,28 @@ proc getQuality { ext } {
 	return $quality
 }
 
+# Gets all inputfiles and converts them to ORA using calligraconverter, skips Inkscape files
+proc makeOra {} {
+	global inputfiles
+	set forbiden_ids [putsHandlers i]
+	
+	pBarControl {} create 0 [llength [dict keys $inputfiles]]
+	
+	dict for {id datas} $::inputfiles {
+		dict with datas {
+			if {[lsearch $forbiden_ids $id ] >= 0} {
+				pBarControl "Skipping $name (SVG)" update 600
+				continue
+			}
+			pBarControl "Oraizing... $name"
+			set outname [file join [file dirname $path] $output]
+			after 1600
+			# catch { exec calligraconverter --batch -- $path $outname } msg
+			pBarControl "Oraizing... $name" update
+		}
+	}
+	pBarControl "All operations Done" forget 600
+}
 #Calligra, gimp and inkscape converter
 proc processHandlerFiles { {outdir "/tmp"} } {
 	global inputfiles handlers deleteFileList
@@ -1514,18 +1558,17 @@ proc processHandlerFiles { {outdir "/tmp"} } {
 proc convert {} {
 	global inputfiles deleteFileList
 	
-	#Create progressbar
-	pack $::widget_name(pbar-label) $::widget_name(pbar-main) -side left -fill x -padx 2 -pady 0
-	
 	#get watermark value
 	set wmark [watermark]
 	set quality [getQuality $::outext]
 	
+	#Create progressbar
+	pBarControl {} create 0 1
 	#process Gimp Calligra and inkscape to Tmp files
 	processHandlerFiles
 	
 	pBarUpdate $::widget_name(pbar-main) cur max [expr {[getFilesTotal]*[llength [getFinalSizelist]]}] current -1
-
+	
 	dict for {id datas} $::inputfiles {
 		dict with datas {
 			if {$deleted} {
@@ -1550,19 +1593,21 @@ proc convert {} {
 			foreach dimension $sizes {
 				set resize {}
 				if {$nsizes == 0} {
-					updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... $name"
+					pBarControl "Converting... $name"
+					#updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... $name"
 					set soname [file join $outpath $output]
 					set convertCmd [concat \"$opath\" $resize $wmark $unsharp $quality \"$soname\"]
 					exec convert {*}$convertCmd
-					pBarUpdate $::widget_name(pbar-main) cur
+					pBarControl "Converting... $name" update
+					# pBarUpdate $::widget_name(pbar-main) cur
 					continue
 				}
 				incr i
 
 				set resize [getResize $size $dimension $filter $unsharp]
 				
-				
-				updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... ${name} to $dimension"
+				pBarControl "Converting... ${name} to $dimension"
+				#updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... ${name} to $dimension"
 				if {$i == 1} {
 					set dimension {}
 				}
@@ -1570,15 +1615,17 @@ proc convert {} {
 				
 				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp $quality \"$soname\"]
 				exec convert {*}$convertCmd
-
-				pBarUpdate $::widget_name(pbar-main) cur
+				
+				pBarControl "Converting... ${name} to $dimension" update
 			}
 		}
 	}
-	updateTextLabel $::widget_name(pbar-label) pbtext textv "Deleting Temporary Files..."
+	# updateTextLabel $::widget_name(pbar-label) pbtext textv "Deleting Temporary Files..."
 	catch {file delete [list $deleteFileList]}
-	pack forget $::widget_name(pbar-main) $::widget_name(pbar-label)
-	updateTextLabel $::widget_name(pbar-label) pbtext textv ""
+	pBarControl "Deleting Temporary Files..." forget 600
+	# after 600
+	# pack forget $::widget_name(pbar-main) $::widget_name(pbar-label)
+	# updateTextLabel $::widget_name(pbar-label) pbtext textv ""
 }
 
 # ---=== Window options
