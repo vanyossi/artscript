@@ -1233,11 +1233,12 @@ proc frameOutput { w } {
 	ttk::label $w.lbl -text "Format:"
 	ttk::combobox $w.fmt -state readonly -width 6 -textvariable ::outext -values $formats
 	$w.fmt set [lindex $formats 0]
-	bind $w.fmt <<ComboboxSelected>> { treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output }
+	bind $w.fmt <<ComboboxSelected>> [list setFormatOptions $w ]
 
 	ttk::label $w.qtb -text "Quality:"
 	ttk::scale $w.qal -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }
 	ttk::label $w.qlb -width 4 -textvariable ::iquality
+	setFormatOptions $w
 
 	ttk::checkbutton $w.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output }
 
@@ -1250,7 +1251,7 @@ proc frameOutput { w } {
 	grid $w.lbl $w.fmt -row 2
 	grid configure $w.lbl -column 2
 	grid configure $w.fmt -column 3	
-	grid $w.ove -row 3 -column 2
+	grid $w.ove -row 3 -column 2 -columnspan 2 -sticky e
 	grid configure $w.fmt $w.qlb -sticky we
 	grid configure $w.qtb $w.lbl -sticky e
 
@@ -1258,6 +1259,30 @@ proc frameOutput { w } {
 	grid columnconfigure $w {1} -weight 2 -pad 4
 	grid rowconfigure $w {0 1 2 3} -weight 1 -pad 4
 	return $w
+}
+
+proc setFormatOptions { w } {
+	# update listname
+	treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output
+	
+	switch -glob -- $::outext {
+		jpg	{
+			set ::iquality 92 
+			$w.qtb configure -text "Quality:"
+			$w.qal configure -from 10 -to 100
+		}
+		png	{
+			set ::iquality 9
+			$w.qtb configure -text "Compress:"
+			$w.qal configure -from 0 -to 9
+		}
+		gif	{
+			set ::iquality 256
+			puts $::iquality
+			$w.qtb configure -text "Colors:"
+			$w.qal configure -from 1 -to 256
+		}
+	}
 }
 
 # ----==== Status bar
@@ -1426,13 +1451,11 @@ proc getResize { size dsize filter unsharp} {
 	return $resize
 }
 # set quality options
-# png compression -type TrueColorMatte -define png:format=png32 -define png:compression-level=9 -define png:compresion-filter=5
-# gif dither
 proc getQuality { ext } {
 	switch -glob -- $ext {
 		jpg	{ set quality "-sampling-factor 1x1,1x,1x1 -quality $::iquality" }
-		png	{ set quality "-quality $::iquality" }
-		gif	{ set quality "-quality $::iquality" }
+		png	{ set quality "-type TrueColorMatte -define png:format=png32 -define png:compression-level=$::iquality -define png:compresion-filter=4" }
+		gif	{ set quality "-channel RGBA -separate \( +clone -dither FloydSteinberg -remap pattern:gray50 \) +swap +delete -combine -channel RGB -dither FloydSteinberg -colors $::iquality" }
 	}
 	return $quality
 }
