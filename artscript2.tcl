@@ -594,6 +594,14 @@ proc printOutname { w } {
 	
 }
 
+# Check id of file selected and sends it to convert to process as preview.
+proc showPreview {} {
+	set id [lindex [$::widget_name(flist) item [$::widget_name(flist) selection] -values] 0]
+	if { $id >= 0 } {
+		convert $id
+	}
+	return
+}
 # First define subprocesses
 # makeThumb creates a thumbnail based on path (file type) makes requested sizes.
 proc makeThumb { path tsize } {
@@ -612,7 +620,7 @@ proc makeThumb { path tsize } {
 
 	} elseif {[regexp {.xcf|.psd} $filext ]} {
 		# TODO: Break appart preview function to allow loading thumbs from tmp folder
-		$::widget_name(thumb-im) configure -compound text -text "No preview"
+		$::widget_name(thumb-im) configure -compound text -text "No Thumbnail"
 		return 0
 	}
 	foreach {size dest} $tsize {
@@ -623,7 +631,7 @@ proc makeThumb { path tsize } {
 	
 # Attempts to load a thumbnail from thumbnails folder if exists.
 # Creates a thumbnail for files missing Large thumbnail
-proc showPreview { w f {tryprev 1}} {
+proc showThumb { w f {tryprev 1}} {
 	global inputfiles env
 
 	# Do not process if selection is multiple
@@ -666,7 +674,7 @@ proc showPreview { w f {tryprev 1}} {
 	}
 
 	if {$tryprev} {
-		showPreview w $f 0
+		showThumb w $f 0
 	}
 }
 
@@ -831,7 +839,17 @@ proc getswatches { {colist 0} {sortby 1}} {
 	}
 	return [dict values $swfinal]
 }
-
+# Ttk style modifiers
+proc artscriptStyles {} {
+	ttk::style layout small.TButton {
+		Button.border -sticky nswe -border 1 -children {
+			Button.focus -sticky nswe -children {
+				Button.spacing -sticky nswe -children {Button.label -sticky nswe}
+				}
+			}
+		}
+	# ttk::style configure small.TButton -background color
+}
 # ----=== Gui Construct ===----
 # TODO Make every frame a procedure to ease movement of the parts
 # Horizontal panel for placing operations that affect Artscript behaviour
@@ -883,9 +901,9 @@ proc guiMiddle { w } {
 	$paned_botom pane $gui_out -weight 2
 	
 	pack $file_pane.flist -side left -expand 1 -fill both
-	pack $file_pane.sscrl $file_pane.lprev -side left -expand 0 -fill both
-	pack propagate $file_pane.lprev 0
-	pack $file_pane.lprev.im -expand 1 -fill both
+	pack $file_pane.sscrl $file_pane.thumb -side left -expand 0 -fill both
+	pack propagate $file_pane.thumb 0
+	pack $file_pane.thumb.im -expand 1 -fill both
 	
 	return $w
 }
@@ -901,7 +919,7 @@ proc guiFileList { w } {
 	$w.flist column ext -width 48 -stretch 0
 	$w.flist column size -width 86 -stretch 0
 	$w.flist column osize -width 86
-	bind $w.flist <<TreeviewSelect>> { showPreview .m2.lprev.im [%W selection] }
+	bind $w.flist <<TreeviewSelect>> { showThumb $::widget_name(thumb-im) [%W selection] }
 	bind $w.flist <Key-Delete> { removeTreeItem %W [%W selection] }
 	ttk::scrollbar $w.sscrl -orient vertical -command [list $w.flist yview ]
 	$::widget_name(flist) tag configure exists -foreground #f00
@@ -909,9 +927,10 @@ proc guiFileList { w } {
 }
 
 proc guiThumbnail { w } {
-	ttk::labelframe $w.lprev -width 276 -height 292 -padding 6 -labelanchor n -text "Thumbnail"
-	# -labelwidget .f2.ac.checkwm
-	set ::widget_name(thumb-im) [ttk::label $w.lprev.im -anchor center -text "No preview"]
+	ttk::labelframe $w.thumb -width 276 -height 316 -padding 6 -labelanchor n -text "Thumbnail"
+	set ::widget_name(thumb-im) [ttk::label $w.thumb.im -anchor center -text "No Thumbnail"]
+	ttk::button $w.thumb.prev -text "Preview" -style small.TButton -command { showPreview }
+	pack $w.thumb.prev -side bottom
 }
 
 # --== Option tabs
@@ -968,7 +987,7 @@ proc tabWatermark { wt } {
 	# dict get $dic key
 	# Get only the name for image list.
 	set iwatermarksk [dict keys $::iwatermarks]
-	set ::widget_name(wmipos) [ttk::combobox $wt.iwatermarks -state readonly -values $iwatermarksk]
+	ttk::combobox $wt.iwatermarks -state readonly -values $iwatermarksk
 	$wt.iwatermarks set [lindex $iwatermarksk 0]
 	set ::wmimsrc [dict get $::iwatermarks [lindex $iwatermarksk 0]]
 	bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel "$::widget_name(check-wm) $wt.cbim" }
@@ -981,7 +1000,7 @@ proc tabWatermark { wt } {
 	bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel "$::widget_name(check-wm) $wt.cbim"] }
 
 	# Image position
-	ttk::combobox $wt.iposition -state readonly -textvariable ::wmimpos -values $wmpositions -width 10
+	set ::widget_name(wmipos) [ttk::combobox $wt.iposition -state readonly -textvariable ::wmimpos -values $wmpositions -width 10]
 	$wt.iposition set $::wmimpos
 	bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel "$::widget_name(check-wm) $wt.cbim" }
 
@@ -1063,15 +1082,6 @@ proc tabResize {st} {
 	
 	ttk::label $st.rgt.ins -text ""
 	pack $st.rgt.ins -side left
-	
-	ttk::style layout small.TButton {
-		Button.border -sticky nswe -border 1 -children {
-			Button.focus -sticky nswe -children {
-				Button.spacing -sticky nswe -children {Button.label -sticky nswe}
-				}
-			}
-		}
-	# ttk::style configure small.TButton -background color
 	
 	# grid $st.ins -column 0 -row 1 -columnspan 5 -sticky we
 	ttk::label $st.lef.ann -text "   No Selection" -font "-size 14"
@@ -1526,11 +1536,15 @@ proc makeOra {} {
 	pBarControl "All operations Done" forget 600
 }
 #Calligra, gimp and inkscape converter
-proc processHandlerFiles { {outdir "/tmp"} } {
+proc processHandlerFiles { {ids ""} {outdir "/tmp"} } {
 	global inputfiles handlers deleteFileList
 	
 	# Files to convert
-	set ids [putsHandlers g i k]
+	if { $ids eq ""} {
+		set ids [putsHandlers g i k]
+	} else {
+		
+	}
 	array set handler $handlers
 	
 	pBarUpdate $::widget_name(pbar-main) cur max [llength $ids] current -1
@@ -1540,6 +1554,10 @@ proc processHandlerFiles { {outdir "/tmp"} } {
 		updateTextLabel $::widget_name(pbar-label) pbtext textv "Extracting... $id(name)"
 		set outname [file join ${outdir} [file root $id(name)]]
 		append outname ".png"
+		
+		if { [file exists $outname ]} {
+			continue
+		}
 		
 		if { $handler($imgv) == {g} } {
 			set i $id(path)
@@ -1553,6 +1571,9 @@ proc processHandlerFiles { {outdir "/tmp"} } {
 		}
 		if { $handler($imgv) == {k} } {
 			catch { exec calligraconverter --batch -- $id(path) $outname } msg
+		}
+		if { $handler($imgv) == {m} } {
+			continue
 		}
 		
 		#Error reporting, if code NONE then png conversion success.
@@ -1575,8 +1596,15 @@ proc processHandlerFiles { {outdir "/tmp"} } {
 	}	
 	return 0
 }
+proc processIds { {id ""} } {
+	if { $id ne "" } {
+		return $id
+	} else {
+		return [dict keys $::inputfiles]
+	}
+}
 # TODO Clean funtion, comment
-proc convert {} {
+proc convert { {id ""} } {
 	global inputfiles deleteFileList
 	
 	#get watermark value
@@ -1586,11 +1614,13 @@ proc convert {} {
 	#Create progressbar
 	pBarControl {} create 0 1
 	#process Gimp Calligra and inkscape to Tmp files
-	processHandlerFiles
+	processHandlerFiles $id
+	set convert_files [processIds $id]
 	
 	pBarUpdate $::widget_name(pbar-main) cur max [expr {[getFilesTotal]*[llength [getFinalSizelist]]}] current -1
 	
-	dict for {id datas} $::inputfiles {
+	foreach idnumber $convert_files {
+		set datas [dict get $::inputfiles $idnumber]
 		dict with datas {
 			if {$deleted} {
 				continue
@@ -1623,23 +1653,28 @@ proc convert {} {
 				if {$i == 1} {
 					set dimension {}
 				}
-				set soname [file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]
-				
-				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp $quality \"$soname\"]
+				if { $id eq ""} {
+				set soname \"[file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]\"
+				} else {
+					set soname "show:"
+				}
+				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp $quality $soname]
 				exec convert {*}$convertCmd
 				
 				pBarControl "Converting... ${name} to $dimension" update
 			}
 		}
 	}
-	catch {file delete [list $deleteFileList]}
-	pBarControl "Deleting Temporary Files..." forget 600
+	if { $id eq ""} {
+		catch {file delete [list $::deleteFileList]}
+	}
+	pBarControl "Operations Done..." forget 600
 }
 
 # ---=== Window options
 wm title . "Artscript $::version -- [getFilesTotal] Files selected"
 # Set close actions
-bind . <Destroy> { }
+bind . <Destroy> [list catch {file delete [list $::deleteFileList]} ]
 
 # We test if icon exist before addin it to the wm
 set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
@@ -1648,6 +1683,7 @@ if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 }
 
 # ---=== Construct GUI
+artscriptStyles
 # Pack Top: menubar. Middle: File, thumbnail, options, suffix output.
 # Bottom: status bar
 guiTopBar .f1
