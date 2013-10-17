@@ -119,7 +119,7 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} {or
 	set dir [file normalize [file dirname $iname]]
 	set name [file rootname [file tail $iname]]
 	set lname [concat $prefix [list $name] $suffix $sizesufix ] ; # Name in brackets to protect white space
-	append outname [join $lname "_"] "." $outext
+	append outname [join $lname "_"] "." [lindex $outext 0]
 	
 	#Add a counter if filename exists
 	if {!$::overwrite} {
@@ -1229,9 +1229,9 @@ proc frameSuffix { w } {
 proc frameOutput { w } {
 	ttk::labelframe $w -text "Output & Quality" -padding 6
 
-	set formats [list png jpg gif ora] ; # TODO ora and keep
+	set formats [list png jpg gif webp {webp lossy} ora] ; # TODO ora and keep
 	ttk::label $w.lbl -text "Format:"
-	ttk::combobox $w.fmt -state readonly -width 6 -textvariable ::outext -values $formats
+	ttk::combobox $w.fmt -state readonly -width 9 -textvariable ::outext -values $formats
 	$w.fmt set [lindex $formats 0]
 	bind $w.fmt <<ComboboxSelected>> [list setFormatOptions $w ]
 
@@ -1285,6 +1285,16 @@ proc setFormatOptions { w } {
 			$w.qtb configure -text "Quality:"
 			$w.qal configure -from 0 -to 0
 			$::widget_name(convert-but) configure -text "Make ORA" -command {makeOra}
+		}
+		webp { 
+			set ::iquality 100 
+			$w.qtb configure -text "Quality:"
+			$w.qal configure -from 10 -to 100
+		}
+		webp* { 
+			set ::iquality 60
+			$w.qtb configure -text "Quality:"
+			$w.qal configure -from 10 -to 100
 		}
 	}
 }
@@ -1478,6 +1488,8 @@ proc getQuality { ext } {
 		jpg	{ set quality "-sampling-factor 1x1,1x,1x1 -quality $::iquality" }
 		png	{ set quality "-type TrueColorMatte -define png:format=png32 -define png:compression-level=$::iquality -define png:compresion-filter=4" }
 		gif	{ set quality "-channel RGBA -separate \( +clone -dither FloydSteinberg -remap pattern:gray50 \) +swap +delete -combine -channel RGB -dither FloydSteinberg -colors $::iquality" }
+		webp { set quality "-quality $::iquality -define webp:lossless=true -define webp:method=6" }
+		webp* { set quality "-quality $::iquality -define webp:auto-filter=true -define webp:lossless=false -define webp:alpha-quality=100"}
 	}
 	return $quality
 }
@@ -1580,10 +1592,10 @@ proc convert {} {
 			if {[dict exists $datas tmp]} {
 				set opath $tmp
 			}
-			set filter "-interpolate bicubic -filter Parzen"
 			# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
 			# use "-interpolate bicubic -filter Lanczos -define filter:blur=.9891028367558475" SLOW but best
 			# with -distort Resize instead of -resize "or LanczosRadius"
+			set filter "-interpolate bicubic -filter Parzen"
 			set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
 			set i 0
 			# get make resize string
@@ -1591,23 +1603,14 @@ proc convert {} {
 			set nsizes [llength $sizes]
 			
 			foreach dimension $sizes {
-				set resize {}
-				if {$nsizes == 0} {
-					pBarControl "Converting... $name"
-					#updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... $name"
-					set soname [file join $outpath $output]
-					set convertCmd [concat \"$opath\" $resize $wmark $unsharp $quality \"$soname\"]
-					exec convert {*}$convertCmd
-					pBarControl "Converting... $name" update
-					# pBarUpdate $::widget_name(pbar-main) cur
-					continue
-				}
 				incr i
-
-				set resize [getResize $size $dimension $filter $unsharp]
+				set resize {}
+				if { $size != $osize } {
+					set resize [getResize $size $dimension $filter $unsharp]
+				}
 				
 				pBarControl "Converting... ${name} to $dimension"
-				#updateTextLabel $::widget_name(pbar-label) pbtext textv "Converting... ${name} to $dimension"
+
 				if {$i == 1} {
 					set dimension {}
 				}
@@ -1620,16 +1623,14 @@ proc convert {} {
 			}
 		}
 	}
-	# updateTextLabel $::widget_name(pbar-label) pbtext textv "Deleting Temporary Files..."
 	catch {file delete [list $deleteFileList]}
 	pBarControl "Deleting Temporary Files..." forget 600
-	# after 600
-	# pack forget $::widget_name(pbar-main) $::widget_name(pbar-label)
-	# updateTextLabel $::widget_name(pbar-label) pbtext textv ""
 }
 
 # ---=== Window options
 wm title . "Artscript $::version -- [getFilesTotal] Files selected"
+# Set close actions
+bind . <Destroy> { }
 
 # We test if icon exist before addin it to the wm
 set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
@@ -1647,8 +1648,6 @@ guiStatusBar .f3
 # ---=== Validate input filetypes
 set argvnops [lrange $argv [llength $::ops] end]
 listValidate $argvnops
-
-
 
 
 
