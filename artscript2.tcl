@@ -1507,7 +1507,7 @@ proc getQuality { ext } {
 		jpg	{ set quality "-sampling-factor 1x1,1x,1x1 -quality $::iquality" }
 		png	{ set quality "-type TrueColorMatte -define png:format=png32 -define png:compression-level=$::iquality -define png:compresion-filter=4" }
 		gif	{ set quality "-channel RGBA -separate \( +clone -dither FloydSteinberg -remap pattern:gray50 \) +swap +delete -combine -channel RGB -dither FloydSteinberg -colors $::iquality" }
-		webp { set quality "-quality $::iquality -define webp:lossless=true -define webp:method=6" }
+		webp { set quality "-quality $::iquality -define webp:auto-filter=true -define webp:lossless=true -define webp:method=5" }
 		webp* { set quality "-quality $::iquality -define webp:auto-filter=true -define webp:lossless=false -define webp:alpha-quality=100"}
 	}
 	return $quality
