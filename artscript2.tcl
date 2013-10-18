@@ -1073,7 +1073,7 @@ proc tabResize {st} {
 	ttk::frame $st -padding 6
 	
 	set ::widget_name(tabsize-left) [ttk::frame $st.lef]
-	ttk::labelframe $st.rgt -text "Options"
+	set ::widget_name(tabsize-right) [ttk::labelframe $st.rgt -text "Options"]
 	
 	grid $st.lef -column 1 -row 1 -sticky nesw
 	grid $st.rgt -column 2 -row 1 -sticky nesw
@@ -1081,8 +1081,8 @@ proc tabResize {st} {
 	grid columnconfigure $st 2 -weight 2 -minsize 250
 	grid rowconfigure $st 1 -weight 1 
 	
-	ttk::label $st.rgt.ins -text ""
-	pack $st.rgt.ins -side left
+	set ::widget_name(st-right-ins) [ttk::label $st.rgt.ins -text ""]
+	pack $st.rgt.ins -side top -expand 0 -fill x
 	
 	# grid $st.ins -column 0 -row 1 -columnspan 5 -sticky we
 	ttk::label $st.lef.ann -text "   No Selection" -font "-size 14"
@@ -1139,11 +1139,14 @@ proc tabResize {st} {
 
 		if { [llength $sizesels] > 1 } {
 			treeAlterVal {getOutputSizesForTree $value 1} $::widget_name(flist) size osize
+			$::widget_name(st-right-ins) configure -text "[llength $sizesels] Sizes selected"
 		} elseif { [llength $sizesels] == 1 } {
 			treeAlterVal {getOutputSizesForTree $value} $::widget_name(flist) size osize
+			$::widget_name(st-right-ins) configure -text "[llength $sizesels] Size selected"
 			bindsetAction 0 0 sizesel $::widget_name(check-sz)
 		} elseif { [llength $sizesels] == 0 } {
 			$::widget_name(check-sz) invoke
+			$::widget_name(st-right-ins) configure -text ""
 		}
 	}
 	
