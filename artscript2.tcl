@@ -212,6 +212,7 @@ proc setDictEntries { id fpath size ext h} {
 	dict set handlers $id $h
 	
 	addTreevalues $::widget_name(flist) $id ; # TODO set widget name as global
+	eventSize $::widget_name(tabsize-left) {}
 }
 
 # Checks the files listed in args to be Filetypes supported from a path list
