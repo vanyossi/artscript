@@ -39,7 +39,7 @@ proc artscriptSettings {} {
 	
 	#--==== Artscript Default Settings
 	set mis_settings [dict create \
-		ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm" \
+		ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm .webp" \
 		autor "Autor" \
 	]
 	# Watermark options
@@ -1528,8 +1528,7 @@ proc makeOra {} {
 			}
 			pBarControl "Oraizing... $name"
 			set outname [file join [file dirname $path] $output]
-			after 1600
-			# catch { exec calligraconverter --batch -- $path $outname } msg
+			catch { exec calligraconverter --batch -- $path $outname } msg
 			pBarControl "Oraizing... $name" update
 		}
 	}
