@@ -1,7 +1,7 @@
 #!/usr/bin/wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: 2.0-alpha
+#  Version: 2.0.0
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #  License: GPLv3 
@@ -16,7 +16,7 @@
 #
 # ---------------------::::::::::::::------------------------
 package require Tk
-set ::version "v2.0-alpha"
+set ::version "v2.0.0"
 
 # Do not show .dot files by default
 catch {tk_getOpenFile foo bar}
