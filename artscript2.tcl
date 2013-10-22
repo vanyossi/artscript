@@ -1139,10 +1139,10 @@ proc tabResize {st} {
 
 		if { [llength $sizesels] > 1 } {
 			treeAlterVal {getOutputSizesForTree $value 1} $::widget_name(flist) size osize
-			$::widget_name(st-right-ins) configure -text "[llength $sizesels] Sizes selected"
-		} elseif { [llength $sizesels] == 1 } {
+			$::widget_name(st-right-ins) configure -text "[llength $sizesels] Sizes set"
+		} elseif { ([llength $sizesels] == 1) && ($sizesels != 0) } {
 			treeAlterVal {getOutputSizesForTree $value} $::widget_name(flist) size osize
-			$::widget_name(st-right-ins) configure -text "[llength $sizesels] Size selected"
+			$::widget_name(st-right-ins) configure -text "[llength $sizesels] Size set"
 			bindsetAction 0 0 sizesel $::widget_name(check-sz)
 		} elseif { [llength $sizesels] == 0 } {
 			$::widget_name(check-sz) invoke
