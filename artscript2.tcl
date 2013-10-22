@@ -63,7 +63,7 @@ proc artscriptSettings {} {
 		]
 	#Sizes
 	set siz_settings [dict create \
-		sizes       [list "1920x1080" "1680x1050" "1280x1024" "1024x768" "80%" "720x720" "50%"] \
+		sizes       [list "2560x1440"  "1920x1080" "1680x1050" "1366x768" "1280x1024" "1280x720" "1024x768" "720x1050" "50%"] \
 	]
 	#Suffix and prefix ops
 	set suf_settings [dict create   \
@@ -79,6 +79,7 @@ proc artscriptSettings {} {
 		sizesel     0               \
 		prefixsel   0               \
 		overwrite   0               \
+		alfaoff		{}				\
 	]
 	#Extension & output
 	set out_settings [dict create \
@@ -856,9 +857,12 @@ proc artscriptStyles {} {
 # Horizontal panel for placing operations that affect Artscript behaviour
 proc guiTopBar { w } {
 	pack [ttk::frame $w] -side top -expand 0 -fill x
-	ttk::label $w.title -text "Artscript 2.0alpha"
+	# ttk::label $w.title -text "Artscript 2.0.0"
+	ttk::separator $w.sep -orient vertical
 	ttk::button $w.add -text "Add files" -command { puts [openFiles] }
-	pack $w.title $w.add  -side left
+	pack $w.add $w.sep -side left -fill x
+	pack configure $w.sep -expand 1
+
 
 	if {[info exists presets]} {
 		ttk::combobox $w.preset -state readonly -values [dict keys $presets]
@@ -1073,7 +1077,7 @@ proc tabResize {st} {
 	ttk::frame $st -padding 6
 	
 	set ::widget_name(tabsize-left) [ttk::frame $st.lef]
-	set ::widget_name(tabsize-right) [ttk::labelframe $st.rgt -text "Options"]
+	set ::widget_name(tabsize-right) [ttk::frame $st.rgt ]
 	
 	grid $st.lef -column 1 -row 1 -sticky nesw
 	grid $st.rgt -column 2 -row 1 -sticky nesw
@@ -1263,6 +1267,7 @@ proc frameOutput { w } {
 	ttk::label $w.qlb -width 4 -textvariable ::iquality
 
 	ttk::checkbutton $w.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output }
+	ttk::checkbutton $w.alf -text "Remove Alfa" -onvalue "-background white -alpha remove" -offvalue "" -variable ::alfaoff
 
 	ttk::separator $w.sep -orient vertical
 
@@ -1273,7 +1278,7 @@ proc frameOutput { w } {
 	grid $w.lbl $w.fmt -row 2
 	grid configure $w.lbl -column 2
 	grid configure $w.fmt -column 3	
-	grid $w.ove -row 3 -column 1 -columnspan 2 -sticky we
+	grid $w.ove $w.alf -row 3 -columnspan 3 -sticky we
 	grid configure $w.fmt $w.qlb -sticky we
 	grid configure $w.qtb $w.lbl -sticky e
 
@@ -1547,8 +1552,6 @@ proc processHandlerFiles { {ids ""} {outdir "/tmp"} } {
 	# Files to convert
 	if { $ids eq ""} {
 		set ids [putsHandlers g i k]
-	} else {
-		
 	}
 	array set handler $handlers
 	
@@ -1559,28 +1562,24 @@ proc processHandlerFiles { {ids ""} {outdir "/tmp"} } {
 		updateTextLabel $::widget_name(pbar-label) pbtext textv "Extracting... $id(name)"
 		set outname [file join ${outdir} [file root $id(name)]]
 		append outname ".png"
-		
-		if { [file exists $outname ]} {
-			continue
+		if { ![file exists $outname ]} {
+			if { $handler($imgv) == {g} } {
+				set i $id(path)
+				set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"$outname\" \"$outname\") )(gimp-quit 0)"
+				#run gimp command, it depends on file extension to do transforms.
+				catch { exec gimp -i -b $cmd } msg
+			}
+			if { $handler($imgv) == {i} } {
+				# output 100%, resize imagick
+				catch { exec inkscape $id(path) -z -C -d 90 -e $outname } msg
+			}
+			if { $handler($imgv) == {k} } {
+				catch { exec calligraconverter --batch -- $id(path) $outname } msg
+			}
+			if { $handler($imgv) == {m} } {
+				continue
+			}
 		}
-		
-		if { $handler($imgv) == {g} } {
-			set i $id(path)
-			set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"$outname\" \"$outname\") )(gimp-quit 0)"
-			#run gimp command, it depends on file extension to do transforms.
-			catch { exec gimp -i -b $cmd } msg
-		}
-		if { $handler($imgv) == {i} } {
-			# output 100%, resize imagick
-			catch { exec inkscape $id(path) -z -C -d 90 -e $outname } msg
-		}
-		if { $handler($imgv) == {k} } {
-			catch { exec calligraconverter --batch -- $id(path) $outname } msg
-		}
-		if { $handler($imgv) == {m} } {
-			continue
-		}
-		
 		#Error reporting, if code NONE then png conversion success.
 		if { ![file exists $outname ]} {
 			set errc $::errorCode;
@@ -1663,7 +1662,7 @@ proc convert { {id ""} } {
 				} else {
 					set soname "show:"
 				}
-				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp $quality $soname]
+				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp $::alfaoff $quality $soname]
 				exec convert {*}$convertCmd
 				
 				pBarControl "Converting... ${name} to $dimension" update
