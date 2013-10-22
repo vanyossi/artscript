@@ -930,7 +930,7 @@ proc guiFileList { w } {
 proc guiThumbnail { w } {
 	ttk::labelframe $w.thumb -width 276 -height 316 -padding 6 -labelanchor n -text "Thumbnail"
 	set ::widget_name(thumb-im) [ttk::label $w.thumb.im -anchor center -text "No Thumbnail"]
-	ttk::button $w.thumb.prev -text "Preview" -style small.TButton -command { showPreview }
+	set ::widget_name(thumb-prev) [ttk::button $w.thumb.prev -text "Preview" -style small.TButton -command { showPreview }]
 	pack $w.thumb.prev -side bottom
 }
 
@@ -1287,6 +1287,7 @@ proc setFormatOptions { w } {
 	# update listname
 	treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output
 	$::widget_name(convert-but) configure -text "Convert" -command {convert}
+	$::widget_name(thumb-prev) state !disabled
 	switch -glob -- $::outext {
 		jpg	{
 			set ::iquality 92 
@@ -1308,6 +1309,7 @@ proc setFormatOptions { w } {
 			$w.qtb configure -text "Quality:"
 			$w.qal configure -from 0 -to 0
 			$::widget_name(convert-but) configure -text "Make ORA" -command {makeOra}
+			$::widget_name(thumb-prev) state disabled
 		}
 		webp { 
 			set ::iquality 100 
