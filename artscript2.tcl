@@ -103,7 +103,7 @@ proc alert {type icon title msg} {
 }
 # TODO: look for binary paths using global $env variable
 proc validate {program} {
-	expr { ![catch {exec which $program}] ? [return 1] : [return 0] }
+	expr { ![catch { exec which $program }] ? [return 1] : [return 0] }
 }
 
 #Prepares output name adding Suffix or Prefix
@@ -616,7 +616,7 @@ proc makeThumb { path tsize } {
 	if { [regexp {.ora|.kra} $filext ] } {
 		set container [dict get $cmd $filext]
 		#unzip to location tmp$container
-		catch {exec unzip $path $container -d /tmp/}
+		catch { exec unzip $path $container -d /tmp/ }
 		set tmpfile "/tmp/$container"
 		set path $tmpfile
 
@@ -626,7 +626,7 @@ proc makeThumb { path tsize } {
 		return 0
 	}
 	foreach {size dest} $tsize {
-		catch {exec convert $path -thumbnail [append size x $size] -flatten PNG32:$dest} msg
+		catch { exec convert -quiet $path -thumbnail [append size x $size] -flatten PNG32:$dest } msg
 	}
 	catch {file delete $tmpfile}
 }
@@ -656,7 +656,7 @@ proc showThumb { w f {tryprev 1}} {
 		global img oldimg
 		set prevgif {/tmp/atkpreview.gif}
 		
-		exec convert $lthumb GIF:$prevgif
+		catch { exec convert -quiet $lthumb GIF:$prevgif }
 		catch {set oldimg $img}
 		set img [image create photo -file /tmp/atkpreview.gif ]
 
@@ -1463,8 +1463,8 @@ proc watermark {} {
 		set height [expr {[llength [split $::wmtxt {\n}]] * 30 * ceil($::wmsize/8.0)}]
 		set wmcolinv [getContrastColor $::wmcol ]
 		
-		set wmtcmd [list convert -size ${width}x${height} xc:transparent -pointsize $::wmsize -gravity Center -fill $::wmcol -annotate 0 "$::wmtxt" -trim \( +clone -background $wmcolinv  -shadow 80x2+0+0 -channel A -level 0,60% +channel \) +swap +repage -gravity center -composite $wmtmptx]
-		exec {*}$wmtcmd
+		set wmtcmd [list convert -quiet -size ${width}x${height} xc:transparent -pointsize $::wmsize -gravity Center -fill $::wmcol -annotate 0 "$::wmtxt" -trim \( +clone -background $wmcolinv  -shadow 80x2+0+0 -channel A -level 0,60% +channel \) +swap +repage -gravity center -composite $wmtmptx]
+		catch { exec {*}$wmtcmd }
 		
 		lappend deleteFileList $wmtmptx ; # add wmtmp to delete list
 		append wmcmd [list -gravity $wmpossel $wmtmptx -compose dissolve -define compose:args=$::wmop -geometry +5+5 -composite ]
@@ -1479,8 +1479,8 @@ proc watermark {} {
 			set iminfo [lindex [split $imfl ":"] 0]
 			set size [lindex $iminfo 0]
 			set wmtmpim [file join "/tmp" "artk-tmp-wtmkim.png" ]
-			set wmicmd [ list convert -size $size xc:transparent -gravity Center $::wmimsrc -compose dissolve -define compose:args=$::wmimop -composite $wmtmpim]
-			exec {*}$wmicmd
+			set wmicmd [ list convert -quiet -size $size xc:transparent -gravity Center $::wmimsrc -compose dissolve -define compose:args=$::wmimop -composite $wmtmpim]
+			catch { exec {*}$wmicmd }
 			
 			# set watval [concat -gravity $::wmimpos -draw "\"image $::wmimcomp 10,10 0,0 '$::wmimsrc'\""]
 			lappend deleteFileList $wmtmpim ; # add wmtmp to delete list
@@ -1663,7 +1663,7 @@ proc convert { {id ""} } {
 					set soname "show:"
 				}
 				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp $::alfaoff $quality $soname]
-				exec convert {*}$convertCmd
+				catch { exec convert {*}$convertCmd }
 				
 				pBarControl "Converting... ${name} to $dimension" update
 			}
