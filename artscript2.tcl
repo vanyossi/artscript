@@ -39,7 +39,7 @@ proc artscriptSettings {} {
 	
 	#--==== Artscript Default Settings
 	set mis_settings [dict create \
-		ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tiff .xcf .xpm .webp" \
+		ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tif .xcf .xpm .webp" \
 		autor "Autor" \
 	]
 	# Watermark options
@@ -1111,13 +1111,13 @@ proc tabResize {st} {
 		return $gsels
 	}
 	
-	proc eventSize { w wc } {
+	proc eventSize { w id } {
 		set sizesels [getSizesSel $w]
 		#Set the interface according to the size type px or %
-		if {![string is boolean $wc]} {
+		if {$id > 0} {
+			set wc $w.wid$id
 			set sel [$wc get]
-			set id [string range $wc end end]
-			set pref "$w."; #[string range $wc 0 end-4]
+			set pref "$w."
 			append hei $pref "hei" $id
 			
 			# String is emptu if they are editing, do nothing in that case
@@ -1164,8 +1164,8 @@ proc tabResize {st} {
 		ttk::combobox $st.hei$id -state readonly -width 8 -values $hList -validate key \
 	-validatecommand { string is integer %P }
 		$st.hei$id set [lindex $hList 0]
-		comboBoxEditEvents $st.wid$id "eventSize $st %W"
-		comboBoxEditEvents $st.hei$id "eventSize $st %W"
+		comboBoxEditEvents $st.wid$id "eventSize $st $id"
+		comboBoxEditEvents $st.hei$id "eventSize $st $id"
 		# ttk::separator $st.sep -orient vertical -padding
 		ttk::label $st.xmu$id -text "x" -font "-size 18"	
 		ttk::button $st.del$id -text "-" -width 2 -style small.TButton -command [list delSizecol $st $id]
