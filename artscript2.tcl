@@ -1165,7 +1165,7 @@ proc tabResize {st} {
 	-validatecommand { string is integer %P }
 		$st.hei$id set [lindex $hList 0]
 		comboBoxEditEvents $st.wid$id "eventSize $st $id"
-		comboBoxEditEvents $st.hei$id "eventSize $st $id"
+		comboBoxEditEvents $st.hei$id ""
 		# ttk::separator $st.sep -orient vertical -padding
 		ttk::label $st.xmu$id -text "x" -font "-size 18"	
 		ttk::button $st.del$id -text "-" -width 2 -style small.TButton -command [list delSizecol $st $id]
