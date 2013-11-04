@@ -11,7 +11,7 @@
 #   Optional deps: calligraconverter, inkscape, gimp
 #
 #  Customize:__
-#   Make a config file (rename presets.config.presets to presets.config)
+#   Make a config file (rename presets.config.example to presets.config)
 #   File must be in the same directory as the script.
 #
 # ---------------------::::::::::::::------------------------
