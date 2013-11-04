@@ -29,7 +29,6 @@ namespace eval img { }
 
 # array set ::settings $::artscript::usett
 # puts "array $::settings(ext)"
-
 proc artscriptSettings {} {
 	# Date values
 	set seconds [clock seconds]
@@ -96,6 +95,12 @@ proc artscriptSettings {} {
 #--=====
 #Don't modify below this line
 
+# Quick hack to keep GUI responsive, without using update extensively
+proc updateGUI {} {
+	# set after inside to 1 to avoid weird behaviour progressbar
+	after idle [list after 1 set x 0]
+	vwait x
+}
 #Function to send message boxes
 proc alert {type icon title msg} {
 		tk_messageBox -type $type -icon $icon -title $title \
@@ -508,7 +513,7 @@ proc addTreevalues { w id } {
 	}
 	#Keep Gui with fresh news
 	updateWinTitle
-	update
+	updateGUI
 }
 
 # Deletes the keys from tree(w), and sets deletes value to 1
@@ -562,7 +567,7 @@ proc updateTextLabel { w gval args } {
 	if {[dict exists $opt textv]} {
 		set tvar [concat $suffix [dict get $opt textv] ]
 	}
-	update
+	updateGUI
 }
 # Transform a value with the supplied script and writes it to dict and treeview
 # Script: script to run, w = widget read = dict readkey, write = key to write
@@ -859,7 +864,7 @@ proc guiTopBar { w } {
 	pack [ttk::frame $w] -side top -expand 0 -fill x
 	# ttk::label $w.title -text "Artscript 2.0.0"
 	ttk::separator $w.sep -orient vertical
-	ttk::button $w.add -text "Add files" -command { puts [openFiles] }
+	ttk::button $w.add -text "Add files" -command { openFiles }
 	pack $w.add $w.sep -side left -fill x
 	pack configure $w.sep -expand 1
 
@@ -1359,13 +1364,12 @@ proc pBarUpdate { w gvar args } {
 	
 	if {[dict exists $opt max]} {
 		$w configure -maximum [dict get $opt max]
-		update
 	}
 	if {[dict exists $opt current]} {
 		set cur [dict get $opt current]
 	}
 	incr cur
-	update
+	updateGUI
 }
 
 # Controls the basic operation of create update and forget from main progressbar
@@ -1693,6 +1697,8 @@ artscriptStyles
 guiTopBar .f1
 guiMiddle .f2
 guiStatusBar .f3
+
+updateGUI
 
 # ---=== Validate input filetypes
 set argvnops [lrange $argv [llength $::ops] end]
