@@ -551,22 +551,13 @@ proc treeSort {tree col direction} {
     set cmd [list treeSort $tree $col [expr {!$direction}]]
     $tree heading $col -command $cmd
 }
-proc updateTextLabel { w gval args } {
-	upvar #0 $gval tvar
-	set opt [dict create {*}$args]
-	
-	if {[dict exists $opt suffix]} {
-		set suffix [dict get $opt suffix]
-	} else {
-		set suffix {}
-	}
-	if {[dict exists $opt text]} {
-		$w configure -text [concat $suffix [dict get $opt text] ]
-	}
-	if {[dict exists $opt textv]} {
-		set tvar [concat $suffix [dict get $opt textv] ]
-	}
-	updateGUI
+
+# Updates global variable
+# var = global variable name, value = new value
+proc updateTextLabel { var value } {
+	upvar #0 $var ltext
+	set ltext $value
+	return
 }
 # Transform a value with the supplied script and writes it to dict and treeview
 # Script: script to run, w = widget read = dict readkey, write = key to write
@@ -1343,14 +1334,14 @@ proc guiStatusBar { w } {
 	set ::widget_name(check-wm) [ttk::checkbutton $w.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable ::watsel -command { turnOffChildCB watsel "$wt.cbim" watselimg "$wt.cbtx" watseltxt }]
 	set ::widget_name(check-sz) [ttk::checkbutton $w.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable ::sizesel]
 
-	set ::widget_name(pbar-main) [ttk::progressbar $w.do.pbar -maximum [getFilesTotal] -variable ::cur -length "300"]
-	set ::widget_name(pbar-label) [ttk::label $w.do.plabel -text "Converting: " -textvariable pbtext]
+	set ::widget_name(pbar-main) [ttk::progressbar $w.do.pbar -maximum [getFilesTotal] -variable ::cur -length "260"]
+	set ::widget_name(pbar-label) [ttk::label $w.do.plabel -textvariable pbtext -anchor e]
 	set ::widget_name(convert-but) [ttk::button $w.do.bconvert -text "Convert" -command {convert}]
 	setFormatOptions $::widget_name(frame-output)
 
 	pack $w.rev.checkwm $w.rev.checksz -side left
 	pack $w.rev -side left
-	pack $w.do -side right
+	pack $w.do -side right -expand 1 -fill x
 	pack $w.do.bconvert -side right -fill x -padx 6 -pady 8
 
 	return $w
@@ -1368,21 +1359,24 @@ proc pBarUpdate { w gvar args } {
 		set cur [dict get $opt current]
 	}
 	incr cur
-	updateGUI
 }
 
 # Controls the basic operation of create update and forget from main progressbar
 proc pBarControl { itext {action none} { delay 0 } {max 0} } {
-	updateTextLabel $::widget_name(pbar-label) pbtext textv $itext
+	updateTextLabel pbtext $itext
+	# event generate $::widget_name(pbar-label) <Expose> -when now
+	update idletasks
 	after $delay
 	switch -- $action {
 		"create" { 
-			pack $::widget_name(pbar-label) $::widget_name(pbar-main) -side left -fill x -padx 2 -pady 0
+			pack $::widget_name(pbar-label) $::widget_name(pbar-main) -side left -expand 1 -fill x -padx 2 -pady 0
+			pack configure $::widget_name(pbar-main) -expand 0
 			pBarUpdate $::widget_name(pbar-main) cur max $max current -1
+			updateGUI
 		}
 		"forget" { 
 			pack forget $::widget_name(pbar-main) $::widget_name(pbar-label)
-			updateTextLabel $::widget_name(pbar-label) pbtext textv ""
+			updateTextLabel pbtext ""
 		 }
 		"update"  { pBarUpdate $::widget_name(pbar-main) cur }
 	}
@@ -1489,7 +1483,6 @@ proc watermark {} {
 			lappend deleteFileList $wmtmpim ; # add wmtmp to delete list
 			append wmcmd " " [list -gravity $wmimpossel $wmtmpim -compose $::wmimcomp -define compose:args=$::wmimop -geometry +10+10 -composite ]
 			# puts $watval
-			
 		}
 	}
 	return $wmcmd
@@ -1541,6 +1534,7 @@ proc makeOra {} {
 				continue
 			}
 			pBarControl "Oraizing... $name"
+			updateGUI
 			set outname [file join [file dirname $path] $output]
 			catch { exec calligraconverter --batch -- $path $outname } msg
 			pBarControl "Oraizing... $name" update
@@ -1562,7 +1556,7 @@ proc processHandlerFiles { {ids ""} {outdir "/tmp"} } {
 	set msg {}
 	foreach imgv $ids {
 		array set id [dict get $inputfiles $imgv]
-		updateTextLabel $::widget_name(pbar-label) pbtext textv "Extracting... $id(name)"
+		updateTextLabel pbtext "Extracting... $id(name)"
 		set outname [file join ${outdir} [file root $id(name)]]
 		append outname ".png"
 		if { ![file exists $outname ]} {
@@ -1610,78 +1604,94 @@ proc processIds { {id ""} } {
 		return [dict keys $::inputfiles]
 	}
 }
+proc doConvert { {id ""} } {
+	
+	set idnumber [lindex $::artscript_convert(files) $::artscript_convert(count)]
+	incr ::artscript_convert(count)
+	
+	if { $idnumber eq {} } {
+		if { $id eq ""} {
+			catch {file delete [list $::deleteFileList]}
+		}
+		pBarControl "Operations Done..." forget 600
+		return
+	}
+	
+	set datas [dict get $::inputfiles $idnumber]
+	dict with datas {
+		if {$deleted} {
+			continue
+		}
+		set opath $path
+		set outpath [file dirname $path]
+
+		if {[dict exists $datas tmp]} {
+			set opath $tmp
+		}
+		# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
+		# use "-interpolate bicubic -filter Lanczos -define filter:blur=.9891028367558475" SLOW but best
+		# with -distort Resize instead of -resize "or LanczosRadius"
+		set filter "-interpolate bicubic -filter Parzen"
+		set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
+		set i 0
+		# get make resize string
+		set sizes [getOutputSizesForTree $size]
+		set nsizes [llength $sizes]
+		
+		foreach dimension $sizes {
+			incr i
+			set resize {}
+			if { $size != $osize } {
+				set resize [getResize $size $dimension $filter $unsharp]
+			}
+			pBarControl "Converting... ${name} to $dimension" update
+			
+			if {$i == 1} {
+				set dimension {}
+			}
+			
+			if { $id eq ""} {
+			set soname \"[file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]\"
+			} else {
+				set soname "show:"
+			}
+			set convertCmd [concat -quiet \"$opath\" $resize $::artscript_convert(wmark) $unsharp $::alfaoff $::artscript_convert(quality) $soname]
+			catch { exec convert {*}$convertCmd }
+			
+			# pBarControl "Converting... ${name} to $dimension" update 1000
+		}
+	}
+	after idle [list after 0 doConvert]
+	
+	return
+}
+
 # TODO Clean funtion, comment
 proc convert { {id ""} } {
 	global inputfiles deleteFileList
 	
+	set ::artscript_convert(count) 0
+	
 	#get watermark value
-	set wmark [watermark]
-	set quality [getQuality $::outext]
+	set ::artscript_convert(wmark) [watermark]
+	set ::artscript_convert(quality) [getQuality $::outext]
 	
 	#Create progressbar
 	pBarControl {} create 0 1
+	
 	#process Gimp Calligra and inkscape to Tmp files
 	processHandlerFiles $id
-	set convert_files [processIds $id]
+	set ::artscript_convert(files) [processIds $id]
 	
 	pBarUpdate $::widget_name(pbar-main) cur max [expr {[getFilesTotal]*[llength [getFinalSizelist]]}] current -1
-	
-	foreach idnumber $convert_files {
-		set datas [dict get $::inputfiles $idnumber]
-		dict with datas {
-			if {$deleted} {
-				continue
-			}
-			set opath $path
-			set outpath [file dirname $path]
 
-			if {[dict exists $datas tmp]} {
-				set opath $tmp
-			}
-			# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
-			# use "-interpolate bicubic -filter Lanczos -define filter:blur=.9891028367558475" SLOW but best
-			# with -distort Resize instead of -resize "or LanczosRadius"
-			set filter "-interpolate bicubic -filter Parzen"
-			set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
-			set i 0
-			# get make resize string
-			set sizes [getOutputSizesForTree $size]
-			set nsizes [llength $sizes]
-			
-			foreach dimension $sizes {
-				incr i
-				set resize {}
-				if { $size != $osize } {
-					set resize [getResize $size $dimension $filter $unsharp]
-				}
-				
-				pBarControl "Converting... ${name} to $dimension"
-
-				if {$i == 1} {
-					set dimension {}
-				}
-				if { $id eq ""} {
-				set soname \"[file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]\"
-				} else {
-					set soname "show:"
-				}
-				set convertCmd [concat -quiet \"$opath\" $resize $wmark $unsharp $::alfaoff $quality $soname]
-				catch { exec convert {*}$convertCmd }
-				
-				pBarControl "Converting... ${name} to $dimension" update
-			}
-		}
-	}
-	if { $id eq ""} {
-		catch {file delete [list $::deleteFileList]}
-	}
-	pBarControl "Operations Done..." forget 600
+	doConvert $id
 }
 
 # ---=== Window options
 wm title . "Artscript $::version -- [getFilesTotal] Files selected"
 # Set close actions
-bind . <Destroy> [list catch {file delete [list $::deleteFileList]} ]
+bind . <Destroy> [list catch {file delete [list $::deleteFileList] } ]
 
 # We test if icon exist before addin it to the wm
 set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
@@ -1697,11 +1707,7 @@ guiTopBar .f1
 guiMiddle .f2
 guiStatusBar .f3
 
-updateGUI
-
 # ---=== Validate input filetypes
 set argvnops [lrange $argv [llength $::ops] end]
 listValidate $argvnops
-
-
 
