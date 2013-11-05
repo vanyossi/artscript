@@ -1680,46 +1680,46 @@ proc doConvert { {id ""} } {
 	
 	set datas [dict get $::inputfiles $idnumber]
 	dict with datas {
-		if {$deleted} {
-			continue
-		}
-		set opath $path
-		set outpath [file dirname $path]
+		if {!$deleted} {
+			set opath $path
+			set outpath [file dirname $path]
 
-		if {[dict exists $datas tmp]} {
-			set opath $tmp
-		}
-		# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
-		# use "-interpolate bicubic -filter Lanczos -define filter:blur=.9891028367558475" SLOW but best
-		# with -distort Resize instead of -resize "or LanczosRadius"
-		set filter "-interpolate bicubic -filter Parzen"
-		set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
-		set i 0
-		# get make resize string
-		set sizes [getOutputSizesForTree $size]
-		set nsizes [llength $sizes]
-		
-		foreach dimension $sizes {
-			incr i
-			set resize {}
-			if { $size != $osize } {
-				set resize [getResize $size $dimension $filter $unsharp]
+			if {[dict exists $datas tmp]} {
+				set opath $tmp
 			}
-			pBarControl "Converting... ${name} to $dimension" update
+			# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
+			# use "-interpolate bicubic -filter Lanczos -define filter:blur=.9891028367558475" SLOW but best
+			# with -distort Resize instead of -resize "or LanczosRadius"
+			set filter "-interpolate bicubic -filter Parzen"
+			set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
+			set i 0
+			# get make resize string
+			set sizes [getOutputSizesForTree $size]
+			set nsizes [llength $sizes]
 			
-			if {$i == 1} {
-				set dimension {}
+			foreach dimension $sizes {
+				incr i
+				set resize {}
+				if { $size != $osize } {
+					set resize [getResize $size $dimension $filter $unsharp]
+				}
+				puts "convert $name"
+				pBarControl "Converting... ${name} to $dimension" update
+				
+				if {$i == 1} {
+					set dimension {}
+				}
+				
+				if { $id eq ""} {
+				set soname \"[file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]\"
+				} else {
+					set soname "show:"
+				}
+				set convertCmd [concat -quiet \"$opath\" $resize $::artscript_convert(wmark) $unsharp $::alfaoff $::artscript_convert(quality) $soname]
+				catch { exec convert {*}$convertCmd }
+				
+				# pBarControl "Converting... ${name} to $dimension" update 1000
 			}
-			
-			if { $id eq ""} {
-			set soname \"[file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]\"
-			} else {
-				set soname "show:"
-			}
-			set convertCmd [concat -quiet \"$opath\" $resize $::artscript_convert(wmark) $unsharp $::alfaoff $::artscript_convert(quality) $soname]
-			catch { exec convert {*}$convertCmd }
-			
-			# pBarControl "Converting... ${name} to $dimension" update 1000
 		}
 	}
 	after idle [list after 0 doConvert]
