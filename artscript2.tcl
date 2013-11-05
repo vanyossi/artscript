@@ -1,7 +1,7 @@
 #!/usr/bin/wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: 2.0.0
+#  Version: 2.0.1
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #  License: GPLv3 
@@ -16,7 +16,7 @@
 #
 # ---------------------::::::::::::::------------------------
 package require Tk
-set ::version "v2.0.0"
+set ::version "v2.0.1"
 
 # Do not show .dot files by default
 catch {tk_getOpenFile foo bar}
@@ -1283,6 +1283,8 @@ proc frameOutput { w } {
 	return $w
 }
 
+# Alters ouput widgets to show format output options
+# w = widget name
 proc setFormatOptions { w } {
 	# update listname
 	treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output
@@ -1347,6 +1349,9 @@ proc guiStatusBar { w } {
 	return $w
 }
 
+# Sets values for progress bar.
+# w = widget, gvar = global variable name
+# args ( max = max value, current, current value)
 proc pBarUpdate { w gvar args } {
 	upvar #0 $gvar cur
 	# set opt [dict create]
@@ -1443,7 +1448,9 @@ proc getOutputSizesForTree { size {formated 0}} {
 	return $fsizes
 }
 #Preproces functions
-#watermark
+# Renders watermark images based on parameters to tmp folder
+# global watseltxt wmtxt wmsize wmcol, watselimg wmimsrc wmimop wmimcomp
+# returns string
 proc watermark {} {
 	global deleteFileList
 	set wmcmd {}
@@ -1488,6 +1495,10 @@ proc watermark {} {
 	return $wmcmd
 }
 
+# Makes resize command, takes a size and calculates intermediate resize steps
+# size = image size, dsize = destination size, filter = resize filter
+# unsharp = unsharp string options
+# return string
 proc getResize { size dsize filter unsharp} {
 	# Use processed scale from getOuputSizeForTree
 	set finalscale $dsize
@@ -1508,7 +1519,9 @@ proc getResize { size dsize filter unsharp} {
 	
 	return $resize
 }
-# set quality options
+
+# set quality options depending on extension
+# returns string
 proc getQuality { ext } {
 	switch -glob -- $ext {
 		jpg	{ set quality "-sampling-factor 1x1,1x,1x1 -quality $::iquality" }
@@ -1542,7 +1555,11 @@ proc makeOra {} {
 	}
 	pBarControl "All operations Done" forget 600
 }
-#Calligra, gimp and inkscape converter
+
+# Calligra, gimp and inkscape converter
+# Creates a png file in tmp and adds file path to dict id
+# ids = files to convert, default all, outfdir = output directory
+# returns nothing
 proc processHandlerFiles { {ids ""} {outdir "/tmp"} } {
 	global inputfiles handlers deleteFileList
 	
@@ -1597,6 +1614,10 @@ proc processHandlerFiles { {ids ""} {outdir "/tmp"} } {
 	}	
 	return 0
 }
+
+# Get ids of files to process
+# id = file to process
+# return list
 proc processIds { {id ""} } {
 	if { $id ne "" } {
 		return $id
@@ -1604,6 +1625,10 @@ proc processIds { {id ""} } {
 		return [dict keys $::inputfiles]
 	}
 }
+
+# Convert: Construct and run convert tailored to each file
+# id = files to process, none given: process all
+# return nothing
 proc doConvert { {id ""} } {
 	
 	set idnumber [lindex $::artscript_convert(files) $::artscript_convert(count)]
@@ -1666,9 +1691,9 @@ proc doConvert { {id ""} } {
 	return
 }
 
-# TODO Clean funtion, comment
+# Set convert global values and total files to process
+# id = files to convert, if none given, all will be processed
 proc convert { {id ""} } {
-	global inputfiles deleteFileList
 	
 	set ::artscript_convert(count) 0
 	
