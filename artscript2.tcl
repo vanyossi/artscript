@@ -431,9 +431,8 @@ proc openFiles {} {
 	{{JPG, JPEG}     {.jpg .jpeg} } \
 	"
 	set files [tk_getOpenFile -filetypes $types -initialdir $::env(HOME) -multiple 1]
+	listValidate $files
 	
-	listValidate $files ; # Add 1 to keep global counter id in sync
-	# TODO Instead of using global inputfiles we could create a trasition dict and append to it.
 	updateWinTitle
 }
 
