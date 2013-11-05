@@ -133,7 +133,7 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} {or
 		while { [file exists [file join $dir "$outname"] ] } {
 			set outname $tmpname
 			incr s
-			set outname [join [list [string trimright $outname ".$outext"] "_$s" ".$outext"] {} ]
+			set outname [join [list [string trimright $outname ".$outext"] "_$s" ".[lindex $outext 0]"] {} ]
 		}
 		unset tmpname
 	}
