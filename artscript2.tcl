@@ -1310,7 +1310,7 @@ proc setFormatOptions { w } {
 			set ::iquality 0
 			$w.qtb configure -text "Quality:"
 			$w.qal configure -from 0 -to 0
-			$::widget_name(convert-but) configure -text "Make ORA" -command {makeOra}
+			$::widget_name(convert-but) configure -text "Make ORA" -command {prepOra}
 			$::widget_name(thumb-prev) state disabled
 		}
 		webp { 
@@ -1533,27 +1533,51 @@ proc getQuality { ext } {
 	return $quality
 }
 
-# Gets all inputfiles and converts them to ORA using calligraconverter, skips Inkscape files
-proc makeOra {} {
-	global inputfiles
-	set forbiden_ids [putsHandlers i]
+# Gets all inputfiles, filter files on extension, sends resulting list to makeORA
+# returns nothing
+proc prepOra {} {
 	
-	pBarControl {} create 0 [llength [dict keys $inputfiles]]
+	set idlist [dict keys $::inputfiles]
 	
-	dict for {id datas} $::inputfiles {
-		dict with datas {
-			if {[lsearch $forbiden_ids $id ] >= 0} {
-				pBarControl "Skipping $name (SVG)" update 600
-				continue
-			}
-			pBarControl "Oraizing... $name"
-			updateGUI
+	set filtered_list {}
+	foreach id $idlist {
+		if { [regexp {^(webp|svg)$} [dict get $::inputfiles $id ext]] } {
+			continue
+		}
+		lappend filtered_list $id
+	}
+	pBarControl {} create 0 [llength $filtered_list]
+	makeOra 0 $filtered_list
+	
+	return
+}
+
+# Converts files recursively to ORA format
+# index = current file, ilist = list to walk with index
+# returns nothing
+proc makeOra { index ilist } {
+
+	set idnumber [lindex $ilist $index]
+	incr index
+	
+	if { $idnumber eq {} } {
+		pBarControl "All operations Done" forget 600
+		return
+	}
+	
+	set datas [dict get $::inputfiles $idnumber]
+	dict with datas {
+		if {!$deleted} {
+			pBarControl "Oraizing... $name" update
+
 			set outname [file join [file dirname $path] $output]
 			catch { exec calligraconverter --batch -- $path $outname } msg
-			pBarControl "Oraizing... $name" update
 		}
 	}
-	pBarControl "All operations Done" forget 600
+	after idle [list after 0 [list makeOra $index $ilist]]
+	return
+}
+
 }
 
 # Calligra, gimp and inkscape converter
