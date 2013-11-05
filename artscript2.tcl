@@ -1754,7 +1754,7 @@ proc convert { {id ""} } {
 # ---=== Window options
 wm title . "Artscript $::version -- [getFilesTotal] Files selected"
 # Set close actions
-bind . <Destroy> [list catch {file delete [list $::deleteFileList] } ]
+bind . <Destroy> [list catch {file delete {*}$::deleteFileList } ]
 
 # We test if icon exist before addin it to the wm
 set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
