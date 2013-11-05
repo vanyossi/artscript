@@ -1376,7 +1376,7 @@ proc pBarControl { itext {action none} { delay 0 } {max 0} } {
 			pack $::widget_name(pbar-label) $::widget_name(pbar-main) -side left -expand 1 -fill x -padx 2 -pady 0
 			pack configure $::widget_name(pbar-main) -expand 0
 			pBarUpdate $::widget_name(pbar-main) cur max $max current -1
-			updateGUI
+			# update idletasks
 		}
 		"forget" { 
 			pack forget $::widget_name(pbar-main) $::widget_name(pbar-label)
@@ -1577,65 +1577,78 @@ proc makeOra { index ilist } {
 	return
 }
 
+# Gets files to be rendered by gimp, calligra or inkscape
+# ids = files to convert (default all)
+# returns integer, total files to process
+proc prepHandlerFiles { {ids ""} } {
+	if { $ids eq ""} {
+		set ids [putsHandlers g i k]
+	}
+	set id_length [llength $ids]
+	pBarUpdate $::widget_name(pbar-main) cur max $id_length current -1
+	
+	processHandlerFiles 0 $ids
+	return $id_length
 }
 
 # Calligra, gimp and inkscape converter
 # Creates a png file in tmp and adds file path to dict id
-# ids = files to convert, default all, outfdir = output directory
+# index = current process position, ilist = list to walk, outfdir = output directory
 # returns nothing
-proc processHandlerFiles { {ids ""} {outdir "/tmp"} } {
+proc processHandlerFiles { index ilist {outdir "/tmp"} } {
 	global inputfiles handlers deleteFileList
 	
-	# Files to convert
-	if { $ids eq ""} {
-		set ids [putsHandlers g i k]
-	}
-	array set handler $handlers
+	set imgv [lindex $ilist $index]
+	incr index
 	
-	pBarUpdate $::widget_name(pbar-main) cur max [llength $ids] current -1
+	if { $imgv eq {} } {
+		return
+	}
 	set msg {}
-	foreach imgv $ids {
-		array set id [dict get $inputfiles $imgv]
-		updateTextLabel pbtext "Extracting... $id(name)"
-		set outname [file join ${outdir} [file root $id(name)]]
-		append outname ".png"
-		if { ![file exists $outname ]} {
-			if { $handler($imgv) == {g} } {
-				set i $id(path)
-				set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"$outname\" \"$outname\") )(gimp-quit 0)"
-				#run gimp command, it depends on file extension to do transforms.
-				catch { exec gimp -i -b $cmd } msg
-			}
-			if { $handler($imgv) == {i} } {
-				# output 100%, resize imagick
-				catch { exec inkscape $id(path) -z -C -d 90 -e $outname } msg
-			}
-			if { $handler($imgv) == {k} } {
-				catch { exec calligraconverter --batch -- $id(path) $outname } msg
-			}
-			if { $handler($imgv) == {m} } {
-				continue
-			}
+	array set handler $handlers
+	array set id [dict get $inputfiles $imgv]
+
+	set outname [file join ${outdir} [file root $id(name)]]
+	append outname ".png"
+	
+	puts "extract $id(name)"
+	pBarControl "Extracting... $id(name)" update
+	
+	if { ![file exists $outname ]} {
+		if { $handler($imgv) == {g} } {
+			set i $id(path)
+			set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"$outname\" \"$outname\") )(gimp-quit 0)"
+			#run gimp command, it depends on file extension to do transforms.
+			catch { exec gimp -i -b $cmd } msg
 		}
-		#Error reporting, if code NONE then png conversion success.
-		if { ![file exists $outname ]} {
-			set errc $::errorCode;
-			set erri $::errorInfo
-			puts "errc: $errc \n\n"
-			if {$errc != "NONE"} {
-				append ::lstmsg "EE: $$id(name) discarted\n"
-				puts $msg
-			}
-			error "something went wrong, Tmp png wasn't created"
+		if { $handler($imgv) == {i} } {
+			# output 100%, resize imagick
+			catch { exec inkscape $id(path) -z -C -d 90 -e $outname } msg
+		}
+		if { $handler($imgv) == {k} } {
+			catch { exec calligraconverter --batch -- $id(path) $outname } msg
+		}
+		if { $handler($imgv) == {m} } {
 			continue
 		}
+	}
+	#Error reporting, if code NONE then png conversion success.
+	if { ![file exists $outname ]} {
+		set errc $::errorCode;
+		set erri $::errorInfo
+		puts "errc: $errc \n\n"
+		if {$errc != "NONE"} {
+			append ::lstmsg "EE: $$id(name) discarted\n"
+			puts $msg
+		}
+		error "something went wrong, tmp png wasn't created"
+	} else {
 		dict set inputfiles $imgv tmp $outname
 		lappend deleteFileList $outname
-		# puts [dict get $inputfiles $imgv]
-		
-	pBarUpdate $::widget_name(pbar-main) cur
-	}	
-	return 0
+	}
+	array unset handler
+	after idle [list after 0 [list processHandlerFiles $index $ilist]]
+	return
 }
 
 # Get ids of files to process
@@ -1728,12 +1741,14 @@ proc convert { {id ""} } {
 	pBarControl {} create 0 1
 	
 	#process Gimp Calligra and inkscape to Tmp files
-	processHandlerFiles $id
+	set total_renders [prepHandlerFiles $id]
+	puts "end handler"
 	set ::artscript_convert(files) [processIds $id]
 	
-	pBarUpdate $::widget_name(pbar-main) cur max [expr {[getFilesTotal]*[llength [getFinalSizelist]]}] current -1
+	pBarUpdate $::widget_name(pbar-main) cur max [expr {([getFilesTotal] + $total_renders) * [llength [getFinalSizelist]]}] current 0
 
 	doConvert $id
+	puts "end convert"
 }
 
 # ---=== Window options
