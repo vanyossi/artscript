@@ -211,14 +211,13 @@ proc setDictEntries { id fpath size ext h} {
 	dict set inputfiles $id name $iname
 	dict set inputfiles $id output [getOutputName $fpath $::outext $::ouprefix $::ousuffix]
 	dict set inputfiles $id size $size
-	dict set inputfiles $id osize $size
+	dict set inputfiles $id osize [getOutputSizesForTree $size 1]
 	dict set inputfiles $id ext $ext
 	dict set inputfiles $id path $apath
 	dict set inputfiles $id deleted 0
 	dict set handlers $id $h
 	
 	addTreevalues $::widget_name(flist) $id ; # TODO set widget name as global
-	eventSize $::widget_name(tabsize-left) {}
 }
 
 # Checks the files listed in args to be Filetypes supported from a path list
