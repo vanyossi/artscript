@@ -1543,7 +1543,8 @@ proc closePipe {f script} {
     # turn blocking on so we can catch any errors
     fconfigure $f -blocking true
     if {[catch {close $f} err]} {
-        output error $err
+        #output error $err
+        puts "some error: $err"
     }
     after idle [list after 0 $script]
 }
@@ -1552,12 +1553,12 @@ proc handleFileEvent {f script} {
     set status [catch { gets $f line } result]
     if { $status != 0 } {
         # unexpected error
-        # output error $result
+        # puts "error $result"
         closePipe $f $script
 
     } elseif { $result >= 0 } {
         # we got some output
-        # output normal $line
+		# puts "normal $line"
 
     } elseif { [eof $f] } {
         # End of file
@@ -1623,7 +1624,7 @@ proc prepHandlerFiles { {ids ""} } {
 	set id_length [llength $ids]
 	pBarUpdate $::widget_name(pbar-main) cur max $id_length current -1
 	
-	processHandlerFiles 0 $ids
+	processHandlerFiles 0 $ids 0
 	return $id_length
 }
 
@@ -1631,43 +1632,71 @@ proc prepHandlerFiles { {ids ""} } {
 # Creates a png file in tmp and adds file path to dict id
 # index = current process position, ilist = list to walk, outfdir = output directory
 # returns nothing
-proc processHandlerFiles { index ilist {outdir "/tmp"} } {
+proc processHandlerFiles { index ilist {step 1}} {
 	global inputfiles handlers deleteFileList
 	
-	set imgv [lindex $ilist $index]
-	incr index
-	
-	if { $imgv eq {} } {
-		return
-	}
-	set msg {}
-	array set handler $handlers
-	array set id [dict get $inputfiles $imgv]
+	switch $step {
+	0 {
+		puts "starting File extractions"
+		after idle [list after 0 [list processHandlerFiles $index $ilist]]
+	} 1 {
+		set imgv [lindex $ilist $index]
+		incr index
+		
+		if { $imgv eq {} } {
+			set ::artscript_convert(extract) false
+			return
+		}
+		set msg {}
+		array set handler $handlers
+		array set id [dict get $inputfiles $imgv]
+		
+		set outdir "/tmp"
+		set outname [file join ${outdir} [file root $id(name)]]
+		append outname ".png"
+		
+		set ::artscript_convert(outname) $outname
+		set ::artscript_convert(imgv) $imgv
+		
+		puts "extract $id(name)"
+		pBarControl "Extracting... $id(name)" update
+		
+		if { ![file exists $outname ]} {
+			if { $handler($imgv) == {g} } {
+				puts "making gimps"
+				set i $id(path)
+				set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"$outname\" \"$outname\") )(gimp-quit 0)"
+				#run gimp command, it depends on file extension to do transforms.
+				# catch { exec gimp -i -b $cmd } msg
+				set extractCmd [list gimp -i -b $cmd]
+			}
+			if { $handler($imgv) == {i} } {
+				puts "making inkscapes"
+				# output 100%, resize imagick
+				# catch { exec inkscape $id(path) -z -C -d 90 -e $outname } msg
+				set extractCmd [list inkscape $id(path) -z -C -d 90 -e $outname]
+			}
+			if { $handler($imgv) == {k} } {
+				puts "making kriters"
+				# catch { exec calligraconverter --batch -- $id(path) $outname } msg
+				set extractCmd [list calligraconverter --batch -- $id(path) $outname]
+			}
+			if { $handler($imgv) == {m} } {
+				continue
+			}
+			runCommand $extractCmd [list relauchHandler $index $ilist]
+		} else {
+			relauchHandler $index $ilist
+		}
+	}}
+	return
+}
 
-	set outname [file join ${outdir} [file root $id(name)]]
-	append outname ".png"
+proc relauchHandler {index ilist} {
 	
-	puts "extract $id(name)"
-	pBarControl "Extracting... $id(name)" update
-	
-	if { ![file exists $outname ]} {
-		if { $handler($imgv) == {g} } {
-			set i $id(path)
-			set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"$outname\" \"$outname\") )(gimp-quit 0)"
-			#run gimp command, it depends on file extension to do transforms.
-			catch { exec gimp -i -b $cmd } msg
-		}
-		if { $handler($imgv) == {i} } {
-			# output 100%, resize imagick
-			catch { exec inkscape $id(path) -z -C -d 90 -e $outname } msg
-		}
-		if { $handler($imgv) == {k} } {
-			catch { exec calligraconverter --batch -- $id(path) $outname } msg
-		}
-		if { $handler($imgv) == {m} } {
-			continue
-		}
-	}
+	set outname $::artscript_convert(outname)
+	set imgv $::artscript_convert(imgv)
+
 	#Error reporting, if code NONE then png conversion success.
 	if { ![file exists $outname ]} {
 		set errc $::errorCode;
@@ -1675,12 +1704,13 @@ proc processHandlerFiles { index ilist {outdir "/tmp"} } {
 		puts "errc: $errc \n\n"
 		if {$errc != "NONE"} {
 			append ::lstmsg "EE: $$id(name) discarted\n"
-			puts $msg
+			# puts $msg
 		}
 		error "something went wrong, tmp png wasn't created"
 	} else {
-		dict set inputfiles $imgv tmp $outname
-		lappend deleteFileList $outname
+		puts "file $outname found!"
+		dict set ::inputfiles $imgv tmp $outname
+		lappend ::deleteFileList $outname
 	}
 	array unset handler
 	after idle [list after 0 [list processHandlerFiles $index $ilist]]
@@ -1701,67 +1731,76 @@ proc processIds { {id ""} } {
 # Convert: Construct and run convert tailored to each file
 # id = files to process, none given: process all
 # return nothing
-proc doConvert { {id ""} } {
+proc doConvert { {step 0} {id ""} } {
 	
-	set idnumber [lindex $::artscript_convert(files) $::artscript_convert(count)]
-	incr ::artscript_convert(count)
-	
-	if { $idnumber eq {} } {
-		if { $id eq ""} {
-			catch {file delete [list $::deleteFileList]}
+	switch $step {
+	0 {
+		puts "starting Convert"
+		after idle [list after 0 [list doConvert 1 $id]]
+	} 1 {
+		if {$::artscript_convert(extract)} {
+			vwait ::artscript_convert(extract)
 		}
-		pBarControl "Operations Done..." forget 600
-		return
-	}
-	
-	set datas [dict get $::inputfiles $idnumber]
-	dict with datas {
-		if {!$deleted} {
-			set opath $path
-			set outpath [file dirname $path]
-
-			if {[dict exists $datas tmp]} {
-				set opath $tmp
+		set idnumber [lindex $::artscript_convert(files) $::artscript_convert(count)]
+		incr ::artscript_convert(count)
+		
+		if { $idnumber eq {} } {
+			if { $id eq ""} {
+				catch {file delete [list $::deleteFileList]}
 			}
-			# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
-			# use "-interpolate bicubic -filter Lanczos -define filter:blur=.9891028367558475" SLOW but best
-			# with -distort Resize instead of -resize "or LanczosRadius"
-			set filter "-interpolate bicubic -filter Parzen"
-			set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
-			set i 0
-			# get make resize string
-			set sizes [getOutputSizesForTree $size]
-			set nsizes [llength $sizes]
-			
-			foreach dimension $sizes {
-				incr i
-				set resize {}
-				if { $size != $osize } {
-					set resize [getResize $size $dimension $filter $unsharp]
-				}
-				puts "convert $name"
-				pBarControl "Converting... ${name} to $dimension" update
+			pBarControl "Operations Done..." forget 600
+			return
+		}
+		
+		set datas [dict get $::inputfiles $idnumber]
+		dict with datas {
+			if {!$deleted} {
+				set opath $path
+				set outpath [file dirname $path]
 				
-				if {$i == 1} {
-					set dimension {}
+				if {[dict exists $datas tmp]} {
+					puts "in"
+					set opath $tmp
 				}
+				# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
+				# use "-interpolate bicubic -filter Lanczos -define filter:blur=.9891028367558475" SLOW but best
+				# with -distort Resize instead of -resize "or LanczosRadius"
+				set filter "-interpolate bicubic -filter Parzen"
+				set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
+				set i 0
+				# get make resize string
+				set sizes [getOutputSizesForTree $size]
+				set nsizes [llength $sizes]
 				
-				if { $id eq ""} {
-				set soname \"[file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]\"
-				} else {
-					set soname "show:"
+				foreach dimension $sizes {
+					incr i
+					set resize {}
+					if { $size != $osize } {
+						set resize [getResize $size $dimension $filter $unsharp]
+					}
+					puts "convert $name"
+					pBarControl "Converting... ${name} to $dimension" update
+					
+					if {$i == 1} {
+						set dimension {}
+					}
+					
+					if { $id eq ""} {
+					set soname \"[file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]\"
+					} else {
+						set soname "show:"
+					}
+					set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) $unsharp $::alfaoff $::artscript_convert(quality) $soname]
+					#catch { exec {*}$convertCmd }
+					runCommand $convertCmd [list doConvert 1]
+					# after idle [list after 0 [list set ::fvar [catch { exec convert {*}$convertCmd &}]]]
+					# vwait ::fvar
+					
+					# pBarControl "Converting... ${name} to $dimension" update 1000
 				}
-				set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) $unsharp $::alfaoff $::artscript_convert(quality) $soname]
-				#catch { exec {*}$convertCmd }
-				runCommand $convertCmd doConvert
-				# after idle [list after 0 [list set ::fvar [catch { exec convert {*}$convertCmd &}]]]
-				# vwait ::fvar
-				
-				# pBarControl "Converting... ${name} to $dimension" update 1000
 			}
 		}
-	}
-	# after idle [list after 0 doConvert]
+	}}
 	return 0
 }
 
@@ -1774,19 +1813,18 @@ proc convert { {id ""} } {
 	#get watermark value
 	set ::artscript_convert(wmark) [watermark]
 	set ::artscript_convert(quality) [getQuality $::outext]
+	set ::artscript_convert(extract) true ; #controls all extracts done before launch convert
 	
 	#Create progressbar
 	pBarControl {} create 0 1
 	
 	#process Gimp Calligra and inkscape to Tmp files
 	set total_renders [prepHandlerFiles $id]
-	puts "end handler"
 	set ::artscript_convert(files) [processIds $id]
 	
 	pBarUpdate $::widget_name(pbar-main) cur max [expr {([getFilesTotal] + $total_renders) * [llength [getFinalSizelist]]}] current -1
 	
-	doConvert $id
-	puts "end convert"
+	doConvert 0 $id
 }
 
 # ---=== Window options
