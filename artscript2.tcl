@@ -1532,6 +1532,42 @@ proc getQuality { ext } {
 	return $quality
 }
 
+proc runCommand {cmd script} {
+    # output command $cmd
+    set f [open "| $cmd 2>@1" r]
+    fconfigure $f -blocking false
+    fileevent $f readable  [list handleFileEvent $f $script]
+}
+
+proc closePipe {f script} {
+    # turn blocking on so we can catch any errors
+    fconfigure $f -blocking true
+    if {[catch {close $f} err]} {
+        output error $err
+    }
+    after idle [list after 0 $script]
+}
+
+proc handleFileEvent {f script} {
+    set status [catch { gets $f line } result]
+    if { $status != 0 } {
+        # unexpected error
+        # output error $result
+        closePipe $f $script
+
+    } elseif { $result >= 0 } {
+        # we got some output
+        # output normal $line
+
+    } elseif { [eof $f] } {
+        # End of file
+        closePipe $f $script
+
+    } elseif { [fblocked $f] } {
+        # Read blocked, so do nothing
+    }
+}
+
 # Gets all inputfiles, filter files on extension, sends resulting list to makeORA
 # returns nothing
 proc prepOra {} {
@@ -1715,16 +1751,18 @@ proc doConvert { {id ""} } {
 				} else {
 					set soname "show:"
 				}
-				set convertCmd [concat -quiet \"$opath\" $resize $::artscript_convert(wmark) $unsharp $::alfaoff $::artscript_convert(quality) $soname]
-				catch { exec convert {*}$convertCmd }
+				set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) $unsharp $::alfaoff $::artscript_convert(quality) $soname]
+				#catch { exec {*}$convertCmd }
+				runCommand $convertCmd doConvert
+				# after idle [list after 0 [list set ::fvar [catch { exec convert {*}$convertCmd &}]]]
+				# vwait ::fvar
 				
 				# pBarControl "Converting... ${name} to $dimension" update 1000
 			}
 		}
 	}
-	after idle [list after 0 doConvert]
-	
-	return
+	# after idle [list after 0 doConvert]
+	return 0
 }
 
 # Set convert global values and total files to process
