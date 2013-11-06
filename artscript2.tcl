@@ -1745,8 +1745,8 @@ proc convert { {id ""} } {
 	puts "end handler"
 	set ::artscript_convert(files) [processIds $id]
 	
-	pBarUpdate $::widget_name(pbar-main) cur max [expr {([getFilesTotal] + $total_renders) * [llength [getFinalSizelist]]}] current 0
-
+	pBarUpdate $::widget_name(pbar-main) cur max [expr {([getFilesTotal] + $total_renders) * [llength [getFinalSizelist]]}] current -1
+	
 	doConvert $id
 	puts "end convert"
 }
@@ -1773,4 +1773,3 @@ guiStatusBar .f3
 # ---=== Validate input filetypes
 set argvnops [lrange $argv [llength $::ops] end]
 listValidate $argvnops
-
