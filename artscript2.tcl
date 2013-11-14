@@ -551,6 +551,19 @@ proc treeSort {tree col direction} {
     $tree heading $col -command $cmd
 }
 
+proc treeSortTagPair {tree col tag antitag} {
+	# Build something we can sort
+	set data {}
+    foreach row [$tree tag has $tag] {
+        lappend data $row
+    }
+    
+    set r -1
+    foreach info [lsort $data] {
+        $tree move $info {} [incr r]
+    }
+}
+
 # Updates global variable
 # var = global variable name, value = new value
 proc updateTextLabel { var value } {
