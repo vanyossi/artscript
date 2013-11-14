@@ -598,6 +598,7 @@ proc showPreview {} {
 	}
 	return
 }
+
 # First define subprocesses
 # makeThumb creates a thumbnail based on path (file type) makes requested sizes.
 proc makeThumb { path tsize } {
@@ -694,6 +695,7 @@ proc comboBoxEditEvents { w {script {optionOn watsel} }} {
 	bind $w <<ComboboxSelected>> $script
 	bind $w <Button-3> { %W configure -state normal }
 	bind $w <Control-Button-1> { %W configure -state normal }
+	bind $w <space> { %W configure -state normal }
 	bind $w <KeyRelease> $script
 	bind $w <FocusOut> { %W configure -state readonly }
 }
@@ -840,11 +842,11 @@ proc artscriptStyles {} {
 	ttk::style layout small.TButton {
 		Button.border -sticky nswe -border 1 -children {
 			Button.focus -sticky nswe -children {
-				Button.spacing -sticky nswe -children {Button.label -sticky nswe}
+				Button.padding -sticky nswe -children {Button.label -expand 0 -side left -sticky nswe}
 				}
 			}
 		}
-	# ttk::style configure small.TButton -background color
+	ttk::style configure small.TButton -padding {6 0} -width 0
 }
 # ----=== Gui Construct ===----
 # TODO Make every frame a procedure to ease movement of the parts
