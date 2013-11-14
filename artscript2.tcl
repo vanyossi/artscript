@@ -62,11 +62,11 @@ proc artscriptSettings {} {
 		]
 	#Sizes
 	set siz_settings [dict create \
-		sizes(wallpaper) [list "2560x1440" "1920x1080" "1680x1050" "1366x768" "1280x1024" "1280x720" "1024x768"] \
-		sizes(percentage) "90% 80% 50% 25%" \
-		sizes(icon) "128x128 96x96 48x48 36x36" \
-		sizes(texture) "256x256 512x512" \
-		sizes(default) "" \
+		sizes_set(wallpaper) [list "2560x1440" "1920x1080" "1680x1050" "1366x768" "1280x1024" "1280x720" "1024x768"] \
+		sizes_set(percentage) "90% 80% 50% 25%" \
+		sizes_set(icon) "128x128 96x96 48x48 36x36" \
+		sizes_set(texture) "256x256 512x512" \
+		sizes_set(default) "" \
 	]
 	#sizes       [list "2560x1440"  "1920x1080" "1680x1050" "1366x768" "1280x1024" "1280x720" "1024x768" "720x1050" "50%"] \
 
@@ -1225,7 +1225,7 @@ proc sizeTreeAddPreset { w } {
 	if { $preset eq {} } {
 		return
 	}
-	foreach size $::sizes($preset) {
+	foreach size $::sizes_set($preset) {
 		sizeTreeAdd $size nonselected off
 	}
 }
@@ -1295,9 +1295,9 @@ proc addSizeBox { w } {
 }
 # TODO organize and comment
 proc sizeSetPreset { w tw } {
-	set val [$w get]
-	$tw configure -values $::sizes($val)
-	$tw set [lindex $::sizes($val) 0]
+	set preset [$w get]
+	$tw configure -values $::sizes_set($preset)
+	$tw set [lindex $::sizes_set($preset) 0]
 	sizeEdit $tw
 }
 # TODO organize and comment
@@ -1323,9 +1323,9 @@ proc addPresetBrowser { w } {
 	ttk::frame $w.set_sizes
 	
 	ttk::label $w.preset.browser -text "Browse presets"
-	foreach preset [array name ::sizes] {
+	foreach preset [array name ::sizes_set] {
 		puts $preset
-		if {[llength $::sizes($preset)] == 0 } {
+		if {[llength $::sizes_set($preset)] == 0 } {
 			continue
 		}
 		lappend presets $preset
@@ -1399,7 +1399,7 @@ proc sizeTreeList { w } {
     
     # Add values for each array key
     # puts [array names ::sizes]
-	foreach size $::sizes(default) {
+	foreach size $::sizes_set(default) {
 		set ::sdict_$size [$w.sizetree insert {} end -tag nonselected -values "$size $name"]
 		# default selecte state, off.
 		set ::sdict($size) {off}
