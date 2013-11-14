@@ -62,8 +62,14 @@ proc artscriptSettings {} {
 		]
 	#Sizes
 	set siz_settings [dict create \
-		sizes       [list "2560x1440"  "1920x1080" "1680x1050" "1366x768" "1280x1024" "1280x720" "1024x768" "720x1050" "50%"] \
+		sizes(wallpaper) [list "2560x1440" "1920x1080" "1680x1050" "1366x768" "1280x1024" "1280x720" "1024x768"] \
+		sizes(percentage) "90% 80% 50% 25%" \
+		sizes(icon) "128x128 96x96 48x48 36x36" \
+		sizes(texture) "256x256 512x512" \
+		sizes(default) "" \
 	]
+	#sizes       [list "2560x1440"  "1920x1080" "1680x1050" "1366x768" "1280x1024" "1280x720" "1024x768" "720x1050" "50%"] \
+
 	#Suffix and prefix ops
 	set suf_settings [dict create   \
 		suffixes    [list "net" "archive" {by-[string map -nocase {{ } -} $::autor]}] \
@@ -362,7 +368,7 @@ proc setUserPresets { s } {
 	
 	#set values according to preset
 	dict for {key value} [dict get $presets $s] {
-		if {[info exists ::$key] != [regexp $gvars $key ] } {
+		if { ![regexp $gvars $key ] } {
 			# Dirty fix: TODO we should set preset on an array
 			set value [string map {{$} {$::}} $value]
 			if { [catch {set keyval [eval list [string trim $value]] } msg] } {
@@ -986,7 +992,7 @@ proc tabWatermark { wt } {
 	ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
 		-validatecommand { string is integer %P }
 	$wt.fontsize set $::wmsize
-	bind $wt.fontsize <ButtonRelease> {bindsetAction wmsize [%W get] watsel "$::widget_name(check-wm) $wt.cbtx"}
+	bind $wt.fontsize <ButtonRelease> { bindsetAction wmsize [%W get] watsel "$::widget_name(check-wm) $wt.cbtx"}
 	bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel "$::widget_name(check-wm) $wt.cbtx" }
 
 	set wmpositions	[list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"]
@@ -1070,154 +1076,455 @@ proc tabWatermark { wt } {
 }
 
 # --== Size options
-proc tabResize {st} {
-	global wList hList
-	foreach size $::sizes {
-		if { [string index $size end] == {%} } {
-			lappend pList $size
-		} else {
-			set size [split $size {x}]
-			lappend wList [lindex $size 0]
-			lappend hList [lindex $size 1]
+# Create checkbox images
+proc createImageVars {} { 
+	set ::img_off [image create photo]
+	$::img_off put {
+        R0lGODlhCgAKAPQQACUlJSYmJicnJygoKCkpKTQ0NOjo6Orq6u3t7fDw8PPz8/T09Pb29vf39/n5
++f39/f///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAAA
+AAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAKAAoAAAUuYDEAZDmIUKqmI8S8
+MERCSm3LAI0oO4JDiKAQ5zAYjw5S8WhMDlywF+Q0KpFOIQA7
+    }
+    set ::img_on [image create photo]
+    $::img_on put {
+        R0lGODlhCgAKAPQAAColMSolMiolMysnMislNCslNSslNiwlNi0nNjQ0Nrr/NLP/PL7/PMP/NLb/
+RLn/TLn/Tb3/VcH/RcT/TsT/T8D/Xcn/WMP/Zcz/YM//adP/dN3/eAAAAAAAAAAAAAAAACH5BAAA
+AAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAKAAoAAAU3YIIghkGaYqOsbEMy
+SywzpeTcuFROT+9PBoElQixaBAJMZcnEIDOXqDSD3Giu2I0gIQAgv4NECAA7
+    }
+}
+
+# Hides or shows height combobox depending if value is wxh or w%
+# size => stringxstring or string%x
+# returns pair list
+proc sizeToggleWidgetWxH { size } {
+	set w $::widget_name(tabsize-cust_size)
+
+	scan $size "%d%s" width height
+	set sep [string index $height 0]
+	set height [string range $height 1 end]
+
+	if { ($sep eq "x") && $height ne {} } {
+		pack $w.hei -side left -after $w.xmu
+		$w.hei state !disabled
+		$w.xmu configure -text "x" -anchor center
+		bind $w.xmu <Button> [list sizeAlterRatio]
+		set size [list wid $width hei $height]
+
+	} elseif { $sep eq "%" } {
+		$w.wid set $width
+		pack forget $w.hei
+
+		$w.xmu configure -text "%" -anchor w
+		bind $w.xmu <Button> {}
+		bind $w.wid <KeyRelease> [list setBind $w]
+
+		set size [list wid $width hei $width]
+	}
+	return $size
+}
+# Convert aspect ratio pairs to float
+# Widget name
+# returns float. Or returns 0 if no ratio
+proc sizeRatioToFloat { w } {
+	
+	set ratio [string trim [$w get] {:}]
+	if {$ratio eq {} } {
+		return 0
+	}
+	set sratio [split $ratio {:}]
+	
+	if { [llength $sratio] > 1 } {
+		set sratio [lreplace $sratio end end [format "%.2f" [lindex $sratio end]] ]
+		catch { set ratio [expr [join $sratio /]] }
+	}
+	return $ratio
+}
+# Flips width and heigth field values and sets a new ratio if it's set
+proc sizeAlterRatio { } {
+	# Get w and h values
+	set wid [$::widget_name(resize_wid_entry) get]
+	set hei [$::widget_name(resize_hei_entry) get]
+	
+	if { ($wid eq {}) || ($hei eq {}) } {
+		return 0
+	}
+	# reverse width and height values
+	$::widget_name(resize_wid_entry) set $hei
+	$::widget_name(resize_hei_entry) set $wid
+	
+	# Get current ratio, calculate new ratio, else format 2:3, reverse
+	set rawratio [$::widget_name(resize_ratio) get]
+	if { ($rawratio ne {}) && ([string is double $rawratio]) } {
+		set ratio [expr {[format "%.1f" $hei] / $wid}]
+		$::widget_name(resize_ratio) set $ratio
+	} else {
+		$::widget_name(resize_ratio) set [join [lreverse [split $rawratio {:}]] {:}]
+		# $::widget_name(resize_ratio) set [ sizeRatioToFloat $::widget_name(resize_ratio) 1 ]
+	}
+}
+# Changes dimension, width or height in respect to Aspect ratio
+# Alter == wid or hei   w, widget father.
+proc sizeAlter { w alter } {
+	set ratio [sizeRatioToFloat $w.rat]
+	set wid [$::widget_name(resize_wid_entry) get]
+	set hei [$::widget_name(resize_hei_entry) get]
+
+	if {($ratio != 0) && ($hei eq {})} {
+		set hei $wid
+	}
+
+	if { [catch {set val [dict get [sizeToggleWidgetWxH ${wid}x${hei}] $alter]} ]} {
+		return
+	}
+	setDimentionRatio $ratio $val $alter
+}
+# Set size wid Bind, back to default value
+proc setBind { w } {
+	bind $w.wid <KeyRelease> [list sizeAlter $w wid]
+}
+
+# Calculates counterpart dimension depending on ratio
+# sets value to target widget from ( mod ) values
+# returns ratio
+proc setDimentionRatio { r val {mod "wid"} } {
+	if { ($val eq {}) || ($r == 0) } {
+		return
+	}
+	switch -- $mod {
+		"hei" { 
+			set val [expr round( $val * $r )] 
+			set target "wid"
+		}
+		"wid" { 
+			set val [expr round( $val / $r )] 
+			set target "hei"
 		}
 	}
-	lappend wList {*}$pList
+	$::widget_name(resize_${target}_entry) set $val
+	return $r
+}
+# Add selected W and H from fields, selected and groupd "custom"
+proc sizeTreeAddWxH { operator width height } {
+	set op [$operator cget -text]
+	set wid [$width get]
+	set hei [$height get]
+	if { $op eq {%}} {
+		set hei {}
+	}
+	set size [append wid "x" $hei]
+	if { $size eq "x"} {
+		return
+	}
+	# set size [join [list $wid $hei] "x" ]
+	sizeTreeAdd $size
+	return
+}
+proc sizeTreeAddPreset { w } {
+	set preset [$w get]
+	if { $preset eq {} } {
+		return
+	}
+	foreach size $::sizes($preset) {
+		sizeTreeAdd $size nonselected off
+	}
+}
+proc sizeTreeAddPresetChild { w } {
+	set size [$w get]
+	sizeTreeAdd $size
+}
+
+proc sizeTreeAdd { size {sel "selected"} {state "on"} } {
+	if { $size eq {} } {
+		return
+	}
+	if { [scan $size "%dx%d" percentage heim] == 1} {
+		set size [append percentage "%"]
+	}
+	if { [lsearch -exact [array names ::sdict] $size] == -1 } {
+		set ::sdict_$size [$::widget_name(resize_tree) insert {} end -tag $sel -values "$size custom" ]
+		set ::sdict($size) $state
+	} else {
+		$::widget_name(resize_tree) item [set ::sdict_$size] -tag selected
+		set ::sdict($size) {on}
+	}
+	# Check if sizes set
+	eventSize
+	#puts [set $val]
+	return
+}
+# Constructs size box (Probably this has to be cut into pieces)
+proc addSizeBox { w } {
+	ttk::frame $w
 	
+	set ratiovals {1:1 1.4142 2:1 3:2 4:3 5:4 5:7 8:5 1.618 16:9 16:10 14:11 12:6 2.35 2.40}
+	set ::widget_name(resize_ratio) [ttk::combobox $w.rat -width 6 -state readonly -values $ratiovals -validate key -validatecommand { regexp {^(()|[0-9])+(()|(\.)|(:))?(([0-9])+|())$} %P } ]
+	comboBoxEditEvents $w.rat "sizeAlter $w wid"
+	#bind $w.rat <KeyRelease> [list sizeRatioToFloat $w.rat]
+	
+	ttk::label $w.lwxh -text ":"
+	# set walppvals {2560 1920 1800 1680 1600 1440 1366 1280 1200 1080 1024 960 864 800 768 600}
+	set ::widget_name(resize_wid_entry) [ ttk::spinbox $w.wid -width 8 -increment 10 -from 1 -to 5000 \
+	  -validate key -validatecommand { regexp {^(()|[0-9])+(()|%%)$} %P } ]
+	bind $::widget_name(resize_wid_entry) <ButtonRelease> [list sizeAlter $w wid]
+	bind $::widget_name(resize_wid_entry) <KeyRelease> [list sizeAlter $w wid]
+
+	# comboBoxEditEvents $w.wid "sizeAlter $w wid"
+	# bind $w.wid <KeyRelease> [list sizeAlter $w "wid"]
+	# bind $w.wid <Shift-Button><Shift-Motion> { puts "[winfo pointerx .] %w"}
+
+	set ::widget_name(resize_hei_entry) [ ttk::spinbox $w.hei -width 8 -increment 10 -from 1 -to 5000 \
+		-validate key -validatecommand { string is integer %P } ]
+	bind $::widget_name(resize_hei_entry) <ButtonRelease> [list sizeAlter $w hei]
+	bind $::widget_name(resize_hei_entry) <KeyRelease> [list sizeAlter $w hei]
+	# comboBoxEditEvents $w.hei "sizeAlter $w hei"
+	# bind $w.hei <KeyRelease> [list sizeAlter $w "hei"]
+	
+	# comboBoxEditEvents $w.wid$id "eventSize $w $id"
+	ttk::label $w.xmu -text "x" -font "-size 18" -anchor center
+	bind $w.xmu <Button> [list sizeAlterRatio]
+	
+	ttk::label $w.title -text "Add custom size. ratio : wxh" -font "-size 12" 
+	pack $w.title -side top -fill x
+	
+	ttk::button $w.add -text "+" -padding {2 0} -style small.TButton -command [list sizeTreeAddWxH $w.xmu $w.wid $w.hei]
+	pack $w.rat $w.lwxh $w.wid $w.xmu $w.hei $w.add -side left -fill x
+	pack configure $w.xmu -expand 1
+
+	return $w
+}
+# TODO organize and comment
+proc sizeSetPreset { w tw } {
+	set val [$w get]
+	$tw configure -values $::sizes($val)
+	$tw set [lindex $::sizes($val) 0]
+	sizeEdit $tw
+}
+# TODO organize and comment
+proc sizeEdit { w } {
+	set size [$w get]
+	set sizes [sizeToggleWidgetWxH $size]
+
+	set w $::widget_name(tabsize-cust_size)
+	
+	dict with sizes {
+		$w.wid set $wid
+		$w.hei set $hei
+		#set ratio
+		$::widget_name(resize_ratio) set [expr {[format "%.2f" $wid] / $hei}]
+	}
+	return 0
+}
+
+proc addPresetBrowser { w } {
+	ttk::frame $w
+	
+	ttk::frame $w.preset
+	ttk::frame $w.set_sizes
+	
+	ttk::label $w.preset.browser -text "Browse presets"
+	foreach preset [array name ::sizes] {
+		puts $preset
+		if {[llength $::sizes($preset)] == 0 } {
+			continue
+		}
+		lappend presets $preset
+	}
+	set presets [lsort $presets]
+	ttk::combobox $w.preset.sets -state readonly -values $presets
+	bind $w.preset.sets <<ComboboxSelected>> [list sizeSetPreset %W $w.set_sizes.size]
+	$w.preset.sets set [lindex $presets 0]
+
+	ttk::button $w.preset.add -text "+" -padding {2 0} -style small.TButton -command [list sizeTreeAddPreset $w.preset.sets]
+	
+	ttk::combobox $w.set_sizes.size -state readonly
+	bind $w.set_sizes.size <<ComboboxSelected>> [list sizeEdit %W]
+	# ttk::button $w.set_sizes.edit -text "Edit" -width 6 -style small.TButton -command [list sizeEdit $w.set_sizes.size]
+	ttk::button $w.set_sizes.add -text "+" -padding {2 0} -style small.TButton -command [list sizeTreeAddPresetChild $w.set_sizes.size]
+	
+	pack $w.preset $w.set_sizes -side top -expand 1 -fill x
+	pack $w.set_sizes -pady 6
+	
+	pack $w.preset.browser $w.preset.sets $w.preset.add -side left -fill x
+	pack $w.set_sizes.size $w.set_sizes.add -side left -fill x
+	pack configure $w.preset.browser $w.set_sizes.size -expand 1	
+
+	return $w
+}
+proc addSizeOps { args } {
+	foreach widget [list {*}$args] {
+		pack $widget -side top -fill x
+	}
+}
+# Creates sizes list GUI
+# w = own widget name
+# returns frame name
+proc sizeTreeList { w } {
+	ttk::frame $w
+	set size_tree_colname {size}
+	set ::widget_name(resize_tree) [ttk::treeview $w.sizetree -columns $size_tree_colname -height 6 -yscrollcommand "$w.sscrl set"]
+	foreach tag {selected nonselected} {
+		$w.sizetree tag bind $tag <Button-1> { sizeTreeToggle %W [%W selection] %x %y }
+	}
+	foreach key {<KP_Add> <plus> <a>} {
+		bind $w.sizetree $key { sizeTreeSetTag %W [%W selection] selected }
+	}
+	foreach key {<KP_Subtract> <minus> <d>} {
+		bind $w.sizetree $key { sizeTreeSetTag %W [%W selection] nonselected }
+	}
+	bind $w.sizetree <Control-a> { %W selection add [%W children {}] }
+	bind $w.sizetree <Control-d> { %W selection remove [%W children {}] }
+	bind $w.sizetree <Control-i> { %W selection toggle [%W children {}] }
+	bind $w.sizetree <Key-Delete> { sizeTreeDelete [%W selection] }
+	bind $w.sizetree <KeyRelease> { eventSize }
+
+	# bind $w.sizetree <<TreeviewSelect>> eventSize
+
+	ttk::scrollbar $w.sscrl -orient vertical -command [list $w.sizetree yview ]
+	
+	pack $w.sizetree $w.sscrl -side left -fill both
+	pack configure $w.sizetree -expand 1
+	
+	$w.sizetree heading #0 -text {} -image $::img_off -command [list treeSortTagPair $w.sizetree #0 selected nonselected ]
+	$w.sizetree column #0 -width 34 -stretch 0
+	$w.sizetree column size -width 50 -stretch 1
+	foreach col $size_tree_colname {
+		set name [string totitle $col]
+		$w.sizetree heading $col -text $name -command [list treeSort $w.sizetree $col 0 ]
+	}
+	
+    # Set images to tags
+    $w.sizetree tag configure selected -image $::img_on
+    $w.sizetree tag configure nonselected -image $::img_off
+    
+    # Add values for each array key
+    # puts [array names ::sizes]
+	foreach size $::sizes(default) {
+		set ::sdict_$size [$w.sizetree insert {} end -tag nonselected -values "$size $name"]
+		# default selecte state, off.
+		set ::sdict($size) {off}
+		#puts [set [subst ::sdict$size]]
+	}
+	return $w
+}
+# Selects size for processing, setting tag as selected
+# w = widget name, sel = item ids, x = pointer x coordinate, y = yposition
+proc sizeTreeToggle { w sel {x 0} {y 0} } {
+	if {$x == 0} {
+		set id $sel
+	} else {
+		set element [$w identify element $x $y]
+		#Only change image if we press over it (check box)
+		if { $element ne "image" } {
+			return
+		}
+		set id [$w identify item $x $y]
+	}
+	foreach el $id {
+		set val [$w set $el size]
+		if { $::sdict($val) eq "on" } {
+			set ::sdict($val) {off}
+			set tag nonselected
+		} else {
+			set ::sdict($val) {on}
+			set tag selected
+		}
+		$w item [set ::sdict_$val] -tag $tag
+	}
+	#recalculate sizes
+	eventSize
+}
+# Sets selected tag to given treeview ids
+# w = target widget, id = list of ids, tag = tag to place
+# returns widget name
+proc sizeTreeSetTag { w id tag } {
+	foreach el $id {
+		set val [$w set $el size]
+		$w item [set ::sdict_$val] -tag $tag
+	}
+}
+proc sizeTreeDelete { sizes } {
+	puts $sizes
+	set slist {}
+	foreach size $sizes  {
+		set size [$::widget_name(resize_tree) set $size size]
+		array unset ::sdict $size
+		lappend slist [set ::sdict_$size]
+	}
+	$::widget_name(resize_tree) detach $slist
+}
+proc sizeTreeClear {} {
+	set slist {}
+	foreach size [array names ::sdict]  {
+		array unset ::sdict $size
+		lappend slist [set ::sdict_$size]
+	}
+	$::widget_name(resize_tree) detach $slist
+	eventSize
+}
+proc sizeTreeOps { w } {
+	ttk::frame $w
+	
+	ttk::button $w.clear -text "clear" -style small.TButton -command {sizeTreeClear}
+	ttk::separator $w.separator -orient horizontal
+	ttk::label $w.selectl -text "Select:"
+	ttk::button $w.all -text "all" -style small.TButton -command {$::widget_name(resize_tree) selection add [$::widget_name(resize_tree) children {}] }
+	ttk::button $w.inv -text "inv." -style small.TButton -command {$::widget_name(resize_tree) selection toggle [$::widget_name(resize_tree) children {}] }
+	ttk::button $w.sels -text "sels" -image $::img_on -style small.TButton -padding {2} -command {$::widget_name(resize_tree) selection set [$::widget_name(resize_tree) tag has selected]}
+
+	#Set focus on tree after pressing the buttons
+	foreach widget [list $w.all $w.inv $w.sels] {
+		bind $widget <ButtonRelease> { focus $::widget_name(resize_tree) }
+	}
+
+	pack $w.clear $w.separator $w.selectl $w.all $w.inv $w.sels -side left
+	pack $w.separator -expand 1 -padx 12
+	return $w
+}
+proc getSizesSel { {sizes {} } } {
+	set selected [$::widget_name(resize_tree) tag has selected]
+	foreach item $selected {
+		lappend sizes [$::widget_name(resize_tree) set $item size]
+	}
+	return $sizes
+}
+
+#set to <<TreeviewSelect>>
+# and add to '+' action buttons
+proc eventSize { } {
+	set sizes [getSizesSel]
+
+	treeAlterVal {getOutputSizesForTree $value 1} $::widget_name(flist) size osize
+
+	if { [llength $sizes] > 0 } {
+		#$::widget_name(st-right-ins) configure -text "[llength $sizes] Sizes set"
+		bindsetAction 0 0 sizesel $::widget_name(check-sz)
+	} else {
+		$::widget_name(check-sz) invoke
+		#$::widget_name(st-right-ins) configure -text ""
+	}
+}
+
+# -	proc delSizecol { st id } { }
+
+proc tabResize {st} {
 	ttk::frame $st -padding 6
 	
 	set ::widget_name(tabsize-left) [ttk::frame $st.lef]
 	set ::widget_name(tabsize-right) [ttk::frame $st.rgt ]
 	
-	grid $st.lef -column 1 -row 1 -sticky nesw
-	grid $st.rgt -column 2 -row 1 -sticky nesw
-	grid columnconfigure $st 1 -weight 1 -minsize 250
-	grid columnconfigure $st 2 -weight 2 -minsize 250
-	grid rowconfigure $st 1 -weight 1 
-	
-	set ::widget_name(st-right-ins) [ttk::label $st.rgt.ins -text ""]
-	pack $st.rgt.ins -side top -expand 0 -fill x
-	
-	# grid $st.ins -column 0 -row 1 -columnspan 5 -sticky we
-	ttk::label $st.lef.ann -text "   No Selection" -font "-size 14"
-	ttk::button $st.lef.add -text "+" -width 2 -style small.TButton -command [list addSizecol $st.lef 1 1]
-	grid $st.lef.ann -column 1 -row 1 -columnspan 4 -sticky nwse
-	grid $st.lef.add -column 0 -row 1 -sticky w
-	grid rowconfigure $st.lef 1 -minsize 28
+	pack $st.lef -side left -fill y -padx 12
+	pack $st.rgt -expand 1 -fill both
 
-	proc getSizesSel { w } {
-		set cols [grid slaves $w -column 2]
-		if { $cols == "$w.ann" } {
-			return 0
-		}
-		set gsels {}
-		set widx [expr {[string length $w]+4}]
-		foreach el $cols {
-			set idl [string range $el $widx end]
-			set wid [$w.wid$idl get]
-			set hei [$w.hei$idl get]
-			lappend gsels "$wid $hei"
-		}
-		return $gsels
-	}
+	set preset_browse [addPresetBrowser $st.lef.broswer]
+	set ::widget_name(tabsize-cust_size) [addSizeBox $st.lef.size]
 	
-	proc eventSize { w id } {
-		set sizesels [getSizesSel $w]
-		#Set the interface according to the size type px or %
-		if {$id > 0} {
-			set wc $w.wid$id
-			set sel [$wc get]
-			set pref "$w."
-			append hei $pref "hei" $id
-			
-			# String is emptu if they are editing, do nothing in that case
-			if { $sel eq "" } {
-				return
-			}
-			# Select height original pair for width
-			if { [catch {$hei current [$wc current]} ]} {
-				 $hei set $sel
-			}
-			# If size is percentage, remove height. 50%x50% values not supported
-			if { [string range $sel end end] == {%} } {
-				$hei set {} 
-				grid forget $hei
-				${pref}xmu$id configure -text "%"
-			# If size does not end like that bue text of label is %, pack height
-			} elseif { [lindex [${pref}xmu$id configure -text] end] == "%" } {
-				array set info [grid info $wc]
-				grid $hei -column 4 -row $info(-row) -sticky we
-				${pref}xmu$id configure -text "x"
-			}
-		}
+	addSizeOps $preset_browse $::widget_name(tabsize-cust_size)
+	pack [sizeTreeOps $st.rgt.size_ops ] -fill x
+	pack [sizeTreeList $st.rgt.size_tree] -expand 1 -fill both
 
-		if { [llength $sizesels] > 1 } {
-			treeAlterVal {getOutputSizesForTree $value 1} $::widget_name(flist) size osize
-			$::widget_name(st-right-ins) configure -text "[llength $sizesels] Sizes set"
-		} elseif { ([llength $sizesels] == 1) && ($sizesels != 0) } {
-			treeAlterVal {getOutputSizesForTree $value} $::widget_name(flist) size osize
-			$::widget_name(st-right-ins) configure -text "[llength $sizesels] Size set"
-			bindsetAction 0 0 sizesel $::widget_name(check-sz)
-		} elseif { [llength $sizesels] == 0 } {
-			$::widget_name(check-sz) invoke
-			$::widget_name(st-right-ins) configure -text ""
-		}
-	}
-	
-	proc addSizecol {st id row {state normal}} {
-		global wList hList
-		
-		grid forget $st.ann
-		ttk::combobox $st.wid$id -state readonly -width 8 -justify right -values $wList -validate key \
-	-validatecommand { regexp {^(()|[0-9])+(()|%%)$} %P }
-		$st.wid$id set [lindex $wList 0]
-		ttk::combobox $st.hei$id -state readonly -width 8 -values $hList -validate key \
-	-validatecommand { string is integer %P }
-		$st.hei$id set [lindex $hList 0]
-		comboBoxEditEvents $st.wid$id "eventSize $st $id"
-		comboBoxEditEvents $st.hei$id ""
-		# ttk::separator $st.sep -orient vertical -padding
-		ttk::label $st.xmu$id -text "x" -font "-size 18"	
-		ttk::button $st.del$id -text "-" -width 2 -style small.TButton -command [list delSizecol $st $id]
-		
-		grid $st.del$id $st.wid$id $st.xmu$id $st.hei$id -row $row
-		grid $st.del$id -column 1
-		grid $st.wid$id -column 2 -sticky we
-		grid $st.xmu$id -column 3 
-		grid $st.hei$id -column 4 -sticky we
-		grid columnconfigure $st {3} -pad 18
-		
-		incr id
-		incr row
-		$st.add configure -command [list addSizecol $st $id $row]
-		
-		eventSize $st 0
-	}
-
-	proc delSizecol { st id } {
-		# grid forget $st.del$id $st.wid$id $st.xmul$id $st.hei$id
-		destroy $st.del$id $st.wid$id $st.xmu$id $st.hei$id
-		set szgrid [llength [getSizesSel $st]]
-		
-		eventSize $st 0
-		if {[llength [grid slaves $st -row 1]] <= 1 } {
-			set i 1
-			set sboxl [lsort [grid slaves $st -column 2]]
-			set widx [expr {[string length $st]+4}]
-			foreach el $sboxl {
-				set idl [string range $el $widx end]
-				grid $st.del$idl $st.wid$idl $st.xmu$idl $st.hei$idl -row $i
-				incr i
-			}
-		}
-		if { [llength [grid slaves $st -column 2]] == 0 } {
-			$st.add configure -command [list addSizecol $st $id 1]
-			grid $st.ann -column 1 -row 1 -columnspan 4 -sticky nwse
-		}
-		return $szgrid
-	}
 	return $st
 }
-
 # --== Suffix and prefix ops
 proc guiOutput { w } {
 
@@ -1401,17 +1708,13 @@ proc pBarControl { itext {action none} { delay 0 } {max 0} } {
 	}
 }
 
-#Resize: returns the validated entry as wxh or N%
+#Resize: returns 0 if no size selected: #TODO remove the need of this func
 proc getFinalSizelist {} {
-	set sizeprelist [getSizesSel $::widget_name(tabsize-left)]
-	if {$sizeprelist != 0 } {
-		foreach {size} $sizeprelist {
-			lappend sizelist [join $size {x}]
-		}
-	} else {
-		set sizelist 0
+	set sizeslist [getSizesSel]
+	if {[llength $sizeslist] == 0 } {
+		return 0
 	}
-	return [lreverse $sizelist]
+	return $sizeslist
 }
 # Returns scaled size fitting in destination measures
 # w xh = original dimension dw x dh = Destination size
@@ -1456,6 +1759,8 @@ proc getOutputSizesForTree { size {formated 0}} {
 		#Add resize filter (better quality)
 		lappend fsizes $finalscale
 	}
+	#Do not return repeated sizes
+	set fsizes [lsort -unique $fsizes]
 	if {$formated} {
 		return [join $fsizes {, }]
 	}
@@ -1855,6 +2160,7 @@ if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 
 # ---=== Construct GUI
 artscriptStyles
+createImageVars
 # Pack Top: menubar. Middle: File, thumbnail, options, suffix output.
 # Bottom: status bar
 guiTopBar .f1
