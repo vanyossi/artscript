@@ -1,4 +1,4 @@
-#!/usr/bin/wish
+#! /usr/bin/env wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
 #  Version: 2.1.0pre
@@ -18,7 +18,7 @@
 package require Tk
 set ::version "v2.1.0-pre"
 
-# Do not show .dot files by default
+# Do not show .dot files by default. !fails in OSX
 catch {tk_getOpenFile foo bar}
 set ::tk::dialog::file::showHiddenVar 0
 set ::tk::dialog::file::showHiddenBtn 1
@@ -27,8 +27,8 @@ set ::tk::dialog::file::showHiddenBtn 1
 catch {ttk::style theme use clam}
 namespace eval img { }
 
-# array set ::settings $::artscript::usett
-# puts "array $::settings(ext)"
+# Loads default values for setting vars
+# Returns dict with all vars.
 proc artscriptSettings {} {
 	# Date values
 	set seconds [clock seconds]
@@ -97,28 +97,37 @@ proc artscriptSettings {} {
 		set ::$key [subst $value]
 	}
     return $settings
+    # TODO array set ::settings $::artscript::usett
+	# puts "array $::settings(ext)"
 }
 #--=====
-#Don't modify below this line
+# Don't modify below this line
 
 # Quick hack to keep GUI responsive, without using update extensively
+# TODO: remove
 proc updateGUI {} {
 	# set after inside to 1 to avoid weird behaviour progressbar
 	after idle [list after 1 set x 0]
 	vwait x
 }
-#Function to send message boxes
+# Implement alert type call for tk_messageBox
+# type,icon,title,msg => string
+# TODO: shuffle values to set least used with default vals
 proc alert {type icon title msg} {
-		tk_messageBox -type $type -icon $icon -title $title \
-		-message $msg
+		tk_messageBox -type $type -icon $icon -title $title -message $msg
 }
+# Find an executable program in path
+# Return bool
 # TODO: look for binary paths using global $env variable
 proc validate {program} {
 	expr { ![catch { exec which $program }] ? [return 1] : [return 0] }
 }
 
-#Prepares output name adding Suffix or Prefix
-#Checks if destination file exists and adds a standard suffix
+# Modifies iname adding suffix, prefix, size and ext.
+# If destination name file exists adds a standard suffix
+# iname => file string, preffix suffix sizesuffix => string to append,
+# orloc => filepath: Used to return destination to orignal loc in case of tmp files (KRA,ORA)
+# returns filename.ext
 proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} {orloc 0} } {
 	
 	if {!$::prefixsel} {
@@ -146,7 +155,8 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} {or
 	return $outname
 }
 
-# Parses the list $argv for :key value elements. returns list
+# Parses the list $argv for (:key value) elements. breaks if strin is file
+# returns list
 proc getUserOps { l } {
 	foreach f $l {
 		if { [file exists $f] } {
@@ -159,21 +169,24 @@ proc getUserOps { l } {
 	}
 }
 
-# Global variable declaration
+#-==== Global variable declaration
 array set ::settings [artscriptSettings]
 array set ::widget_name {}
 #puts $settings(sizes)
-# Global dictionaries, files values, files who process
+#-==== Global dictionaries, files values, files who process
 set ::inputfiles [dict create]
 set ::handlers [dict create]
 set ::ops [getUserOps $argv]
-# Find Optional dependencies (as global to search file only once)
+#-==== Find Optional dependencies (as global to search file only once)
 set ::hasgimp [validate "gimp"]
 set ::hasinkscape [validate "inkscape"]
 set ::hascalligra [validate "calligraconverter"]
+#-====# Global file counter TODO: separate delete to a list
+set ::fc 1
 
-# Get image properties Size, format and path from identify IM
-# Receives an absolute file path
+# Get image properties Size, format and path of Image
+# Receives an absolute (f)ile path
+# Returns dict or error if file is not supported
 proc identifyFile { f } {
 	set identify [list identify -quiet -format "%wx%h:%m:%M "]
 	if { [catch {set finfo [exec {*}$identify $f] } msg ] } {
@@ -186,8 +199,9 @@ proc identifyFile { f } {
 	}
 }
 
-# Parse SVG directly as Inkscape gives drawing not page wxh data
+# Get SVG file to get Width and Height.
 # Works with plain and normal svg saved from inkscape. TODO: testing
+# returns string {widtxheight} or 0 if nothing found
 proc getWidthHeightSVG { f } {
 	set fl [open $f]
 	set data [read $fl]
@@ -207,6 +221,8 @@ proc getWidthHeightSVG { f } {
 	}
 }
 
+# Place in globap inputfiles dictionary
+# id => global fc, fpath filepath, size WxH, ext .string, h string(inkscape,calligra,gimp...)
 proc setDictEntries { id fpath size ext h} {
 	global inputfiles handlers
 
@@ -226,8 +242,10 @@ proc setDictEntries { id fpath size ext h} {
 	addTreevalues $::widget_name(flist) $id ; # TODO set widget name as global
 }
 
-# Checks the files listed in args to be Filetypes supported from a path list
-set ::fc 1 ; # Global counter TODO: separate delete to a list
+
+# Validates the files supplied to be Filetypes supported by script
+# Search order: gimp(xcf,psd) > inkscape(svg,ai) > calligra(kra,ora,xcf,psd) > allelse
+# ltoval list
 proc listValidate { ltoval } {
 	global fc
 
@@ -313,7 +331,8 @@ proc listValidate { ltoval } {
 	}
 }
 
-#configuration an presets
+# Searchs for presets.config in script directory, parses and set values from file to global
+# TODO return dict, use dict values to set master settings array
 proc getUserPresets {} {
 	global ops presets
 	
@@ -357,6 +376,8 @@ proc getUserPresets {} {
 		}
 	}
 }
+# Change settings values from $::presets dict "s"
+# s string, setting preset name
 proc setUserPresets { s } {
 	global presets
 	if {![info exists presets]} {
@@ -392,7 +413,8 @@ getUserPresets
 setUserPresets "default"
 	
 # Returns total of files in dict except for flagged as deleted.
-# TODO all boolean is reversed. use incr to count
+# get_del bool, true = get all files loaded
+# returns integer
 proc getFilesTotal { { get_del 0} } {
 	global inputfiles
 	
@@ -414,19 +436,22 @@ proc updateWinTitle { } {
 	wm title . "Artscript $::version -- [getFilesTotal] Files selected"
 }
 
-# Returns a list with all keys that match value == c
+# Returns a list of ids of all elements that have args string in value
+# args string list (gimp inkscape, magick, calligra)
 proc putsHandlers {args} {
 	global handlers
 	foreach c $args {
-		set ${c}fdict [dict filter $handlers script {k v} {expr {$v eq $c}}]
-		lappend images {*}[dict keys [set ${c}fdict]]
+		lappend images {*}[dict filter $handlers script {k v} {expr {$v eq $c}}]
+		# lappend images {*}[dict keys [set ${c}fdict]]
 	}
-	return $images
-	#or puts [dict keys [subst $${c}fdict]]
+	return [dict keys $images]
 }
-
-proc openFiles {} {
-	global inputfiles
+# Shows open dialog for supported types
+# Validates the input and updates the window title
+proc openFiles [list [list path $::env(HOME)]] {
+	if {[info exists ::artscript(openpath)]} {
+		set path $::artscript(openpath)
+	}
 	set exts [list $::ext]
 	set types " \
 	 	\"{Suported Images}  $exts \"
@@ -436,16 +461,16 @@ proc openFiles {} {
 	{{PNG}           {.png}       } \
 	{{JPG, JPEG}     {.jpg .jpeg} } \
 	"
-	set files [tk_getOpenFile -filetypes $types -initialdir $::env(HOME) -multiple 1]
+	set files [tk_getOpenFile -filetypes $types -initialdir $path -multiple 1]
+	# Set initialdir global from files
+	set ::artscript(openpath) [file dirname [lindex $files 0]]
+
 	listValidate $files
-	
 	updateWinTitle
 }
 
 # ----=== Gui proc events ===----
-
-# Checks checkbox state, turns on if off and returns value.
-# TODO Make versatile to any checkbox
+# Sort arguments and send first 4 to global mod procs
 proc bindsetAction { args } {
 	foreach i $args {
 		incr n
@@ -454,6 +479,9 @@ proc bindsetAction { args } {
 	setGValue $1 $2
 	optionOn $3 $4
 }
+# Sets global value with value
+# gvar: global variable name
+# TODO, review for removal
 proc setGValue {gvar value} {
 	if {$gvar != 0} {
 		upvar #0 $gvar var
@@ -461,6 +489,9 @@ proc setGValue {gvar value} {
 		puts $var
 	}
 }
+# Toggles on state of checkbox using gvar
+# only if args elements are different.
+# args = widget checkbox path
 proc optionOn {gvar args} {
 	if {$gvar != 0} {
 		upvar #0 $gvar var
@@ -473,7 +504,7 @@ proc optionOn {gvar args} {
 		}
 	}
 }
-# Parent cb only off if all args are off
+# Parent checkbox only off if all args are off
 # proc master child1? child2?...
 proc  turnOffParentCB { parent args } {
 	set varpar [$parent cget -variable]
@@ -537,6 +568,7 @@ proc removeTreeItem { w i } {
 }
 
 # from http://wiki.tcl.tk/20930
+# Sorts tree values by column
 proc treeSort {tree col direction} {
 	# Build something we can sort
     set data {}
@@ -556,7 +588,8 @@ proc treeSort {tree col direction} {
     set cmd [list treeSort $tree $col [expr {!$direction}]]
     $tree heading $col -command $cmd
 }
-
+# Sorts tree column by pair tags On/off
+# tree widgetname, col, column, tag/antitag
 proc treeSortTagPair {tree col tag antitag} {
 	# Build something we can sort
 	set data {}
@@ -572,14 +605,15 @@ proc treeSortTagPair {tree col tag antitag} {
 
 # Updates global variable
 # var = global variable name, value = new value
+# TODO: check if necessary
 proc updateTextLabel { var value } {
 	upvar #0 $var ltext
 	set ltext $value
 	return
 }
-# Transform a value with the supplied script and writes it to dict and treeview
-# Script: script to run, w = widget read = dict readkey, write = key to write
-proc treeAlterVal { {script {puts $value}} w read write  } {
+# Transform a read with the supplied script and writes it to dict and treeview
+# Script: script to run, w = widget, write/read = dict key or tree column
+proc treeAlterVal { {script {set $value}} w read write  } {
 	global inputfiles
 	
 	foreach id [dict keys $inputfiles] {
@@ -600,16 +634,16 @@ proc treeAlterVal { {script {puts $value}} w read write  } {
 		}
 	}
 }
-
+# Updates checkbox state and output name values on tree (w)
 proc printOutname { w } {
 	if {$::prefixsel || $w != 0} {
 		bindsetAction 0 0 prefixsel $::widget_name(cb-prefix)
 	}
 	treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output
-	
 }
 
-# Check id of file selected and sends it to convert to process as preview.
+# Check id of file selected in filetree and sends it to convert to process as preview.
+# TODO add size preview selection
 proc showPreview {} {
 	set id [lindex [$::widget_name(flist) item [$::widget_name(flist) selection] -values] 0]
 	if { $id >= 0 } {
@@ -618,8 +652,8 @@ proc showPreview {} {
 	return
 }
 
-# First define subprocesses
-# makeThumb creates a thumbnail based on path (file type) makes requested sizes.
+# Creates a thumbnail and places it in user thumbnail folders
+# It uses md5 string to store the file name in thumbs dir
 proc makeThumb { path tsize } {
 	set cmd [dict create]
 	dict set cmd .ora {Thumbnails/thumbnail.png}
@@ -709,7 +743,7 @@ proc scrollTabs { w i {dir 1} } {
 		}
 }
 
-# Defines a combobox editable with right click
+# Defines combobox editable events.
 proc comboBoxEditEvents { w {script {optionOn watsel} }} {
 	bind $w <<ComboboxSelected>> $script
 	bind $w <Button-3> { %W configure -state normal }
@@ -718,7 +752,9 @@ proc comboBoxEditEvents { w {script {optionOn watsel} }} {
 	bind $w <KeyRelease> $script
 	bind $w <FocusOut> { %W configure -state readonly }
 }
-#Convert RGB to HSV, to calculate contrast colors
+
+# Convert RGB to HSV, to calculate contrast colors
+# Returns float list => hue, saturation, value, lightness, luma 
 proc rgbtohsv { r g b } {
 	set r1 [expr {$r/255.0}]
 	set g1 [expr {$g/255.0}]
@@ -751,6 +787,9 @@ proc rgbtohsv { r g b } {
 	return [list $h [format "%0.2f" $s] [format "%0.2f" $v] [format "%0.2f" $l] [format "%0.2f" $luma]]
 }
 
+# Calls tk colorchooser and sets color on canvas element widget.
+# return hex color string
+# TODO, remove hardcoded names to allow use on other canvas widgets
 proc setColor { w var item col {direct 1} { title "Choose color"} } {
 	upvar 1 $var txtcol ; # review if txtcol can be deleted
 	set col [lindex $col end]
@@ -768,12 +807,15 @@ proc setColor { w var item col {direct 1} { title "Choose color"} } {
 	return $col
 }
 
+# Returns the most contrasting color, black or white, based on luma values
 proc getContrastColor { color } {
 	set rgbs [winfo rgb . $color]
 	set luma [lindex [rgbtohsv {*}$rgbs ] 4]
 	return [expr { $luma >= 105 ? "black" : "white" }]
 }
 
+# Draws watermark color swatches
+# (w)idgetname, args = color list
 proc drawSwatch { w args } {
 	set args {*}$args
 	set chal [expr {ceil([llength $args]/2.0)}] ; # Half swatch list
@@ -802,6 +844,7 @@ proc drawSwatch { w args } {
 }
 
 # from http://wiki.tcl.tk/534
+# Convert rgb to hex values
 proc dec2rgb {r {g 0} {b UNSET} {clip 0}} {
 	if {![string compare $b "UNSET"]} {
 		set clip $g
@@ -826,7 +869,9 @@ proc dec2rgb {r {g 0} {b UNSET} {clip 0}} {
 	  [expr {($g>$max)?$max:(($g<0)?0:$g)}] \
 	  [expr {($b>$max)?$max:(($b<0)?0:$b)}]]
 }
-
+# Returns sorted dict of colors
+# Colors can be sorted, or grouped by luma, saturation, hsv...
+# colist list, sortby integer (index of rgbtohsv return vals)
 proc getswatches { {colist 0} {sortby 1}} {
 	# Set a default palette, colors have to be in rgb
 	set swcol { Black {0 0 0} English-red {208 0 0} {Dark crimson} {120 4 34} Orange {254 139 0} Sand {193 177 127} Sienna {183 65 0} {Yellow ochre} {215 152 11} {Cobalt blue} {0 70 170} Blue {30 116 253} {Bright steel blue} {170 199 254} Mint {118 197 120} Aquamarine {192 254 233} {Forest green} {0 67 32} {Sea green} {64 155 104} Green-yellow {188 245 28} Purple {137 22 136} Violet {77 38 137} {Rose pink} {254 101 203} Pink {254 202 218} {CMYK Cyan} {0 254 254} {CMYK Yellow} {254 254 0} White {255 255 255} }
@@ -856,6 +901,7 @@ proc getswatches { {colist 0} {sortby 1}} {
 	}
 	return [dict values $swfinal]
 }
+
 # Ttk style modifiers
 proc artscriptStyles {} {
 	ttk::style layout small.TButton {
@@ -867,6 +913,7 @@ proc artscriptStyles {} {
 		}
 	ttk::style configure small.TButton -padding {6 0} -width 0
 }
+
 # ----=== Gui Construct ===----
 # TODO Make every frame a procedure to ease movement of the parts
 # Horizontal panel for placing operations that affect Artscript behaviour
@@ -892,6 +939,7 @@ proc guiMakePaned { w orientation } {
 	ttk::panedwindow $w -orient $orientation
 	return $w
 	}
+# Add children to panedwindows or notebooks
 proc guiAddChildren { w args } {
 	foreach widget $args {
 		$w add $widget	
@@ -969,7 +1017,7 @@ proc guiOptionTabs { w } {
 	
 	return $w
 }
-# Set a var to ease modularization. TODO: procs
+
 proc tabWatermark { wt } {
 
 	ttk::frame $wt -padding 6
@@ -1220,6 +1268,7 @@ proc sizeTreeAddWxH { operator width height } {
 	sizeTreeAdd $size
 	return
 }
+# Add all preset values to sizeTree
 proc sizeTreeAddPreset { w } {
 	set preset [$w get]
 	if { $preset eq {} } {
@@ -1229,11 +1278,13 @@ proc sizeTreeAddPreset { w } {
 		sizeTreeAdd $size nonselected off
 	}
 }
+# Add selected value from preset childs.
 proc sizeTreeAddPresetChild { w } {
 	set size [$w get]
 	sizeTreeAdd $size
 }
 
+# Adds size to sizetree with default value on
 proc sizeTreeAdd { size {sel "selected"} {state "on"} } {
 	if { $size eq {} } {
 		return
@@ -1253,6 +1304,7 @@ proc sizeTreeAdd { size {sel "selected"} {state "on"} } {
 	#puts [set $val]
 	return
 }
+
 # Constructs size box (Probably this has to be cut into pieces)
 proc addSizeBox { w } {
 	ttk::frame $w
@@ -1443,29 +1495,24 @@ proc sizeTreeSetTag { w id tag } {
 		$w item [set ::sdict_$val] -tag $tag
 	}
 }
+# Deletes sizes from sizeTree and unsets from array
 proc sizeTreeDelete { sizes } {
-	puts $sizes
 	set slist {}
-	foreach size $sizes  {
-		set size [$::widget_name(resize_tree) set $size size]
-		array unset ::sdict $size
-		lappend slist [set ::sdict_$size]
-	}
-	$::widget_name(resize_tree) detach $slist
-}
-proc sizeTreeClear {} {
-	set slist {}
-	foreach size [array names ::sdict]  {
+	foreach size $sizes {
+		if {[scan $size "I%d" tmp] > 0} {
+			set size [$::widget_name(resize_tree) set $size size]
+		}
 		array unset ::sdict $size
 		lappend slist [set ::sdict_$size]
 	}
 	$::widget_name(resize_tree) detach $slist
 	eventSize
 }
+
 proc sizeTreeOps { w } {
 	ttk::frame $w
 	
-	ttk::button $w.clear -text "clear" -style small.TButton -command {sizeTreeClear}
+	ttk::button $w.clear -text "clear" -style small.TButton -command {sizeTreeDelete [array names ::sdict]}
 	ttk::separator $w.separator -orient horizontal
 	ttk::label $w.selectl -text "Select:"
 	ttk::button $w.all -text "all" -style small.TButton -command {$::widget_name(resize_tree) selection add [$::widget_name(resize_tree) children {}] }
@@ -1481,6 +1528,7 @@ proc sizeTreeOps { w } {
 	pack $w.separator -expand 1 -padx 12
 	return $w
 }
+# Returns list of sizes with selected tag
 proc getSizesSel { {sizes {} } } {
 	set selected [$::widget_name(resize_tree) tag has selected]
 	foreach item $selected {
@@ -1851,7 +1899,8 @@ proc getQuality { ext } {
 	}
 	return $quality
 }
-
+# Adds command to fileevent handler
+# cmd exec command, script last cmd executed
 proc runCommand {cmd script} {
     # output command $cmd
     set f [open "| $cmd 2>@1" r]
@@ -1859,6 +1908,9 @@ proc runCommand {cmd script} {
     fileevent $f readable  [list handleFileEvent $f $script]
 }
 
+# Closes f event if error or end of executing
+# Add scritp to event cue when finishing
+# That allows for control in comand order 
 proc closePipe {f script} {
     # turn blocking on so we can catch any errors
     fconfigure $f -blocking true
@@ -1868,7 +1920,8 @@ proc closePipe {f script} {
     }
     after idle [list after 0 $script]
 }
-
+# Do something depending on what the fileevent returns
+# f fileevent, script, pass to closePipe
 proc handleFileEvent {f script} {
     set status [catch { gets $f line } result]
     if { $status != 0 } {
@@ -1963,6 +2016,7 @@ proc processHandlerFiles { index ilist {step 1}} {
 		set imgv [lindex $ilist $index]
 		incr index
 		
+		# Stop process if no more files to convert
 		if { $imgv eq {} } {
 			set ::artscript_convert(extract) false
 			return
@@ -2008,10 +2062,12 @@ proc processHandlerFiles { index ilist {step 1}} {
 		} else {
 			relauchHandler $index $ilist
 		}
-	}}
+	} }
 	return
 }
 
+# After running processHandlerFiles check if file created
+# append to global dir if success call for next process.
 proc relauchHandler {index ilist} {
 	
 	set outname $::artscript_convert(outname)
@@ -2059,6 +2115,7 @@ proc doConvert { {step 0} {id ""} } {
 		after idle [list after 0 [list doConvert 1 $id]]
 	} 1 {
 		if {$::artscript_convert(extract)} {
+			# wait until extraction ends to begin converting
 			vwait ::artscript_convert(extract)
 		}
 		set idnumber [lindex $::artscript_convert(files) $::artscript_convert(count)]
