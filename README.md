@@ -1,10 +1,21 @@
 artscriptk
 ==========
 
-Artscript is a GUI wrapper for Imagemagick actions (Watermarking, Resize, Collages) that allows to work with KRA, ORA, XCF, aiming for clarity in use while obtaining high quality results.
+Artscript is a small app to easy convert from production file images(KRA,XCF,PSD,ORA,SVG) to universal formats(JPG, PNG, GIF or WEBM). If installed tt uses gimp, inkscape and calligra in console mode to render PNG files in batch. Finally ImageMagick to arrange and finetune the final images. Artscript is made for digital painters, as such it aims for high quality results, not speed.
+
 
 #About
 *Script originally inspired by David Revoy (www.davidrevoy.com , info@davidrevoy.com )*
+
+Imagemagick tools are used to scale, watermark and build image contact sheets(Collage Mode). It can accept all file formats supported by Imagemagick but for speed purposes I setted a filter for suggested input files.
+
+*Input file formats:* .ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tif .xcf .xpm .webp
+
+Output formats are configured for quality, for that reason not all formats are supported yet.
+*Output formats:* .jpg .png .gif .webm .webm(lossy)
+
+There is a special output format mode to transform any image supported by Krita to ORA
+*Make ora suggested:* .psd .kra .png
 
 #### Goal
 - Aid in the deploy of digital artwork for media with the best possible quality
@@ -17,24 +28,27 @@ GPL 3.0
 ### Disclamer
 
 I'm not a developer, what you have is the product of learning programming on my spare time.
-There might be some rough edges and bugs, please feel free to report them using github
+There might be some rough edges and bugs and I encourage you to report them using github.
 
-I tested artscript2 as much as I could to avoid corrupted files and unwanted overwrites
+I tested artscript2 as much as I could to avoid corrupted files and unwanted overwrites, but bad things could happen. You use it at your own risk.
 
 ### Dependencies
 
-- **Tk:** For Gui.  
+- **Tcl/Tk:** 
 - **ImageMagick (6.7.5 and up):** Library for manipulating image formats.
 - **zip:** Get info from ORA and KRA files (width height and the likes)
 - **md5:** Read and generate thumbnails
-- **calligraconverter (optional):** Handles the converts from ORA and KRA files to PNG
-- **inkscape (optional):** Handles mostly SVG and AI converts. If inkscape is not found Imagemagick will perform SVG transforms
+- **calligraconverter (optional):** Handles the extraction from ORA and KRA files to PNG. (Also does PSD if gimp is not present)
+- **inkscape (optional):** Handles mostly SVG and AI converts. If not found Imagemagick will perform SVG transforms
+- **gimp (optional):** Handles XCF and PSD extraction to PNG. If not found Imagemagick will perform XCF transforms
 
 
 ### What it does
-Artscript is a GUI wrapper for Imagemagick actions (Watermarking, Resize, Collages) that allows to work with KRA, ORA, XCF, aiming for clarity in use while obtaining high quality results.
+In short, convert a bunch of images from format A to format B.
 
-It's best used combined with a file manager (ex. thunar) or image manager (ex.geeqie) to quickly populate the file list and from there modify the options to add watermar, resizes, set name ouput.
+The advantage over other applications is the integration of gimp, inkscape and calligraconvert to the batch actions.
+
+It's best used combined with a file manager (ex. thunar) or image manager (ex.geeqie) to quickly populate the file list from a selection. But it can be used standalone.
 
 It's perfect for batch preparing images before publishing (web for ex), create thumbnails or collage of images in the directory, for example
 
@@ -140,7 +154,7 @@ All comboboxes can be edited pressing "Right CLick" to enter edit mode
 
 Press Convert to Run options
 
-### Collage (In Development)
+### Collage (v2 In Development)
 - To make a Collage from input files set "Make Collage Please" to on
 - Make Collage Please checkbutton will generate a Tiled image containing all selected images. It will add a watermark if you set it so and a suffix.
 
