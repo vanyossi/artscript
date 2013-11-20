@@ -1148,8 +1148,8 @@ SywzpeTcuFROT+9PBoElQixaBAJMZcnEIDOXqDSD3Giu2I0gIQAgv4NECAA7
 # Hides or shows height combobox depending if value is wxh or w%
 # size => stringxstring or string%x
 # returns pair list
-proc sizeToggleWidgetWxH { size } {
-	set w $::widget_name(tabsize-cust_size)
+proc sizeToggleWidgetWxH { size {name "resize"} } {
+	set w $::widget_name(tab_${name}_size)
 
 	scan $size "%d%s" width height
 	set sep [string index $height 0]
@@ -1159,7 +1159,7 @@ proc sizeToggleWidgetWxH { size } {
 		pack $w.hei -side left -after $w.xmu
 		$w.hei state !disabled
 		$w.xmu configure -text "x" -anchor center
-		bind $w.xmu <Button> [list sizeAlterRatio]
+		bind $w.xmu <Button> [list sizeAlterRatio $name]
 		set size [list wid $width hei $height]
 
 	} elseif { $sep eq "%" } {
@@ -1168,7 +1168,7 @@ proc sizeToggleWidgetWxH { size } {
 
 		$w.xmu configure -text "%" -anchor w
 		bind $w.xmu <Button> {}
-		bind $w.wid <KeyRelease> [list setBind $w]
+		bind $w.wid <KeyRelease> [list setBind $w $name]
 
 		set size [list wid $width hei $width]
 	}
@@ -1192,53 +1192,53 @@ proc sizeRatioToFloat { w } {
 	return $ratio
 }
 # Flips width and heigth field values and sets a new ratio if it's set
-proc sizeAlterRatio { } {
+proc sizeAlterRatio { name } {
 	# Get w and h values
-	set wid [$::widget_name(resize_wid_entry) get]
-	set hei [$::widget_name(resize_hei_entry) get]
+	set wid [$::widget_name(${name}_wid_entry) get]
+	set hei [$::widget_name(${name}_hei_entry) get]
 	
 	if { ($wid eq {}) || ($hei eq {}) } {
 		return 0
 	}
 	# reverse width and height values
-	$::widget_name(resize_wid_entry) set $hei
-	$::widget_name(resize_hei_entry) set $wid
+	$::widget_name(${name}_wid_entry) set $hei
+	$::widget_name(${name}_hei_entry) set $wid
 	
 	# Get current ratio, calculate new ratio, else format 2:3, reverse
-	set rawratio [$::widget_name(resize_ratio) get]
+	set rawratio [$::widget_name(${name}_ratio) get]
 	if { ($rawratio ne {}) && ([string is double $rawratio]) } {
 		set ratio [expr {[format "%.1f" $hei] / $wid}]
-		$::widget_name(resize_ratio) set $ratio
+		$::widget_name(${name}_ratio) set $ratio
 	} else {
-		$::widget_name(resize_ratio) set [join [lreverse [split $rawratio {:}]] {:}]
+		$::widget_name(${name}_ratio) set [join [lreverse [split $rawratio {:}]] {:}]
 		# $::widget_name(resize_ratio) set [ sizeRatioToFloat $::widget_name(resize_ratio) 1 ]
 	}
 }
 # Changes dimension, width or height in respect to Aspect ratio
 # Alter == wid or hei   w, widget father.
-proc sizeAlter { w alter } {
+proc sizeAlter { w alter name } {
 	set ratio [sizeRatioToFloat $w.rat]
-	set wid [$::widget_name(resize_wid_entry) get]
-	set hei [$::widget_name(resize_hei_entry) get]
+	set wid [$::widget_name(${name}_wid_entry) get]
+	set hei [$::widget_name(${name}_hei_entry) get]
 
 	if {($ratio != 0) && ($hei eq {})} {
 		set hei $wid
 	}
 
-	if { [catch {set val [dict get [sizeToggleWidgetWxH ${wid}x${hei}] $alter]} ]} {
+	if { [catch {set val [dict get [sizeToggleWidgetWxH ${wid}x${hei} $name] $alter]} ]} {
 		return
 	}
-	setDimentionRatio $ratio $val $alter
+	setDimentionRatio $ratio $val $name $alter
 }
 # Set size wid Bind, back to default value
-proc setBind { w } {
-	bind $w.wid <KeyRelease> [list sizeAlter $w wid]
+proc setBind { w name } {
+	bind $w.wid <KeyRelease> [list sizeAlter $w wid $name]
 }
 
 # Calculates counterpart dimension depending on ratio
 # sets value to target widget from ( mod ) values
 # returns ratio
-proc setDimentionRatio { r val {mod "wid"} } {
+proc setDimentionRatio { r val {name "resize"} {mod "wid"} } {
 	if { ($val eq {}) || ($r == 0) } {
 		return
 	}
@@ -1252,7 +1252,7 @@ proc setDimentionRatio { r val {mod "wid"} } {
 			set target "hei"
 		}
 	}
-	$::widget_name(resize_${target}_entry) set $val
+	$::widget_name(${name}_${target}_entry) set $val
 	return $r
 }
 # Add selected W and H from fields, selected and groupd "custom"
@@ -1309,41 +1309,37 @@ proc sizeTreeAdd { size {sel "selected"} {state "on"} } {
 }
 
 # Constructs size box (Probably this has to be cut into pieces)
-proc addSizeBox { w } {
+proc addSizeBox { w name } {
 	ttk::frame $w
 	
 	set ratiovals {1:1 1.4142 2:1 3:2 4:3 5:4 5:7 8:5 1.618 16:9 16:10 14:11 12:6 2.35 2.40}
-	set ::widget_name(resize_ratio) [ttk::combobox $w.rat -width 6 -state readonly -values $ratiovals -validate key -validatecommand { regexp {^(()|[0-9])+(()|(\.)|(:))?(([0-9])+|())$} %P } ]
-	comboBoxEditEvents $w.rat "sizeAlter $w wid"
+	set ::widget_name(${name}_ratio) [ttk::combobox $w.rat -width 6 -state readonly -values $ratiovals -validate key -validatecommand { regexp {^(()|[0-9])+(()|(\.)|(:))?(([0-9])+|())$} %P } ]
+	comboBoxEditEvents $w.rat [list sizeAlter $w wid $name]
 	#bind $w.rat <KeyRelease> [list sizeRatioToFloat $w.rat]
 	
 	ttk::label $w.lwxh -text ":"
 	# set walppvals {2560 1920 1800 1680 1600 1440 1366 1280 1200 1080 1024 960 864 800 768 600}
-	set ::widget_name(resize_wid_entry) [ ttk::spinbox $w.wid -width 8 -increment 10 -from 1 -to 5000 \
+	set ::widget_name(${name}_wid_entry) [ ttk::spinbox $w.wid -width 8 -increment 10 -from 1 -to 5000 \
 	  -validate key -validatecommand { regexp {^(()|[0-9])+(()|%%)$} %P } ]
-	bind $::widget_name(resize_wid_entry) <ButtonRelease> [list sizeAlter $w wid]
-	bind $::widget_name(resize_wid_entry) <KeyRelease> [list sizeAlter $w wid]
+	bind $::widget_name(${name}_wid_entry) <ButtonRelease> [list sizeAlter $w wid $name]
+	bind $::widget_name(${name}_wid_entry) <KeyRelease> [list sizeAlter $w wid $name]
 
-	# comboBoxEditEvents $w.wid "sizeAlter $w wid"
-	# bind $w.wid <KeyRelease> [list sizeAlter $w "wid"]
+	# comboBoxEditEvents $w.wid "sizeAlter $w wid $name"
+	# bind $w.wid <KeyRelease> [list sizeAlter $w "wid $name"]
 	# bind $w.wid <Shift-Button><Shift-Motion> { puts "[winfo pointerx .] %w"}
 
-	set ::widget_name(resize_hei_entry) [ ttk::spinbox $w.hei -width 8 -increment 10 -from 1 -to 5000 \
+	set ::widget_name(${name}_hei_entry) [ ttk::spinbox $w.hei -width 8 -increment 10 -from 1 -to 5000 \
 		-validate key -validatecommand { string is integer %P } ]
-	bind $::widget_name(resize_hei_entry) <ButtonRelease> [list sizeAlter $w hei]
-	bind $::widget_name(resize_hei_entry) <KeyRelease> [list sizeAlter $w hei]
-	# comboBoxEditEvents $w.hei "sizeAlter $w hei"
-	# bind $w.hei <KeyRelease> [list sizeAlter $w "hei"]
+	bind $::widget_name(${name}_hei_entry) <ButtonRelease> [list sizeAlter $w hei $name]
+	bind $::widget_name(${name}_hei_entry) <KeyRelease> [list sizeAlter $w hei $name]
+	# comboBoxEditEvents $w.hei "sizeAlter $w hei $name"
+	# bind $w.hei <KeyRelease> [list sizeAlter $w "hei $name"]
 	
 	# comboBoxEditEvents $w.wid$id "eventSize $w $id"
 	ttk::label $w.xmu -text "x" -font "-size 18" -anchor center
-	bind $w.xmu <Button> [list sizeAlterRatio]
-	
-	ttk::label $w.title -text "Add custom size. ratio : wxh" -font "-size 12" 
-	pack $w.title -side top -fill x
-	
-	ttk::button $w.add -text "+" -padding {2 0} -style small.TButton -command [list sizeTreeAddWxH $w.xmu $w.wid $w.hei]
-	pack $w.rat $w.lwxh $w.wid $w.xmu $w.hei $w.add -side left -fill x
+	bind $w.xmu <Button> [list sizeAlterRatio $name]
+
+	pack $w.rat $w.lwxh $w.wid $w.xmu $w.hei -side left -fill x
 	pack configure $w.xmu -expand 1
 
 	return $w
@@ -1360,7 +1356,7 @@ proc sizeEdit { w } {
 	set size [$w get]
 	set sizes [sizeToggleWidgetWxH $size]
 
-	set w $::widget_name(tabsize-cust_size)
+	set w $::widget_name(tab_resize_size)
 	
 	dict with sizes {
 		$w.wid set $wid
@@ -1548,29 +1544,36 @@ proc eventSize { } {
 	treeAlterVal {getOutputSizesForTree $value 1} $::widget_name(flist) size osize
 
 	if { [llength $sizes] > 0 } {
-		#$::widget_name(st-right-ins) configure -text "[llength $sizes] Sizes set"
+		# $::option_tab tab $::st -image $::img_on
 		bindsetAction 0 0 sizesel $::widget_name(check-sz)
 	} else {
 		$::widget_name(check-sz) invoke
-		#$::widget_name(st-right-ins) configure -text ""
+		# $::option_tab tab $::st -image $::img_off
 	}
 }
 
 # -	proc delSizecol { st id } { }
 
-proc tabResize {st} {
+proc tabResize { st } {
 	ttk::frame $st -padding 6
 	
 	set ::widget_name(tabsize-left) [ttk::frame $st.lef]
-	set ::widget_name(tabsize-right) [ttk::frame $st.rgt ]
+	set ::widget_name(tabsize-right) [ttk::frame $st.rgt]
 	
 	pack $st.lef -side left -fill y -padx 12
 	pack $st.rgt -expand 1 -fill both
 
 	set preset_browse [addPresetBrowser $st.lef.broswer]
-	set ::widget_name(tabsize-cust_size) [addSizeBox $st.lef.size]
+	set ::widget_name(tab_resize_size) [addSizeBox $st.lef.size "resize"]
+	# pack widgets around addSizeBox
+	set w $::widget_name(tab_resize_size)
+	ttk::label $w.title -text "Add custom size. ratio : wxh" -font "-size 12" 
+	ttk::button $w.add -text "+" -padding {2 0} -style small.TButton -command [list sizeTreeAddWxH $w.xmu $w.wid $w.hei]
 	
-	addSizeOps $preset_browse $::widget_name(tabsize-cust_size)
+	pack $w.title -before $w.rat -side top -fill x
+	pack $w.add -after $w.hei -side left
+	
+	addSizeOps $preset_browse $::widget_name(tab_resize_size)
 	pack [sizeTreeOps $st.rgt.size_ops ] -fill x
 	pack [sizeTreeList $st.rgt.size_tree] -expand 1 -fill both
 
