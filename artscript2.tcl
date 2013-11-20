@@ -1882,7 +1882,7 @@ proc getResize { size dsize filter unsharp} {
 		set resize [concat $resize -resize 80% +repage $unsharp]
 	}
 	# Final resize output
-	set resize [concat $resize -resize ${finalscale}${operator} +repage "-colorspace sRGB"]
+	set resize [concat $resize -resize ${finalscale}${operator} +repage "-colorspace sRGB" $unsharp]
 	
 	return $resize
 }
@@ -2167,7 +2167,7 @@ proc doConvert { {step 0} {id ""} } {
 					} else {
 						set soname "show:"
 					}
-					set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) $unsharp $::alfaoff $::artscript_convert(quality) $soname]
+					set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) $::alfaoff $::artscript_convert(quality) $soname]
 					#catch { exec {*}$convertCmd }
 					runCommand $convertCmd [list doConvert 1]
 					# after idle [list after 0 [list set ::fvar [catch { exec convert {*}$convertCmd &}]]]
