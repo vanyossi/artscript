@@ -601,6 +601,9 @@ proc treeSortTagPair {tree col tag antitag} {
     foreach info [lsort $data] {
         $tree move $info {} [incr r]
     }
+    # reverse sort order
+    set cmd [list treeSortTagPair $tree $col $antitag $tag]
+    $tree heading $col -command $cmd
 }
 
 # Updates global variable
