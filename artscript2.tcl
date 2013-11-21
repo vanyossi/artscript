@@ -191,7 +191,7 @@ set ::fc 1
 proc identifyFile { f } {
 	set identify [list identify -quiet -format "%wx%h:%m:%M "]
 	if { [catch {set finfo [exec {*}$identify $f] } msg ] } {
-		return -code error "$msg"
+		return -code break "$msg"
 	} else {
 		foreach {size ext path} [split [lindex $finfo 0] ":"] {
 			set valist "size $size ext [string tolower $ext] path $path"
@@ -706,7 +706,7 @@ proc showThumb { w f {tryprev 1}} {
 
 	# Do not process if selection is multiple
 	if {[llength $f] > 1} {
-		return -code 3
+		return -code break
 	}
 	# TODO, get value with no lindex: .t set $f id
 	set id [lindex [$::widget_name(flist) item $f -values] 0]
@@ -804,23 +804,36 @@ proc rgbtohsv { r g b } {
 # Calls tk colorchooser and sets color on canvas element widget.
 # return hex color string
 # TODO, remove hardcoded names to allow use on other canvas widgets
-proc setColor { w item col {direct 1} { title "Choose color"} } {
+proc setColor { w item col {chooser 1} } {
+	set identify_tag [lindex [$w itemcget $item -tags] 0]
+	switch -- $identify_tag {
+		"bg"          { set title "Collage Background Color"}
+		"border"      { set title "Collage Border Color"}
+		"label"       { set title "Collage Label Color"}
+		"watermark"   { set title "Watermark Text Color"}
+		"default"     { set title "Choose color"}
+	}
 	set col [lindex $col end]
 
 	#Call color chooser and store value to set canvas color and get rgb values
-	if { $direct } {
+	if { $chooser } {
 		set col [tk_chooseColor -title $title -initialcolor $col -parent .]
 	}
 	# User selected a color and not cancel then
-	if { [expr {$col ne "" ? 1 : 0}] } {
+	if { $col ne "" } {
 		$w itemconfigure $item -fill $col
+	} else {
+		return -code break "No color selected"
 	}
 	return $col
 }
 # Calls color chooser and set contrast color for watermark text
 # w widget to modify, args pass to setColor
 proc setColorAndContrast { w args } {
-	set col [setColor $w {*}$args]
+	# set col [setColor $w {*}$args]
+	if { [catch {set col [setColor $w {*}$args]} msg] } {
+		return
+	}
 	$w itemconfigure $::canvasWatermark(main) -outline [getContrastColor $col]
 	set ::wmcol $col
 }
@@ -1110,7 +1123,7 @@ proc tabWatermark { wt } {
 
 	canvas $wt.st.chos  -width 62 -height 26
 	
-	set ::canvasWatermark(main) [$wt.st.chos create rectangle 2 2 26 26 -fill $::wmcol -width 2 -outline [getContrastColor $::wmcol] -tags {main}]
+	set ::canvasWatermark(main) [$wt.st.chos create rectangle 2 2 26 26 -fill $::wmcol -width 2 -outline [getContrastColor $::wmcol] -tags {watermark main}]
 	$wt.st.chos bind main <Button-1> { setColorAndContrast %W $::canvasWatermark(main) [%W itemconfigure $::canvasWatermark(main) -fill] }
 
 	set wmswatch [getswatches $::wmcolswatch]
