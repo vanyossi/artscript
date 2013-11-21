@@ -107,8 +107,9 @@ proc artscriptSettings {} {
 # TODO: remove
 proc updateGUI {} {
 	# set after inside to 1 to avoid weird behaviour progressbar
-	after idle [list after 1 set x 0]
-	vwait x
+	update idletasks
+	# after idle [list after 1 set x 0]
+	# vwait x
 }
 # Implement alert type call for tk_messageBox
 # type,icon,title,msg => string
