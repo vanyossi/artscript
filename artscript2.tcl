@@ -794,7 +794,6 @@ proc rgbtohsv { r g b } {
 # return hex color string
 # TODO, remove hardcoded names to allow use on other canvas widgets
 proc setColor { w var item col {direct 1} { title "Choose color"} } {
-	upvar 1 $var txtcol ; # review if txtcol can be deleted
 	set col [lindex $col end]
 
 	#Call color chooser and store value to set canvas color and get rgb values
@@ -804,10 +803,15 @@ proc setColor { w var item col {direct 1} { title "Choose color"} } {
 	# User selected a color and not cancel then
 	if { [expr {$col ne "" ? 1 : 0}] } {
 		$w itemconfigure $item -fill $col
-		$w itemconfigure $::canvasWatermark(main) -outline [getContrastColor $col]
-		set txtcol $col
 	}
 	return $col
+}
+# Calls color chooser and set contrast color for watermark text
+# w widget to modify, args pass to setColor
+proc setColorAndContrast { w args } {
+	set col [setColor $w {*}$args]
+	$w itemconfigure $::canvasWatermark(main) -outline [getContrastColor $col]
+	set ::txtcol $col
 }
 
 # Returns the most contrasting color, black or white, based on luma values
@@ -837,7 +841,7 @@ proc drawSwatch { w args } {
 		incr i
 		set ::canvasWatermark($i) [$w create rectangle $x $y [expr {$x+$cw}] [expr {$y+$ch-1}] -fill $swatch -width 1 -outline {gray26} -tags {swatch}]
 		set col [lindex [$w itemconfigure $::canvasWatermark($i) -fill] end]
-		$w bind $::canvasWatermark($i) <Button-1> [list setColor $w ::wmcol $::canvasWatermark(main) $col 0 ]
+		$w bind $::canvasWatermark($i) <Button-1> [list setColorAndContrast $w ::wmcol $::canvasWatermark(main) $col 0 ]
 		if { $i == $chal } {
 			incr y $ch
 			set x [expr {$x-($cw*$i)}]
@@ -1096,7 +1100,7 @@ proc tabWatermark { wt } {
 	canvas $wt.st.chos  -width 62 -height 26
 	
 	set ::canvasWatermark(main) [$wt.st.chos create rectangle 2 2 26 26 -fill $::wmcol -width 2 -outline [getContrastColor $::wmcol] -tags {main}]
-	$wt.st.chos bind main <Button-1> { setColor %W wmcol $::canvasWatermark(main) [%W itemconfigure $::canvasWatermark(main) -fill] }
+	$wt.st.chos bind main <Button-1> { setColorAndContrast %W wmcol $::canvasWatermark(main) [%W itemconfigure $::canvasWatermark(main) -fill] }
 
 	set wmswatch [getswatches $::wmcolswatch]
 	drawSwatch $wt.st.chos $wmswatch
