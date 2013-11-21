@@ -262,7 +262,11 @@ proc listValidate { ltoval } {
 
 		if { [regexp {^(.xcf|.psd)$} $filext ] && $::hasgimp } {
 
-			set size [lindex [exec identify -format "%wx%h " $i ] 0]
+			runCommand [concat identify -format "%wx%h " $i] [list set ::validate_wait 1] ::artscript(tmp_size)
+			vwait ::validate_wait
+			set size $::artscript(tmp_size)
+
+			#set size [lindex [exec identify -format "%wx%h " $i ] 0]
 
 			setDictEntries $::fc $i $size $filext "g"
 			incr ::fc
@@ -1935,11 +1939,11 @@ proc getQuality { ext } {
 }
 # Adds command to fileevent handler
 # cmd exec command, script last cmd executed
-proc runCommand {cmd script} {
+proc runCommand {cmd script {var ""}} {
     # output command $cmd
     set f [open "| $cmd 2>@1" r]
     fconfigure $f -blocking false
-    fileevent $f readable  [list handleFileEvent $f $script]
+    fileevent $f readable  [list handleFileEvent $f $script $var]
 
     return $f
 }
@@ -1958,7 +1962,7 @@ proc closePipe {f script} {
 }
 # Do something depending on what the fileevent returns
 # f fileevent, script, pass to closePipe
-proc handleFileEvent {f script} {
+proc handleFileEvent {f script {var ""}} {
     set status [catch { gets $f line } result]
     if { $status != 0 } {
         # unexpected error
@@ -1966,6 +1970,7 @@ proc handleFileEvent {f script} {
         closePipe $f $script
 
     } elseif { $result >= 0 } {
+    	catch {set $var $line}
         # we got some output
 		# puts "normal $line"
 
