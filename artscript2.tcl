@@ -793,7 +793,7 @@ proc rgbtohsv { r g b } {
 # Calls tk colorchooser and sets color on canvas element widget.
 # return hex color string
 # TODO, remove hardcoded names to allow use on other canvas widgets
-proc setColor { w var item col {direct 1} { title "Choose color"} } {
+proc setColor { w item col {direct 1} { title "Choose color"} } {
 	set col [lindex $col end]
 
 	#Call color chooser and store value to set canvas color and get rgb values
@@ -811,7 +811,7 @@ proc setColor { w var item col {direct 1} { title "Choose color"} } {
 proc setColorAndContrast { w args } {
 	set col [setColor $w {*}$args]
 	$w itemconfigure $::canvasWatermark(main) -outline [getContrastColor $col]
-	set ::txtcol $col
+	set ::wmcol $col
 }
 
 # Returns the most contrasting color, black or white, based on luma values
@@ -841,7 +841,7 @@ proc drawSwatch { w args } {
 		incr i
 		set ::canvasWatermark($i) [$w create rectangle $x $y [expr {$x+$cw}] [expr {$y+$ch-1}] -fill $swatch -width 1 -outline {gray26} -tags {swatch}]
 		set col [lindex [$w itemconfigure $::canvasWatermark($i) -fill] end]
-		$w bind $::canvasWatermark($i) <Button-1> [list setColorAndContrast $w ::wmcol $::canvasWatermark(main) $col 0 ]
+		$w bind $::canvasWatermark($i) <Button-1> [list setColorAndContrast $w $::canvasWatermark(main) $col 0 ]
 		if { $i == $chal } {
 			incr y $ch
 			set x [expr {$x-($cw*$i)}]
@@ -1100,7 +1100,7 @@ proc tabWatermark { wt } {
 	canvas $wt.st.chos  -width 62 -height 26
 	
 	set ::canvasWatermark(main) [$wt.st.chos create rectangle 2 2 26 26 -fill $::wmcol -width 2 -outline [getContrastColor $::wmcol] -tags {main}]
-	$wt.st.chos bind main <Button-1> { setColorAndContrast %W wmcol $::canvasWatermark(main) [%W itemconfigure $::canvasWatermark(main) -fill] }
+	$wt.st.chos bind main <Button-1> { setColorAndContrast %W $::canvasWatermark(main) [%W itemconfigure $::canvasWatermark(main) -fill] }
 
 	set wmswatch [getswatches $::wmcolswatch]
 	drawSwatch $wt.st.chos $wmswatch
