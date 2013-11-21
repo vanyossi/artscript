@@ -657,12 +657,10 @@ proc showPreview {} {
 
 # Creates a thumbnail and places it in user thumbnail folders
 # It uses md5 string to store the file name in thumbs dir
-proc makeThumb { path tsize } {
+proc makeThumb { path filext tsize } {
 	set cmd [dict create]
 	dict set cmd .ora {Thumbnails/thumbnail.png}
 	dict set cmd .kra {preview.png}
-
-	set filext [string tolower [file extension $path] ]
 
 	if { [regexp {.ora|.kra} $filext ] } {
 		set container [dict get $cmd $filext]
@@ -681,7 +679,25 @@ proc makeThumb { path tsize } {
 	}
 	catch {file delete $tmpfile}
 }
+
+proc setThumbGif { path } {
+	global img oldimg thumb_proc
+
+	set prevgif {/tmp/atkpreview.gif}
 	
+	catch {close $thumb_proc}
+	set thumb_proc [runCommand [concat convert -quiet $path GIF:$prevgif] [list set ::thumb_wait 1]]
+	vwait ::thumb_wait
+	# catch { exec convert -quiet $lthumb GIF:$prevgif }
+	catch {set oldimg $img}
+	catch {puts $img}
+	set img [image create photo -file $prevgif ]
+
+	$::widget_name(thumb-im) configure -compound image -image $img
+	catch {image delete $oldimg}
+	# catch {file delete $prevgif}
+}
+
 # Attempts to load a thumbnail from thumbnails folder if exists.
 # Creates a thumbnail for files missing Large thumbnail
 proc showThumb { w f {tryprev 1}} {
@@ -695,6 +711,7 @@ proc showThumb { w f {tryprev 1}} {
 	set id [lindex [$::widget_name(flist) item $f -values] 0]
 	
 	set path [dict get $inputfiles $id path]
+	set filext [string tolower [file extension $path] ]
 	# Creates md5 checksum from text string: TODO avoid using echo
 	# exec md5sum << "string" and string trim $hash {- }
 	set thumbname [lindex [exec echo -n "file://$path" \| md5sum] 0]
@@ -704,26 +721,19 @@ proc showThumb { w f {tryprev 1}} {
 
 	# Displays preview in widget, Make proc of this.
 	if { [file exists $lthumb ] } {
-		global img oldimg
-		set prevgif {/tmp/atkpreview.gif}
-		
-		catch { exec convert -quiet $lthumb GIF:$prevgif }
-		catch {set oldimg $img}
-		set img [image create photo -file /tmp/atkpreview.gif ]
-
-		$::widget_name(thumb-im) configure -compound image -image $img
-		catch {image delete $oldimg}
-
-		catch {file delete $prevgif}
-		return ; # Exits parent proc
-		# As a proc it has to return true false
+		setThumbGif $lthumb
+		return 
 
 	} elseif { [file exists $nthumb] } {
 		puts "$path has normal thumb"
-		makeThumb $path [list 256 $lthumb]
+		if {[regexp {.xcf|.psd} $filext ]} {
+			setThumbGif $nthumb
+			return
+		}
+		makeThumb $path $filext [list 256 $lthumb]
 	} else {
 		puts "$path has no thumb"
-		makeThumb $path [list 128 $nthumb 256 $lthumb]
+		makeThumb $path $filext [list 128 $nthumb 256 $lthumb]
 	}
 
 	if {$tryprev} {
@@ -1916,6 +1926,8 @@ proc runCommand {cmd script} {
     set f [open "| $cmd 2>@1" r]
     fconfigure $f -blocking false
     fileevent $f readable  [list handleFileEvent $f $script]
+
+    return $f
 }
 
 # Closes f event if error or end of executing
