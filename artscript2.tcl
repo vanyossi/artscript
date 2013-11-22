@@ -2057,10 +2057,6 @@ proc processHandlerFiles { index ilist {step 1}} {
 
 	set imgv [lindex $ilist $index]
 	array set handler $handlers
-	# Prevents error when calling preview
-	if {$handler($imgv) eq {m}} {
-		set imgv {}
-	}
 	
 	switch $step {
 	0 {
@@ -2071,7 +2067,7 @@ proc processHandlerFiles { index ilist {step 1}} {
 		incr index
 		
 		# Stop process if no more files to convert
-		if { $imgv eq {} } {
+		if { ($imgv eq {}) || ($handler($imgv) eq {m})} {
 			set ::artscript_convert(extract) false
 			return
 		}
