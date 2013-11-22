@@ -85,6 +85,7 @@ proc artscriptSettings {} {
 		prefixsel   0               \
 		overwrite   0               \
 		alfaoff		{}				\
+		artscript(alfa_color)	"white" \
 	]
 	#Extension & output
 	set out_settings [dict create \
@@ -1445,7 +1446,7 @@ proc addSizeOps { args } {
 proc sizeTreeList { w } {
 	ttk::frame $w
 	set size_tree_colname {size}
-	set ::widget_name(resize_tree) [ttk::treeview $w.sizetree -columns $size_tree_colname -height 6 -yscrollcommand "$w.sscrl set"]
+	set ::widget_name(resize_tree) [ttk::treeview $w.sizetree -columns $size_tree_colname -height 5 -yscrollcommand "$w.sscrl set"]
 	foreach tag {selected nonselected} {
 		$w.sizetree tag bind $tag <Button-1> { sizeTreeToggle %W [%W selection] %x %y }
 	}
@@ -1656,37 +1657,42 @@ proc frameSuffix { w } {
 }
 
 proc frameOutput { w } {
-	ttk::labelframe $w -text "Output & Quality" -padding 6
+	ttk::labelframe $w -text "Output & Quality" -padding {6 6 12}
 
 	set formats [list png jpg gif webp {webp lossy} ora] ; # TODO ora and keep
-	ttk::label $w.lbl -text "Format:"
-	ttk::combobox $w.fmt -state readonly -width 9 -textvariable ::outext -values $formats
-	$w.fmt set [lindex $formats 0]
-	bind $w.fmt <<ComboboxSelected>> [list setFormatOptions $w ]
+	ttk::label $w.label_format -text "Format:"
+	ttk::combobox $w.format -state readonly -width 9 -textvariable ::outext -values $formats
+	$w.format set [lindex $formats 0]
+	bind $w.format <<ComboboxSelected>> [list setFormatOptions $w ]
 
-	ttk::label $w.qtb -text "Quality:"
-	ttk::scale $w.qal -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }
-	ttk::label $w.qlb -width 4 -textvariable ::iquality
+	ttk::label $w.label_quality -text "Quality:"
+	ttk::scale $w.slider_qual -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }
+	ttk::label $w.slider_qual_val -width 4 -textvariable ::iquality
 
-	ttk::checkbutton $w.ove -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output }
-	ttk::checkbutton $w.alf -text "Remove Alfa" -onvalue "-background white -alpha remove" -offvalue "" -variable ::alfaoff
-
+	ttk::checkbutton $w.overwrite -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output }
+	ttk::checkbutton $w.alfa_off -text "Remove Alfa" -onvalue "-background %s -alpha remove" -offvalue "" -variable ::alfaoff
+	canvas $w.alpha_color -width 16 -height 16
+	set ::artscript(alfa_color) [$w.alpha_color create rectangle 1 1 15 15 -fill $::artscript(alfa_color) -width 1 -outline "grey20" -tags {alfa}]
+	$w.alpha_color bind alfa <Button-1> { set ::artscript(alfa_color) [setColor %W $::artscript(alfa_color) [%W itemconfigure $::artscript(alfa_color) -fill]] }
+	
 	ttk::separator $w.sep -orient vertical
 
-	grid $w.qtb $w.qlb $w.qal -row 1
-	grid configure $w.qtb -column 1
-	grid configure $w.qal -column 2 -columnspan 2 -sticky we
-	grid configure $w.qlb -column 4 -sticky w
-	grid $w.lbl $w.fmt -row 2
-	grid configure $w.lbl -column 2
-	grid configure $w.fmt -column 3	
-	grid $w.ove $w.alf -row 3 -columnspan 3 -sticky we
-	grid configure $w.fmt $w.qlb -sticky we
-	grid configure $w.qtb $w.lbl -sticky e
+	grid $w.label_quality $w.slider_qual_val $w.slider_qual - -row 1 -sticky we
+	#grid configure $w.label_quality -column 1
+	#grid configure $w.slider_qual -column 2 -columnspan 2 -sticky we
+	grid configure $w.slider_qual_val -column 4 -sticky w
+	grid x x $w.label_format $w.format x -row 2 -sticky we
+	# grid configure $w.label_format -column 2
+	# grid configure $w.format -column 3
+	grid $w.overwrite - - $w.alfa_off - - -row 3 -sticky we
+	# grid configure $w.format $w.slider_qual_val -sticky we
+	grid configure $w.label_quality $w.label_format -sticky e
+	place $w.alpha_color -in $w.alfa_off -relx .92 -y 1 -anchor ne
 
-	grid columnconfigure $w {2} -weight 12 -pad 4 
-	grid columnconfigure $w {1} -weight 2 -pad 4
-	grid rowconfigure $w {0 1 2 3} -weight 1 -pad 4
+	grid columnconfigure $w {1} -weight 12 -pad 4 
+	grid columnconfigure $w {0} -weight 2 -pad 4
+	grid rowconfigure $w "all" -pad {6}
+	grid configure $w.overwrite $w.alfa_off -pady {12 1}
 	return $w
 }
 
@@ -1700,35 +1706,35 @@ proc setFormatOptions { w } {
 	switch -glob -- $::outext {
 		jpg	{
 			set ::iquality 92 
-			$w.qtb configure -text "Quality:"
-			$w.qal configure -from 10 -to 100
+			$w.label_quality configure -text "Quality:"
+			$w.slider_qual configure -from 10 -to 100
 		}
 		png	{
 			set ::iquality 9
-			$w.qtb configure -text "Compress:"
-			$w.qal configure -from 0 -to 9
+			$w.label_quality configure -text "Compress:"
+			$w.slider_qual configure -from 0 -to 9
 		}
 		gif	{
 			set ::iquality 256
-			$w.qtb configure -text "Colors:"
-			$w.qal configure -from 1 -to 256
+			$w.label_quality configure -text "Colors:"
+			$w.slider_qual configure -from 1 -to 256
 		}
 		ora	{
 			set ::iquality 0
-			$w.qtb configure -text "Quality:"
-			$w.qal configure -from 0 -to 0
+			$w.label_quality configure -text "Quality:"
+			$w.slider_qual configure -from 0 -to 0
 			$::widget_name(convert-but) configure -text "Make ORA" -command {prepOra}
 			$::widget_name(thumb-prev) state disabled
 		}
 		webp { 
 			set ::iquality 100 
-			$w.qtb configure -text "Quality:"
-			$w.qal configure -from 10 -to 100
+			$w.label_quality configure -text "Quality:"
+			$w.slider_qual configure -from 10 -to 100
 		}
 		webp* { 
 			set ::iquality 60
-			$w.qtb configure -text "Quality:"
-			$w.qal configure -from 10 -to 100
+			$w.label_quality configure -text "Quality:"
+			$w.slider_qual configure -from 10 -to 100
 		}
 	}
 }
@@ -2048,13 +2054,20 @@ proc prepHandlerFiles { {ids ""} } {
 # returns nothing
 proc processHandlerFiles { index ilist {step 1}} {
 	global inputfiles handlers deleteFileList
+
+	set imgv [lindex $ilist $index]
+	array set handler $handlers
+	# Prevents error when calling preview
+	if {$handler($imgv) eq {m}} {
+		set imgv {}
+	}
 	
 	switch $step {
 	0 {
 		puts "starting File extractions"
 		after idle [list after 0 [list processHandlerFiles $index $ilist]]
 	} 1 {
-		set imgv [lindex $ilist $index]
+		
 		incr index
 		
 		# Stop process if no more files to convert
@@ -2063,7 +2076,7 @@ proc processHandlerFiles { index ilist {step 1}} {
 			return
 		}
 		set msg {}
-		array set handler $handlers
+		
 		array set id [dict get $inputfiles $imgv]
 		
 		set outdir "/tmp"
@@ -2076,7 +2089,7 @@ proc processHandlerFiles { index ilist {step 1}} {
 		puts "extract $id(name)"
 		pBarControl "Extracting... $id(name)" update
 		
-		if { ![file exists $outname ]} {
+		if { ![file exists $outname ] } {
 			if { $handler($imgv) == {g} } {
 				puts "making gimps"
 				set i $id(path)
@@ -2095,9 +2108,6 @@ proc processHandlerFiles { index ilist {step 1}} {
 				puts "making kriters"
 				# catch { exec calligraconverter --batch -- $id(path) $outname } msg
 				set extractCmd [list calligraconverter --batch -- $id(path) $outname]
-			}
-			if { $handler($imgv) == {m} } {
-				continue
 			}
 			runCommand $extractCmd [list relauchHandler $index $ilist]
 		} else {
@@ -2208,7 +2218,7 @@ proc doConvert { {step 0} {id ""} } {
 					} else {
 						set soname "show:"
 					}
-					set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) $::alfaoff $::artscript_convert(quality) $soname]
+					set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) $unsharp [format $::alfaoff $::artscript(alfa_color)] $::artscript_convert(quality) $soname]
 					#catch { exec {*}$convertCmd }
 					runCommand $convertCmd [list doConvert 1]
 					# after idle [list after 0 [list set ::fvar [catch { exec convert {*}$convertCmd &}]]]
