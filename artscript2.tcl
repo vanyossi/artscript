@@ -2010,13 +2010,20 @@ proc prepHandlerFiles { {ids ""} } {
 # returns nothing
 proc processHandlerFiles { index ilist {step 1}} {
 	global inputfiles handlers deleteFileList
+
+	set imgv [lindex $ilist $index]
+	array set handler $handlers
+	# Prevents error when calling preview
+	if {$handler($imgv) eq {m}} {
+		set imgv {}
+	}
 	
 	switch $step {
 	0 {
 		puts "starting File extractions"
 		after idle [list after 0 [list processHandlerFiles $index $ilist]]
 	} 1 {
-		set imgv [lindex $ilist $index]
+		
 		incr index
 		
 		# Stop process if no more files to convert
@@ -2025,7 +2032,7 @@ proc processHandlerFiles { index ilist {step 1}} {
 			return
 		}
 		set msg {}
-		array set handler $handlers
+		
 		array set id [dict get $inputfiles $imgv]
 		
 		set outdir "/tmp"
@@ -2038,7 +2045,7 @@ proc processHandlerFiles { index ilist {step 1}} {
 		puts "extract $id(name)"
 		pBarControl "Extracting... $id(name)" update
 		
-		if { ![file exists $outname ]} {
+		if { ![file exists $outname ] } {
 			if { $handler($imgv) == {g} } {
 				puts "making gimps"
 				set i $id(path)
@@ -2057,9 +2064,6 @@ proc processHandlerFiles { index ilist {step 1}} {
 				puts "making kriters"
 				# catch { exec calligraconverter --batch -- $id(path) $outname } msg
 				set extractCmd [list calligraconverter --batch -- $id(path) $outname]
-			}
-			if { $handler($imgv) == {m} } {
-				continue
 			}
 			runCommand $extractCmd [list relauchHandler $index $ilist]
 		} else {
@@ -2170,7 +2174,7 @@ proc doConvert { {step 0} {id ""} } {
 					} else {
 						set soname "show:"
 					}
-					set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) $unsharp $::alfaoff $::artscript_convert(quality) $soname]
+					set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) $unsharp [format $::alfaoff $::artscript(alfa_color)] $::artscript_convert(quality) $soname]
 					#catch { exec {*}$convertCmd }
 					runCommand $convertCmd [list doConvert 1]
 					# after idle [list after 0 [list set ::fvar [catch { exec convert {*}$convertCmd &}]]]
