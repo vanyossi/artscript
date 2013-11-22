@@ -118,11 +118,13 @@ proc updateGUI {} {
 proc alert {type icon title msg} {
 		tk_messageBox -type $type -icon $icon -title $title -message $msg
 }
-# Find an executable program in path
+# Find program in path
 # Return bool
-# TODO: look for binary paths using global $env variable
 proc validate {program} {
-	expr { ![catch { exec which $program }] ? [return 1] : [return 0] }
+	foreach place [split $::env(PATH) {:}] {
+		expr { [file exists [file join $place $program]] == 1 ? [return 1] : [continue] }
+	}
+	return 0
 }
 
 # Modifies iname adding suffix, prefix, size and ext.
