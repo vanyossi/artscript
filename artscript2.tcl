@@ -958,6 +958,7 @@ proc artscriptStyles {} {
 			}
 		}
 	ttk::style configure small.TButton -padding {6 0} -width 0
+	ttk::style configure no_indicator.TCheckbutton -font "-weight bold"
 }
 
 # ----=== Gui Construct ===----
