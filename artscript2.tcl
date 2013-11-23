@@ -225,25 +225,26 @@ proc getWidthHeightSVG { f } {
 	}
 }
 
-# Place in globap inputfiles dictionary
-# id => global fc, fpath filepath, size WxH, ext .string, h string(inkscape,calligra,gimp...)
-proc setDictEntries { id fpath size ext h} {
+# Computes values to insert in global inputfiles dictionary
+# id => uniq integer, fpath filepath, size WxH, ext .string, h string(inkscape,calligra,gimp...)
+proc setDictEntries { id fpath size ext h } {
 	global inputfiles handlers
 
-	set iname [file tail $fpath]
-	set apath [file normalize $fpath]
-	set ext [string trim $ext {.}]
-	
-	dict set inputfiles $id name $iname
-	dict set inputfiles $id output [getOutputName $fpath $::outext $::ouprefix $::ousuffix]
-	dict set inputfiles $id size $size
-	dict set inputfiles $id osize [getOutputSizesForTree $size 1]
-	dict set inputfiles $id ext $ext
-	dict set inputfiles $id path $apath
-	dict set inputfiles $id deleted 0
+	set input_values [dict create \
+		name      [file tail $fpath] \
+		output    [getOutputName $fpath $::outext $::ouprefix $::ousuffix] \
+		size      $size \
+		osize     [getOutputSizesForTree $size 1] \
+		ext       [string trim $ext {.}] \
+		path      [file normalize $fpath] \
+		deleted   0 \
+	]
 	dict set handlers $id $h
-	
-	addTreevalues $::widget_name(flist) $id ; # TODO set widget name as global
+	dict for {key value} $input_values {
+		dict set inputfiles $id $key $value
+	}
+
+	addTreevalues $::widget_name(flist) $id ;
 }
 
 # Get contents from file and parse them into Size values.
