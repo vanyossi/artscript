@@ -246,12 +246,36 @@ proc setDictEntries { id fpath size ext h} {
 	addTreevalues $::widget_name(flist) $id ; # TODO set widget name as global
 }
 
+# Get contents from file and parse them into Size values.
+proc getOraKraSize { image_file filext } {
+	set size {}
+
+	switch -- $filext {
+	".ora" { set unzip_file {stack.xml} }
+	".kra" { set unzip_file {maindoc.xml} }
+	}
+	if { [catch { set zipcon [exec unzip -p $image_file $unzip_file]} msg] } {
+		return -code break "$image_file is not a valid ORA/KRA"
+	}
+
+	set zipkey [lsearch -inline -regexp -all $zipcon {^(w|h|width|height)} ]
+
+	foreach size_val $zipkey {
+		lassign [scan $size_val {%[hwiegdth]="%d"%s}] val1 val2
+		lappend size_list [list $val1 $val2]
+	}
+	set width_height [lsort -decreasing -index 0 $size_list]
+	lassign $width_height width height
+	set size [join [list [lindex $width 1] [lindex $height 1]] {x}]
+
+	return $size
+}
 
 # Validates the files supplied to be Filetypes supported by script
 # Search order: gimp(xcf,psd) > inkscape(svg,ai) > calligra(kra,ora,xcf,psd) > allelse
 # ltoval list
 proc listValidate { ltoval } {
-	global fc
+	# global fc
 
 	foreach i $ltoval {
 		# Call itself with directory contents if arg is dir
@@ -269,8 +293,6 @@ proc listValidate { ltoval } {
 			vwait ::validate_wait
 			set size $::artscript(tmp_size)
 
-			#set size [lindex [exec identify -format "%wx%h " $i ] 0]
-
 			setDictEntries $::fc $i $size $filext "g"
 			incr ::fc
 			continue
@@ -283,12 +305,12 @@ proc listValidate { ltoval } {
 					continue
 				}
 			} else {
-				if { [catch { exec inkscape -S $i | head -n 1 } msg] } {
+				 # TODO get rid of head cmd
+				if { [catch { set svgcon [exec inkscape -S $i | head -n 1] } msg] } {
 					append ::lstmsg "EE: $i discarted\n"
 					puts $msg
 					continue
 				}
-				set svgcon [exec inkscape -S $i | head -n 1] ; # TODO get rid of head cmd
 				set svgvals [lrange [split $svgcon {,}] end-1 end] ; # Get the last elements of first line == w x h
 				set size [expr {round([lindex $svgvals 0])}] ; # Make float to int. TODO check if format "%.0f" works best here
 				append size "x" [expr {round([lindex $svgvals 1])}]
@@ -298,27 +320,12 @@ proc listValidate { ltoval } {
 			continue
 
 		} elseif { [regexp {^(.kra|.ora|.xcf|.psd)$} $filext ] && $::hascalligra } {
-			set size "N/A"
-			# TODO Simplify
-			# Get contents from file and parse them into Size values.
-			if { $filext == ".ora" } {
-				if { [catch { set zipcon [exec unzip -p $i stack.xml | grep image | head -n 1] } msg] } {
-					continue
-				}
-				set zipcon [exec unzip -p $i stack.xml | grep image | head -n 1]
-				set zipkey [lreverse [ string trim $zipcon "image<> " ] ]
-				set size [string trim [lindex [split [lindex $zipkey 1] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 0] "="] 1] {"\""}]
-				unset zipcon zipkey
 
-			} elseif { $filext == ".kra" } {
-				if { [catch { set zipcon [exec unzip -p $i maindoc.xml | grep -i IMAGE | head -n1] } msg] } {
-					continue
-				}
-					set zipcon [exec unzip -p $i maindoc.xml | grep -i IMAGE | head -n1]
-					set zipkey [lsearch -inline -regexp -all $zipcon {^(width|height)} ]
-					set size [string trim [lindex [split [lindex $zipkey 0] {=}] 1] "\""]x[string trim [lindex [split [lindex $zipkey 1] "="] 1] {"\""}]
-					unset zipcon zipkey
+			if { [catch {set size [getOraKraSize $i $filext]} msg ] } {
+				puts $msg
+				continue
 			}
+
 			setDictEntries $::fc $i $size $filext "k"
 			incr ::fc
 			continue
