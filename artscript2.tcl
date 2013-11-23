@@ -104,18 +104,9 @@ proc artscriptSettings {} {
 #--=====
 # Don't modify below this line
 
-# Quick hack to keep GUI responsive, without using update extensively
-# TODO: remove
-proc updateGUI {} {
-	# set after inside to 1 to avoid weird behaviour progressbar
-	update idletasks
-	# after idle [list after 1 set x 0]
-	# vwait x
-}
 # Implement alert type call for tk_messageBox
 # type,icon,title,msg => string
-# TODO: shuffle values to set least used with default vals
-proc alert {type icon title msg} {
+proc alert { title msg type icon } {
 		tk_messageBox -type $type -icon $icon -title $title -message $msg
 }
 # Find program in path
@@ -227,7 +218,7 @@ proc getWidthHeightSVG { f } {
 
 # Computes values to insert in global inputfiles dictionary
 # id => uniq integer, fpath filepath, size WxH, ext .string, h string(inkscape,calligra,gimp...)
-proc setDictEntries { id fpath size ext h } {
+proc setDictEntries { id fpath size ext h {add 1}} {
 	global inputfiles handlers
 
 	set input_values [dict create \
@@ -243,10 +234,11 @@ proc setDictEntries { id fpath size ext h } {
 	dict for {key value} $input_values {
 		dict set inputfiles $id $key $value
 	}
-
-	addTreevalues $::widget_name(flist) $id ;
+	if {$add} {
+		addTreevalues $::widget_name(flist) $id ; # TODO set widget name as global
+	}
 }
-
+	
 # Get contents from file and parse them into Size values.
 proc getOraKraSize { image_file filext } {
 	set size {}
@@ -564,7 +556,7 @@ proc addTreevalues { w id } {
 	}
 	#Keep Gui with fresh news
 	updateWinTitle
-	updateGUI
+	update idletasks
 }
 
 # Deletes the keys from tree(w), and sets deletes value to 1
@@ -664,9 +656,10 @@ proc printOutname { w } {
 # Check id of file selected in filetree and sends it to convert to process as preview.
 # TODO add size preview selection
 proc showPreview {} {
-	set id [lindex [$::widget_name(flist) item [$::widget_name(flist) selection] -values] 0]
+	set selection [$::widget_name(flist) selection]
+	set id [lindex [$::widget_name(flist) item [lindex $selection 0] -values] 0]
 	if { $id >= 0 } {
-		convert $id
+		convert $id 1
 	}
 	return
 }
@@ -2048,8 +2041,16 @@ proc makeOra { index ilist } {
 # Gets files to be rendered by gimp, calligra or inkscape
 # ids = files to convert (default all)
 # returns integer, total files to process
-proc prepHandlerFiles { {ids ""} } {
-	if { $ids eq ""} {
+proc prepHandlerFiles { {files ""} } {
+	set ids {}
+	if { $files ne ""} {
+		array set handler $::handlers
+		foreach item $files {
+			if {$handler($item) ne {m} } {
+				lappend ids $item
+			}
+		}
+	} else {
 		set ids [putsHandlers g i k]
 	}
 	set id_length [llength $ids]
@@ -2080,6 +2081,7 @@ proc processHandlerFiles { index ilist {step 1}} {
 		# Stop process if no more files to convert
 		if { ($imgv eq {}) || ($handler($imgv) eq {m})} {
 			set ::artscript_convert(extract) false
+			puts "File extractions finished"
 			return
 		}
 		set msg {}
@@ -2154,9 +2156,9 @@ proc relauchHandler {index ilist} {
 # Get ids of files to process
 # id = file to process
 # return list
-proc processIds { {id ""} } {
-	if { $id ne "" } {
-		return $id
+proc processIds { {ids ""} } {
+	if { $ids ne "" } {
+		return $ids
 	} else {
 		return [dict keys $::inputfiles]
 	}
@@ -2165,12 +2167,12 @@ proc processIds { {id ""} } {
 # Convert: Construct and run convert tailored to each file
 # id = files to process, none given: process all
 # return nothing
-proc doConvert { {step 0} {id ""} } {
+proc doConvert { {preview 0} {step 1} } {
 	
 	switch $step {
 	0 {
 		puts "starting Convert"
-		after idle [list after 0 [list doConvert 1 $id]]
+		after idle [list after 0 [list doConvert $preview]]
 	} 1 {
 		if {$::artscript_convert(extract)} {
 			# wait until extraction ends to begin converting
@@ -2180,10 +2182,8 @@ proc doConvert { {step 0} {id ""} } {
 		incr ::artscript_convert(count)
 		
 		if { $idnumber eq {} } {
-			if { $id eq ""} {
-				catch {file delete [list $::deleteFileList]}
-			}
 			pBarControl "Operations Done..." forget 600
+			puts "Convert done."
 			return
 		}
 		
@@ -2220,18 +2220,15 @@ proc doConvert { {step 0} {id ""} } {
 						set dimension {}
 					}
 					
-					if { $id eq ""} {
-					set soname \"[file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]\"
+					if {!$preview} {
+						set soname \"[file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]\"
 					} else {
+						puts "Generating preview"
 						set soname "show:"
 					}
 					set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) [format $::alfaoff $::artscript(alfa_color)] $::artscript_convert(quality) $soname]
 					#catch { exec {*}$convertCmd }
-					runCommand $convertCmd [list doConvert 1]
-					# after idle [list after 0 [list set ::fvar [catch { exec convert {*}$convertCmd &}]]]
-					# vwait ::fvar
-					
-					# pBarControl "Converting... ${name} to $dimension" update 1000
+					runCommand $convertCmd [list doConvert]
 				}
 			}
 		}
@@ -2241,7 +2238,7 @@ proc doConvert { {step 0} {id ""} } {
 
 # Set convert global values and total files to process
 # id = files to convert, if none given, all will be processed
-proc convert { {id ""} } {
+proc convert { {ids ""} {preview 0} } {
 	
 	set ::artscript_convert(count) 0
 	
@@ -2254,12 +2251,12 @@ proc convert { {id ""} } {
 	pBarControl {} create 0 1
 	
 	#process Gimp Calligra and inkscape to Tmp files
-	set total_renders [prepHandlerFiles $id]
-	set ::artscript_convert(files) [processIds $id]
+	set total_renders [prepHandlerFiles $ids]
+	set ::artscript_convert(files) [processIds $ids]
+
+	pBarUpdate $::widget_name(pbar-main) cur max [expr {([llength $::artscript_convert(files)] + $total_renders) * [llength [getFinalSizelist]]}] current -1
 	
-	pBarUpdate $::widget_name(pbar-main) cur max [expr {([getFilesTotal] + $total_renders) * [llength [getFinalSizelist]]}] current -1
-	
-	doConvert 0 $id
+	doConvert $preview 0
 }
 
 # ---=== Window options
