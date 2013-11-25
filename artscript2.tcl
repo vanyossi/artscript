@@ -1,7 +1,7 @@
 #! /usr/bin/env wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: 2.1.1
+#  Version: 2.1.2
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #  License: GPLv3 
@@ -16,7 +16,7 @@
 #
 # ---------------------::::::::::::::------------------------
 package require Tk
-set ::version "v2.1.1"
+set ::version "v2.1.2"
 
 # Do not show .dot files by default. !fails in OSX
 catch {tk_getOpenFile foo bar}
@@ -282,9 +282,9 @@ proc listValidate { ltoval } {
 
 		if { [regexp {^(.xcf|.psd)$} $filext ] && $::hasgimp } {
 
-			runCommand [concat identify -format "%wx%h " $i] [list set ::validate_wait 1] ::artscript(tmp_size)
+			runCommand [list identify -format "%wx%h " $i] [list set ::validate_wait 1] ::artscript(tmp_size)
 			vwait ::validate_wait
-			set size $::artscript(tmp_size)
+			set size [lindex $::artscript(tmp_size) 0]
 
 			setDictEntries $::fc $i $size $filext "g"
 			incr ::fc
@@ -390,8 +390,10 @@ proc setUserPresets { s } {
 		return 0
 	}
 
-	# TODO remove this list of global tcl vars. set all user vars in a pair list value, or array.
-	set gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_pkgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
+    # TODO remove this list of global tcl vars. set all user vars in a pair list value, or array.
+    set gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|
+    tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_p
+    kgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
 	
 	#set values according to preset
 	dict for {key value} [dict get $presets $s] {
@@ -651,13 +653,11 @@ proc printOutname { w } {
 	treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output
 }
 
-# Check id of file selected in filetree and sends it to convert to process as preview.
+# Check id of thumbnail shown sends it to convert to preview.
 # TODO add size preview selection
 proc showPreview {} {
-	set selection [$::widget_name(flist) selection]
-	set id [lindex [$::widget_name(flist) item [lindex $selection 0] -values] 0]
-	if { $id >= 0 } {
-		convert $id 1
+	if {[info exists ::artscript(preview_id)]} {
+		prepConvert Convert $::artscript(preview_id) 1
 	}
 	return
 }
@@ -715,9 +715,9 @@ proc showThumb { w f {tryprev 1}} {
 		return -code break
 	}
 	# TODO, get value with no lindex: .t set $f id
-	set id [lindex [$::widget_name(flist) item $f -values] 0]
+	set ::artscript(preview_id) [lindex [$::widget_name(flist) item $f -values] 0]
 	
-	set path [dict get $inputfiles $id path]
+	set path [dict get $inputfiles $::artscript(preview_id) path]
 	set filext [string tolower [file extension $path] ]
 	# Creates md5 checksum from text string: TODO avoid using echo
 	# exec md5sum << "string" and string trim $hash {- }
@@ -906,12 +906,18 @@ proc dec2rgb {r {g 0} {b UNSET} {clip 0}} {
 	  [expr {($g>$max)?$max:(($g<0)?0:$g)}] \
 	  [expr {($b>$max)?$max:(($b<0)?0:$b)}]]
 }
+
 # Returns sorted dict of colors
 # Colors can be sorted, or grouped by luma, saturation, hsv...
 # colist list, sortby integer (index of rgbtohsv return vals)
 proc getswatches { {colist 0} {sortby 1}} {
 	# Set a default palette, colors have to be in rgb
-	set swcol { Black {0 0 0} English-red {208 0 0} {Dark crimson} {120 4 34} Orange {254 139 0} Sand {193 177 127} Sienna {183 65 0} {Yellow ochre} {215 152 11} {Cobalt blue} {0 70 170} Blue {30 116 253} {Bright steel blue} {170 199 254} Mint {118 197 120} Aquamarine {192 254 233} {Forest green} {0 67 32} {Sea green} {64 155 104} Green-yellow {188 245 28} Purple {137 22 136} Violet {77 38 137} {Rose pink} {254 101 203} Pink {254 202 218} {CMYK Cyan} {0 254 254} {CMYK Yellow} {254 254 0} White {255 255 255} }
+
+	set swcol { Black {0 0 0} English-red {208 0 0} {Dark crimson} {120 4 34} Orange {254 139 0} Sand {193 177 127}
+	Sienna {183 65 0} {Yellow ochre} {215 152 11} {Cobalt blue} {0 70 170} Blue {30 116 253} {Bright steel blue} {170
+	199 254} Mint {118 197 120} Aquamarine {192 254 233} {Forest green} {0 67 32} {Sea green} {64 155 104} Green-yellow
+	{188 245 28} Purple {137 22 136} Violet {77 38 137} {Rose pink} {254 101 203} Pink {254 202 218} {CMYK Cyan} {0 254
+	254} {CMYK Yellow} {254 254 0} White {255 255 255} }
 	
 	if { [llength $colist] > 1 } {
 		set swcol [list]
@@ -1666,7 +1672,6 @@ proc setColageStyle { style {erase true}} {
 				"label" {
 					$::widget_name(tab_collage_${prop}) delete 0 end
 					$::widget_name(tab_collage_${prop}) insert 0 $value
-					# puts [$::widget_name(tab_collage_${prop}) get]
 				}
 				"default" {
 					$::widget_name(tab_collage_${prop}) set $value
@@ -1745,7 +1750,8 @@ proc colLayout { w } {
 
 }
 
-proc colFilterLabel {} {
+proc colFilterLabel { id } {
+	#global inputfiles
 	set input [$::widget_name(tab_collage_label) get]
 	set text [split $input]
 	set ftext {}
@@ -1753,9 +1759,9 @@ proc colFilterLabel {} {
 	foreach word $text {
 		switch -glob -- $word {
 			"*%%*" { }
-			"*%f*" { set word [string map -nocase {%f "filename.suffix"} $word ] }
-			"*%e*" { set word [string map -nocase {%e "EXT"} $word ] }
-			"*%G*" { set word [string map -nocase {%G "W x H"} $word ] }
+			"*%f*" { set word [string map -nocase "%f [list [dict get $::inputfiles $id name] ]" $word ] }
+			"*%e*" { set word [string map -nocase "%e [list [dict get $::inputfiles $id ext] ]" $word ] }
+			"*%G*" { set word [string map -nocase "%G [list [dict get $::inputfiles $id size] ]" $word ] }
 		}
 		lappend ftext $word
 	}
@@ -1774,10 +1780,24 @@ proc colLabel { w } {
 	ttk::checkbutton $w.col_mode -text "Concatenate" -variable ::concatenate
 	ttk::label $w.col_label_mode -text "(Images ignore tile size)"
 
+	set col_ops [ttk::frame $w.options -padding {12 0 0 0} ]
+	ttk::label $col_ops.prev -width 9 -text "" -anchor e
+	ttk::button $col_ops.show_prev -text "Estimate size" -style small.TButton -command [list colEstimateSize $col_ops.prev]
+	ttk::label $col_ops.label_mode -text "Mode:" -anchor e
+	set ::widget_name(tab_collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values {{} Concatenation {Zero geometry}} ]
+
+	grid $col_ops.prev $col_ops.show_prev -sticky e
+	grid $col_ops.label_mode $col_ops.mode -sticky e
+	grid configure $col_ops.prev $col_ops.label_mode -padx {0 6}
+	grid columnconfigure $col_ops {0} -weight 1
+	grid rowconfigure $col_ops "all" -pad 4
+
 	# grid $w.col_mode $w.col_label_mode -sticky we
-	grid $w.label_title $w.label_text -sticky we
-	grid x $w.subst -sticky we
+	grid $w.label_title $w.label_text $col_ops -sticky we
+	grid $w.subst - -sticky we
+	grid configure $col_ops -columnspan 1
 	grid columnconfigure $w {1} -weight 1
+	grid columnconfigure $w {2} -weight 2
 	grid rowconfigure $w {0 1} -pad 6
 
 
@@ -1820,8 +1840,8 @@ proc colStyle { w } {
 }
 proc colSelect {} {
 	switch -- $::collage_sel {
-		0 {set ops {off ? "Convert" {convert} } }
-		1 {set ops {on ! "Make Collage" {prepCollage} } }
+		0 {set ops {off ? "Convert" {prepConvert} } }
+		1 {set ops {on ! "Make Collage" {prepConvert "Collage"} } }
 	}
 	lassign $ops state mode convert_string convert_cmd
 	set image [append ::img_$state]
@@ -1840,8 +1860,11 @@ proc colLayoutsSelect { w } {
 
 	ttk::label $w.label_layouts -text "Layouts:"
 
-	set {::collage_layouts(Photo sheet)} "ratio 4:3 wid 375 hei 200 col 6 row 4 range 23 label {%f: (%G)}"
-	set ::collage_layouts(Images) "ratio 1:1 wid 350 hei 350 col 3 row 3 range {}"
+	set {::collage_layouts(Photo sheet)} "ratio 3:2 wid 275 hei 183 col 6 row 5 range 30 border 1 padding 4 label {%f: (%G)}"
+	set {::collage_layouts(Storyboard)} "ratio 16:9 wid 500 hei 281 col 3 row 3 range 9 border 1 padding 8 label {%f}"
+	set {::collage_layouts(Image Strip v)} "ratio 4:3 wid 300 hei 225 col 1 row 8 range {} border 0 padding 2 label {}"
+	set {::collage_layouts(Image Strip h)} "ratio 4:3 wid 300 hei 225 col 8 row 1 range {} border 0 padding 2 label {}"
+	set {::collage_layouts(Square 3x3)} "ratio 1:1 wid 350 hei 350 col 3 row 3 range {} border 0 padding 2 label {}"
 	
 	set swatches [lsort [getArrayNamesIfValue ::collage_layouts]]
 	ttk::combobox $w.layouts -width 16 -state readonly -values $swatches
@@ -1887,15 +1910,33 @@ proc tabCollage { w } {
 
 	return $w
 }
+# Estimate ouptput size. TODO make the code less repetitive with prepCollage 
+proc colEstimateSize { w } {
+	foreach {value} {border padding col row } {
+		set $value [$::widget_name(tab_collage_${value}) get]
+	}
+	# Calculate space needed for padding and border
+	set pixel_space [expr {($border + $padding)*2} ]
+
+	foreach var {width height} value [colGetTileSize] {
+		set $var [expr {$value - $pixel_space}]
+	}
+	if { [catch {set fsize "[expr {$col * ($width + $pixel_space)}]x[expr {$row * ($height + $pixel_space)}]"}] } {
+		$w configure -text "Need more data"
+	} else {
+		$w configure -text $fsize
+	}
+}
+
 proc colGetTileSize {} {
 	set width [$::widget_name(tab_collage_wid) get]
 	set height [$::widget_name(tab_collage_hei) get]
 
-	if {($width eq {}) && ($heigth eq {}) } {
+	if {($width eq {}) && ($height eq {}) } {
 		return [list 200 200]
 	} elseif {$width eq {}} {
 		set width $height
-	} else {
+	} elseif {$height eq {}} {
 		set height $width
 	}
 	return [list $width $height]
@@ -1915,72 +1956,133 @@ proc colRange { ilist range } {
 	return $rangelists
 }
 
-proc prepCollage {args} {
-	global inputfiles deleteFileList
+proc prepCollage { input_files } {
 
-	#get label
-	set clabel [colFilterLabel]
+	set ::artscript_convert(collage_vars) [dict create]
 
-	# get Size
-	lassign [colGetTileSize] wid hei
+	# get Border padding range col row
+	foreach {value} {border padding col row range mode} {
+		set $value [$::widget_name(tab_collage_${value}) get]
+	}
 
-	# get col row range
-	set col [$::widget_name(tab_collage_col) get]
-	set row [$::widget_name(tab_collage_row) get]
-	set range [$::widget_name(tab_collage_range) get]
+	# Calculate space needed for padding and border
+	set pixel_space [expr {($border + $padding)*2} ]
 
-	# get autoRange
+	# Set width height minus spacing from border padding.
+	foreach var {width height} value [colGetTileSize] {
+		set $var [expr {$value - $pixel_space}]
+	}
+
+	# Calculate range validity (less than col * row)
 	set auto_range [colGetRange]
 
-	# get Border padding
-	set border [$::widget_name(tab_collage_border) get]
-	set padding [$::widget_name(tab_collage_padding) get]
+	if { $auto_range != 0 && $range ne {} } {
+		set range [expr {min($range,$auto_range)}]
+	}
+	if { $range eq {} || $range == 0 } {
+		set range_lists [list $input_files]
+		set range 1
+	} else {
+		set range_lists [colRange $input_files $range]
+	}
+	#Add Conditional settings
+	lassign [list {} 0] concatenate zero_geometry
+	if {$mode eq "Concatenation"} {
+		set concatenate {-mode Concatenate}
+	} elseif {$mode eq "Zero geometry"} {
+		set zero_geometry 1
+	}
 
-	set ::artscript_convert(collage_vars) [dict create \
-		clabel $clabel width $wid height $hei column $col row $row \
-		range $range auto_range $auto_range border $border padding $padding \
-	]
+	pBarUpdate $::widget_name(pbar-main) cur max [expr { ceil([llength $input_files] / [format %.2f $range]) * 2 + $::artscript_convert(total_renders) * [llength [getFinalSizelist]] }] current [expr {$::cur -2}]
+	
+
+	# Place color values
+	foreach {color} {bg_color border_color img_color label_color} {
+		dict set ::artscript_convert(collage_vars) $color [$::widget_name(col_canvas) itemcget $::canvas_Collage($color) -fill]
+	}
+	# Add row col size label range border padding to dict
+	foreach {value} {width height col row range border padding pixel_space concatenate zero_geometry} {
+		dict set ::artscript_convert(collage_vars) $value [set $value]
+	}
 	puts $::artscript_convert(collage_vars)
-
+	return $range_lists
 }
-proc doCollage { files index {step 1}} {
-	global fc
-
-	# ::artscript_convert(collage_ids)
-
+proc doCollage { files {step 1} args } {
+	# global inputfiles
 	switch $step {
 	0 {
+		if {$::artscript_convert(extract)} {
+			# wait until extraction ends to begin converting
+			vwait ::artscript_convert(extract)
+		}
 		puts "Powering up Collage Assembly line"
-		after idle [list after 0 [list doCollage $index]]
+		set ::artscript_convert(count) 0
+		set range_files [prepCollage $files]
+		after idle [list after 0 [list doCollage $range_files]]
+
 	} 1 {
-		set range_pack [lindex $files $index]
-		incr index
+
+		set range_pack [lindex $files $::artscript_convert(count)]
+		incr ::artscript_convert(count)
+
+		pBarControl [format {%s %d/%d} "Assembling..." ${::artscript_convert(count)} [llength $files]] update
+
 		# Stop process if no more collages in cue
 		if { ($range_pack eq {}) } {
-			set ::artscript_convert(extract) false
+			# set ::artscript_convert(extract) false
 			puts "All collages assembled"
-			# convert $::artscript_convert(collage_ids) 0
+			doConvert $::artscript_convert(collage_ids) 0
 			return
 		}
 		dict with ::artscript_convert(collage_vars) {
-			# destw = size + borderx2 + paddingx2
-			# Do for each size
-			foreach id $range_pack {
-				getOutputSize wid hei destwx2 desthx2
-			}
-			# getOutputSize wid hei destwx2 desthx2
 
+			foreach id $range_pack {
+				set opath [dict get $::inputfiles $id path]
+				catch {set opath [dict get $::inputfiles $id tmp]}
+
+				#get label
+				set clabel [colFilterLabel $id]
+
+				lassign [scan [dict get $::inputfiles $id size] "%dx%d"] wid hei
+				set rsize [getOutputSize $wid $hei $width $height]
+				lappend collage_names -label $clabel
+				lappend collage_names [format {%s[%s]} $opath $rsize]
+			}
+
+			foreach {var} {col row} {
+				set value [set $var]
+				set x$var [expr {($value eq {} || $value == 0) ? 1 : $value}]
+			}
 			# finalsize convert 50% > wid = row x destw
+			set fsize "[expr {$xcol * ($width + $pixel_space)}]x[expr {$xrow * ($height + $pixel_space)}]"
 
 			#Add filename to dict
-			setDictEntries id fpath size ext h {add 1
-			incr ::fc
+			set output_path [format {%s_%d.%s} "/tmp/collage-${::day}" $::artscript_convert(count) "png"]
+			set geometry [expr { $zero_geometry ? "1x1+${padding}+${padding}\\<" : "${width}x${height}+${padding}+${padding}" }]
+			puts $geometry
 
-			set Cmd [list montage -quiet $clabel {filename.png[wxh] filename.png[wxh]} -geometry "$size+$padding+$padding" -border $border -background {} -bordercolor {} -tile ${col}x${row} -fill {}}  "png:$tmpname"]
+			set Cmd [concat montage -quiet {*}$collage_names \
+				-geometry $geometry $concatenate -tile ${col}x${row} \
+				-border $border -background $bg_color -bordercolor $border_color -fill $label_color \
+				"png:$output_path" ]
 			puts $Cmd
 		}
-		# runCommand $Cmd [list relauchHandler $index $ilist]
+		runCommand $Cmd [list relaunchCollage $output_path $opath $fsize $files]
 	}}
+}
+proc relaunchCollage { file_generated destination size files } {
+	# global fc deleteFileList
+	if {[file exists $file_generated]} {
+		set output_dir [file dirname $destination]
+		set name [file join $output_dir [file tail $file_generated]]
+
+		lappend ::artscript_convert(collage_ids) $::fc
+		setDictEntries $::fc $name $size {.png} {m} 0
+		dict set ::inputfiles $::fc tmp $file_generated
+		lappend ::deleteFileList $file_generated
+		incr ::fc
+	}
+	after idle [list after 0 [list doCollage $files]]
 }
 
 
@@ -2115,7 +2217,7 @@ proc setFormatOptions { w } {
 proc guiStatusBar { w } {
 	# set default button Convert string
 	set ::artscript(bconvert_string) "Convert"
-	set ::artscript(bconvert_cmd) {convert}
+	set ::artscript(bconvert_cmd) {prepConvert}
 	pack [ttk::frame $w] -side top -expand 0 -fill x
 	
 	ttk::frame $w.rev
@@ -2126,7 +2228,7 @@ proc guiStatusBar { w } {
 
 	set ::widget_name(pbar-main) [ttk::progressbar $w.do.pbar -maximum [getFilesTotal] -variable ::cur -length "260"]
 	set ::widget_name(pbar-label) [ttk::label $w.do.plabel -textvariable pbtext -anchor e]
-	set ::widget_name(convert-but) [ttk::button $w.do.bconvert -text $::artscript(bconvert_string) -command {convert}]
+	set ::widget_name(convert-but) [ttk::button $w.do.bconvert -text $::artscript(bconvert_string) -command {prepConvert}]
 	setFormatOptions $::widget_name(frame-output)
 
 	pack $w.rev.checkwm $w.rev.checksz -side left
@@ -2275,7 +2377,6 @@ proc watermark {} {
 			# set watval [concat -gravity $::wmimpos -draw "\"image $::wmimcomp 10,10 0,0 '$::wmimsrc'\""]
 			lappend deleteFileList $wmtmpim ; # add wmtmp to delete list
 			append wmcmd " " [list -gravity $wmimpossel $wmtmpim -compose $::wmimcomp -define compose:args=$::wmimop -geometry +10+10 -composite ]
-			# puts $watval
 		}
 	}
 	return $wmcmd
@@ -2353,7 +2454,7 @@ proc handleFileEvent {f script {var ""}} {
     } elseif { $result >= 0 } {
     	catch {set $var $line}
         # we got some output
-		# puts "normal $line"
+		puts "$line"
 
     } elseif { [eof $f] } {
         # End of file
@@ -2443,7 +2544,7 @@ proc processHandlerFiles { index ilist {step 1}} {
 	
 	switch $step {
 	0 {
-		puts "starting File extractions"
+		puts "Starting File extractions..."
 		after idle [list after 0 [list processHandlerFiles $index $ilist]]
 	} 1 {
 		
@@ -2466,12 +2567,12 @@ proc processHandlerFiles { index ilist {step 1}} {
 		set ::artscript_convert(outname) $outname
 		set ::artscript_convert(imgv) $imgv
 		
-		puts "extract $id(name)"
+		puts "Extract $id(name)"
 		pBarControl "Extracting... $id(name)" update
 		
 		if { ![file exists $outname ] } {
 			if { $handler($imgv) == {g} } {
-				puts "making gimps"
+				puts "Rendering Gimps"
 				set i $id(path)
 				set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"$outname\" \"$outname\") )(gimp-quit 0)"
 				#run gimp command, it depends on file extension to do transforms.
@@ -2479,13 +2580,13 @@ proc processHandlerFiles { index ilist {step 1}} {
 				set extractCmd [list gimp -i -b $cmd]
 			}
 			if { $handler($imgv) == {i} } {
-				puts "making inkscapes"
+				puts "Rendering Ink Scapes"
 				# output 100%, resize imagick
 				# catch { exec inkscape $id(path) -z -C -d 90 -e $outname } msg
 				set extractCmd [list inkscape $id(path) -z -C -d 90 -e $outname]
 			}
 			if { $handler($imgv) == {k} } {
-				puts "making kriters"
+				puts "Rendering Kriters: Calligraconvert always return errors!"
 				# catch { exec calligraconverter --batch -- $id(path) $outname } msg
 				set extractCmd [list calligraconverter --batch -- $id(path) $outname]
 			}
@@ -2508,7 +2609,7 @@ proc relauchHandler {index ilist} {
 	if { ![file exists $outname ]} {
 		set errc $::errorCode;
 		set erri $::errorInfo
-		puts "errc: $errc \n\n"
+		puts "error: $errc \n\n"
 		if {$errc != "NONE"} {
 			# puts $msg
 		}
@@ -2530,30 +2631,39 @@ proc processIds { {ids ""} } {
 	if { $ids ne "" } {
 		return $ids
 	} else {
-		return [dict keys $::inputfiles]
+		lappend images {*}[dict filter $::inputfiles script {k v} {expr {[dict get $v deleted] eq 0}}]
+		return [dict keys $images]
 	}
 }
 
 # Convert: Construct and run convert tailored to each file
 # id = files to process, none given: process all
 # return nothing
-proc doConvert { {preview 0} {step 1} } {
+proc doConvert { files {step 1} {preview 0} } {
 	
 	switch $step {
 	0 {
-		puts "starting Convert"
-		after idle [list after 0 [list doConvert $preview]]
+		puts "Starting Convert..."
+		set ::artscript_convert(count) 0
+		after idle [list after 0 [list doConvert $files 1 $preview]]
 	} 1 {
 		if {$::artscript_convert(extract)} {
 			# wait until extraction ends to begin converting
 			vwait ::artscript_convert(extract)
 		}
-		set idnumber [lindex $::artscript_convert(files) $::artscript_convert(count)]
+		set idnumber [lindex $files $::artscript_convert(count)]
 		incr ::artscript_convert(count)
 		
 		if { $idnumber eq {} } {
 			pBarControl "Operations Done..." forget 600
 			puts "Convert done."
+			# erase all collage from lists
+			if {[llength $::artscript_convert(collage_ids)] > 0} {
+				foreach i $::artscript_convert(collage_ids) {
+					dict unset ::inputfiles $i
+				}
+				set ::artscript_convert(collage_ids) {}
+			}	
 			return
 		}
 		
@@ -2564,7 +2674,6 @@ proc doConvert { {preview 0} {step 1} } {
 				set outpath [file dirname $path]
 				
 				if {[dict exists $datas tmp]} {
-					puts "in"
 					set opath $tmp
 				}
 				# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
@@ -2582,7 +2691,7 @@ proc doConvert { {preview 0} {step 1} } {
 					if { $size != $osize } {
 						set resize [getResize $size $dimension $filter $unsharp]
 					}
-					puts "convert $name"
+					puts "converting... $name"
 					pBarControl "Converting... ${name} to $dimension" update
 					
 					if {$i == 1} {
@@ -2597,7 +2706,7 @@ proc doConvert { {preview 0} {step 1} } {
 					}
 					set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) [format $::alfaoff $::artscript(alfa_color)] $::artscript_convert(quality) $soname]
 					#catch { exec {*}$convertCmd }
-					runCommand $convertCmd [list doConvert]
+					runCommand $convertCmd [list doConvert $files]
 				}
 			}
 		}
@@ -2605,27 +2714,37 @@ proc doConvert { {preview 0} {step 1} } {
 	return 0
 }
 
-# Set convert global values and total files to process
+# Set convert global and values total files to process
 # id = files to convert, if none given, all will be processed
-proc convert { {ids ""} {preview 0} } {
-	
-	set ::artscript_convert(count) 0
-	
+proc prepConvert { {type "Convert"} {ids ""} {preview 0} } {
+
+	pBarControl {} create 0 1
+
+	set ::artscript_convert(files) [processIds $ids]
+	set ::artscript_convert(collage_ids) [list]
+	if {[llength $::artscript_convert(files)] == 0} {
+		pBarControl "No files loaded!" forget 600
+		return -code break
+	}
 	#get watermark value
 	set ::artscript_convert(wmark) [watermark]
 	set ::artscript_convert(quality) [getQuality $::outext]
-	set ::artscript_convert(extract) true ; #controls all extracts done before launch convert
-	
-	#Create progressbar
-	pBarControl {} create 0 1
+
+	set ::artscript_convert(extract) true ; #controls all extracts are done before convert
 	
 	#process Gimp Calligra and inkscape to Tmp files
-	set total_renders [prepHandlerFiles $ids]
 	set ::artscript_convert(files) [processIds $ids]
+	set ::artscript_convert(total_renders) [prepHandlerFiles $::artscript_convert(files)]
 
-	pBarUpdate $::widget_name(pbar-main) cur max [expr {([llength $::artscript_convert(files)] + $total_renders) * [llength [getFinalSizelist]]}] current -1
+	if {$type eq "Collage"} {
+		# set total_renders [expr ($total_renders/]
+	}
+
+	#Create progressbar
 	
-	doConvert $preview 0
+	pBarUpdate $::widget_name(pbar-main) cur max [expr {([llength $::artscript_convert(files)] + $::artscript_convert(total_renders)) * [llength [getFinalSizelist]]}] current -1
+	
+	do$type $::artscript_convert(files) 0 $preview
 }
 
 # ---=== Window options
