@@ -159,9 +159,13 @@ Only rename will ignore the extension setting since no convert will be done.
 
 Press Convert to Run options
 
-Collage (v2 In Development)
-To make a Collage from input files set "Make Collage Please" to on
-Make Collage Please checkbutton will generate a Tiled image containing all selected images. It will add a watermark if you set it so and a suffix.
+Collage 
+To make a Collage from input go to Collage tab. This mode does not turn on
+automagically, it has to be set explicitly from the checkbox at the top left
+of the tab
+
+Collage will generate a Tiled image containing all selected images. It will
+add a watermark if you seleced one and a suffix.
 
 
 ### Customize:

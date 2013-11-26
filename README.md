@@ -154,9 +154,9 @@ All comboboxes can be edited pressing "Right CLick" to enter edit mode
 
 Press Convert to Run options
 
-### Collage (v2 In Development)
-- To make a Collage from input files set "Make Collage Please" to on
-- Make Collage Please checkbutton will generate a Tiled image containing all selected images. It will add a watermark if you set it so and a suffix.
+### Collage 
+- To make a Collage go to Collage tab and set the Make collage checkbox to Active mode, color green.
+- Collage will generate a Tiled image containing all selected images. It will add a watermark if you selected one.
 
 
 # Customize:  
