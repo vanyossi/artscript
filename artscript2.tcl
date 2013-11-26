@@ -2061,8 +2061,8 @@ proc doCollage { files {step 1} args } {
 			set geometry [expr { $zero_geometry ? "1x1+${padding}+${padding}\\<" : "${width}x${height}+${padding}+${padding}" }]
 			puts $geometry
 
-			set Cmd [concat montage -quiet {*}$collage_names \
-				-geometry $geometry $concatenate -tile ${col}x${row} \
+			set Cmd [concat montage -quiet $collage_names \
+				-geometry [list $geometry] $concatenate -tile ${col}x${row} \
 				-border $border -background $bg_color -bordercolor $border_color -fill $label_color \
 				"png:$output_path" ]
 			puts $Cmd
