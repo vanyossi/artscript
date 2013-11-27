@@ -1,7 +1,7 @@
 #! /usr/bin/env wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: 2.1.2
+#  Version: 2.1.3
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #  License: GPLv3 
@@ -16,7 +16,7 @@
 #
 # ---------------------::::::::::::::------------------------
 package require Tk
-set ::version "v2.1.2"
+set ::version "v2.1.3"
 
 # Do not show .dot files by default. !fails in OSX
 catch {tk_getOpenFile foo bar}
@@ -134,14 +134,14 @@ proc validate {program} {
 # iname => file string, preffix suffix sizesuffix => string to append,
 # orloc => filepath: Used to return destination to orignal loc in case of tmp files (KRA,ORA)
 # returns filename.ext
-proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} {orloc 0} } {
+proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} } {
 	
 	if {!$::prefixsel} {
 		set prefix {}
 		set suffix {}
 	}
-	if {$orloc != 0 } {
-		set iname $orloc
+	if {$outext eq "Rename" } {
+		set outext [string trim [file extension $iname] {.}]
 	}
 	set dir [file normalize [file dirname $iname]]
 	set name [file rootname [file tail $iname]]
@@ -2148,7 +2148,7 @@ proc frameSuffix { w } {
 proc frameOutput { w } {
 	ttk::labelframe $w -text "Output & Quality" -padding {6 6 12}
 
-	set formats [list png jpg gif webp {webp lossy} ora] ; # TODO ora and keep
+	set formats [list png jpg gif webp {webp lossy} ora {Rename}] ; # TODO ora and keep
 	ttk::label $w.label_format -text "Format:"
 	ttk::combobox $w.format -state readonly -width 9 -textvariable ::outext -values $formats
 	$w.format set [lindex $formats 0]
@@ -2224,6 +2224,13 @@ proc setFormatOptions { w } {
 			set ::iquality 60
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 10 -to 100
+		}
+		Rename {
+			set ::iquality 0
+			$w.label_quality configure -text "Quality:"
+			$w.slider_qual configure -from 0 -to 0
+			$::widget_name(convert-but) configure -text "Rename" -command {renameFiles}
+			$::widget_name(thumb-prev) state disabled
 		}
 	}
 }
@@ -2434,6 +2441,38 @@ proc getQuality { ext } {
 	}
 	return $quality
 }
+
+proc renameFiles { {index 0} {step 0} } {
+	# global inputfiles
+	switch -exact -- $step {
+		0 {
+			pBarControl {} create 0 1
+			set ::artscript_convert(files) [processIds]
+			pBarUpdate $::widget_name(pbar-main) cur max [llength $::artscript_convert(files)] current -1
+			renameFiles 0 1
+		}
+		1 {
+			set id [lindex $::artscript_convert(files) $index]
+			incr index
+			if {$id eq {}} {
+				pBarControl "Operations Done..." forget 600
+				puts "Rename done."
+				return
+			}
+
+			dict with ::inputfiles $id {
+				puts "renaming... $name"
+				pBarControl "Renaming..." update
+
+				set dir [file dirname $path]
+				# puts "Rename $path to [file join $dir $output]"
+				file rename $path [file join $dir $output]
+			}
+			renameFiles $index 1
+		}
+	}
+}
+	
 # Adds command to fileevent handler
 # cmd exec command, script last cmd executed
 proc runCommand {cmd script {var ""}} {
@@ -2755,12 +2794,7 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 	set ::artscript_convert(files) [processIds $ids]
 	set ::artscript_convert(total_renders) [prepHandlerFiles $::artscript_convert(files)]
 
-	if {$type eq "Collage"} {
-		# set total_renders [expr ($total_renders/]
-	}
-
 	#Create progressbar
-	
 	pBarUpdate $::widget_name(pbar-main) cur max [expr {([llength $::artscript_convert(files)] + $::artscript_convert(total_renders)) * [llength [getFinalSizelist]]}] current -1
 	
 	do$type $::artscript_convert(files) 0 preview $preview
