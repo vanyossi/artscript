@@ -1744,6 +1744,9 @@ proc colLayout { w } {
 	set ::widget_name(tab_collage_range) [ttk::spinbox $w.ran -width $width -from 1 -to 56 \
 		-validate key -validatecommand { string is integer %P }]
 
+	bind $::widget_name(tab_collage_col) <KeyRelease> colSetRange
+	bind $::widget_name(tab_collage_row) <KeyRelease> colSetRange
+
 	grid $w.label_col $w.label_row $w.label_ran -sticky w
 	grid $w.col $w.row $w.ran -sticky w
 	grid columnconfigure $w {0 1} -pad 6
@@ -2003,7 +2006,6 @@ proc prepCollage { input_files } {
 	}
 
 	pBarUpdate $::widget_name(pbar-main) cur max [expr { ceil([llength $input_files] / [format %.2f $range]) * 2 + $::artscript_convert(total_renders) * [llength [getFinalSizelist]] }] current [expr {$::cur -2}]
-	
 
 	# Place color values
 	foreach {color} {bg_color border_color img_color label_color} {
@@ -2036,14 +2038,14 @@ proc doCollage { files {step 1} args } {
 
 		pBarControl [format {%s %d/%d} "Assembling..." ${::artscript_convert(count)} [llength $files]] update
 
-		# Stop process if no more collages in cue
-		if { ($range_pack eq {}) } {
-			# set ::artscript_convert(extract) false
-			puts "All collages assembled"
-			doConvert $::artscript_convert(collage_ids) 0
-			return
-		}
 		dict with ::artscript_convert(collage_vars) {
+			# Stop process if no more collages in cue
+			if { ($range_pack eq {}) } {
+				# set ::artscript_convert(extract) false
+				puts "All collages assembled"
+				doConvert $::artscript_convert(collage_ids) 0 trim $trim
+				return
+			}
 
 			foreach id $range_pack {
 				set opath [dict get $::inputfiles $id path]
@@ -2075,7 +2077,7 @@ proc doCollage { files {step 1} args } {
 			set Cmd [concat montage -quiet $collage_names \
 				-geometry [list $geometry] $concatenate -tile ${col}x${row} \
 				-border $border -background $bg_color -bordercolor $border_color -fill $label_color \
-				$trim "png:$output_path" ]
+				"PNG32:$output_path" ]
 			# puts $Cmd
 		}
 		runCommand $Cmd [list relaunchCollage $output_path $opath $fsize $files]
@@ -2650,13 +2652,17 @@ proc processIds { {ids ""} } {
 # Convert: Construct and run convert tailored to each file
 # id = files to process, none given: process all
 # return nothing
-proc doConvert { files {step 1} {preview 0} } {
-	
+proc doConvert { files {step 1} args } {
+	lassign [lrepeat 2 {}] preview trim
+	foreach {key value} $args {
+		set $key $value
+	}
+
 	switch $step {
 	0 {
 		puts "Starting Convert..."
 		set ::artscript_convert(count) 0
-		after idle [list after 0 [list doConvert $files 1 $preview]]
+		after idle [list after 0 [list doConvert $files 1 {*}$args]]
 	} 1 {
 		if {$::artscript_convert(extract)} {
 			# wait until extraction ends to begin converting
@@ -2709,15 +2715,15 @@ proc doConvert { files {step 1} {preview 0} } {
 						set dimension {}
 					}
 					
-					if {!$preview} {
+					if {$preview eq {}} {
 						set soname \"[file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]\"
 					} else {
 						puts "Generating preview"
 						set soname "show:"
 					}
-					set convertCmd [concat convert -quiet \"$opath\" $resize $::artscript_convert(wmark) [format $::alfaoff $::artscript(alfa_color)] $::artscript_convert(quality) $soname]
-					#catch { exec {*}$convertCmd }
-					runCommand $convertCmd [list doConvert $files]
+					set convertCmd [concat convert -quiet \"$opath\" $trim $resize $::artscript_convert(wmark) [format $::alfaoff $::artscript(alfa_color)] $::artscript_convert(quality) $soname]
+
+					runCommand $convertCmd [list doConvert $files 1 {*}$args]
 				}
 			}
 		}
@@ -2727,7 +2733,7 @@ proc doConvert { files {step 1} {preview 0} } {
 
 # Set convert global and values total files to process
 # id = files to convert, if none given, all will be processed
-proc prepConvert { {type "Convert"} {ids ""} {preview 0} } {
+proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 
 	pBarControl {} create 0 1
 
@@ -2755,7 +2761,7 @@ proc prepConvert { {type "Convert"} {ids ""} {preview 0} } {
 	
 	pBarUpdate $::widget_name(pbar-main) cur max [expr {([llength $::artscript_convert(files)] + $::artscript_convert(total_renders)) * [llength [getFinalSizelist]]}] current -1
 	
-	do$type $::artscript_convert(files) 0 $preview
+	do$type $::artscript_convert(files) 0 preview $preview
 }
 
 # ---=== Window options
