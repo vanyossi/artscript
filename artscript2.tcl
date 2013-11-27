@@ -1969,7 +1969,7 @@ proc prepCollage { input_files } {
 	set pixel_space [expr {($border + $padding)*2} ]
 
 	#Add Conditional settings
-	lassign [list {} 0] concatenate zero_geometry
+	lassign [list {} 0 {}] concatenate zero_geometry trim
 	if {$mode eq "Concatenation"} {
 		set concatenate {-mode Concatenate}
 	} elseif {$mode eq "Zero geometry"} {
@@ -1981,8 +1981,10 @@ proc prepCollage { input_files } {
 		set $var [expr {$value - $pixel_space}]
 	}
 	if {($zero_geometry == 0) && ($concatenate eq {})} {
-		set width [expr {$width == 1500 ? $height : $width}]
-		set height [expr {$height == 1500 ? $width : $height}]
+		set width [expr {$width == (1500 - $pixel_space) ? $height : $width}]
+		set height [expr {$height == (1500 - $pixel_space) ? $width : $height}]
+	} else {
+		set trim {-trim}
 	}
 
 	# Calculate range validity (less than col * row)
@@ -2006,7 +2008,7 @@ proc prepCollage { input_files } {
 		dict set ::artscript_convert(collage_vars) $color [$::widget_name(col_canvas) itemcget $::canvas_Collage($color) -fill]
 	}
 	# Add row col size label range border padding to dict
-	foreach {value} {width height col row range border padding pixel_space concatenate zero_geometry} {
+	foreach {value} {width height col row range border padding pixel_space concatenate zero_geometry trim} {
 		dict set ::artscript_convert(collage_vars) $value [set $value]
 	}
 	puts $::artscript_convert(collage_vars)
@@ -2066,13 +2068,13 @@ proc doCollage { files {step 1} args } {
 			#Add filename to dict
 			set output_path [format {%s_%d.%s} "/tmp/collage-${::day}" $::artscript_convert(count) "png"]
 			set geometry [expr { $zero_geometry ? "1x1+${padding}+${padding}\\<" : "${width}x${height}+${padding}+${padding}" }]
-			puts $geometry
+			# puts $geometry
 
 			set Cmd [concat montage -quiet $collage_names \
 				-geometry [list $geometry] $concatenate -tile ${col}x${row} \
 				-border $border -background $bg_color -bordercolor $border_color -fill $label_color \
-				"png:$output_path" ]
-			puts $Cmd
+				$trim "png:$output_path" ]
+			# puts $Cmd
 		}
 		runCommand $Cmd [list relaunchCollage $output_path $opath $fsize $files]
 	}}
