@@ -1933,11 +1933,11 @@ proc colGetTileSize {} {
 	set height [$::widget_name(tab_collage_hei) get]
 
 	if {($width eq {}) && ($height eq {}) } {
-		return [list 200 200]
+		return [list 1500 1500]
 	} elseif {$width eq {}} {
-		set width $height
+		set width 1500
 	} elseif {$height eq {}} {
-		set height $width
+		set height 1500
 	}
 	return [list $width $height]
 }
@@ -2045,7 +2045,9 @@ proc doCollage { files {step 1} args } {
 
 				lassign [scan [dict get $::inputfiles $id size] "%dx%d"] wid hei
 				set rsize [getOutputSize $wid $hei $width $height]
-				lappend collage_names -label $clabel
+				if {$clabel ne {}} {
+					lappend collage_names -label $clabel
+				}
 				lappend collage_names [format {%s[%s]} $opath $rsize]
 			}
 
