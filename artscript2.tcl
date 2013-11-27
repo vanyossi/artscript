@@ -139,10 +139,15 @@ proc getOutputName { iname outext { prefix "" } { suffix {} } {sizesufix {}} } {
 	if {!$::prefixsel} {
 		set prefix {}
 		set suffix {}
+	} else {
+		foreach val {prefix suffix} {
+			set $val [expr {[set $val] eq "%mtime" ? [clock format [file mtime $iname] -format %Y-%m-%d] : [set $val]}]
+		}
 	}
 	if {$outext eq "Rename" } {
 		set outext [string trim [file extension $iname] {.}]
 	}
+	
 	set dir [file normalize [file dirname $iname]]
 	set name [file rootname [file tail $iname]]
 	set lname [concat $prefix [list $name] $suffix $sizesufix ] ; # Name in brackets to protect white space
@@ -2124,7 +2129,7 @@ proc guiOutput { w } {
 }
 
 proc frameSuffix { w } {
-	lappend ::suffixes "$::date" {} ; # Appends an empty value to allow easy deselect
+	lappend ::suffixes "$::date" "%mtime" {} ; # Appends an empty value to allow easy deselect
 	set ::suffixes [lsort $::suffixes]
 	foreach suf $::suffixes {
 		lappend suflw [string length $suf]
