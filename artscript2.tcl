@@ -1968,9 +1968,21 @@ proc prepCollage { input_files } {
 	# Calculate space needed for padding and border
 	set pixel_space [expr {($border + $padding)*2} ]
 
+	#Add Conditional settings
+	lassign [list {} 0] concatenate zero_geometry
+	if {$mode eq "Concatenation"} {
+		set concatenate {-mode Concatenate}
+	} elseif {$mode eq "Zero geometry"} {
+		set zero_geometry 1
+	}
+
 	# Set width height minus spacing from border padding.
 	foreach var {width height} value [colGetTileSize] {
 		set $var [expr {$value - $pixel_space}]
+	}
+	if {($zero_geometry == 0) && ($concatenate eq {})} {
+		set width [expr {$width == 1500 ? $height : $width}]
+		set height [expr {$height == 1500 ? $width : $height}]
 	}
 
 	# Calculate range validity (less than col * row)
@@ -1984,13 +1996,6 @@ proc prepCollage { input_files } {
 		set range 1
 	} else {
 		set range_lists [colRange $input_files $range]
-	}
-	#Add Conditional settings
-	lassign [list {} 0] concatenate zero_geometry
-	if {$mode eq "Concatenation"} {
-		set concatenate {-mode Concatenate}
-	} elseif {$mode eq "Zero geometry"} {
-		set zero_geometry 1
 	}
 
 	pBarUpdate $::widget_name(pbar-main) cur max [expr { ceil([llength $input_files] / [format %.2f $range]) * 2 + $::artscript_convert(total_renders) * [llength [getFinalSizelist]] }] current [expr {$::cur -2}]
