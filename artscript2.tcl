@@ -2159,8 +2159,8 @@ proc frameOutput { w } {
 	ttk::checkbutton $w.overwrite -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output }
 	ttk::checkbutton $w.alfa_off -text "Remove Alfa" -onvalue "-background %s -alpha remove" -offvalue "" -variable ::alfaoff
 	canvas $w.alpha_color -width 16 -height 16
-	set ::artscript(alfa_color) [$w.alpha_color create rectangle 1 1 15 15 -fill $::artscript(alfa_color) -width 1 -outline "grey20" -tags {alfa}]
-	$w.alpha_color bind alfa <Button-1> { set ::artscript(alfa_color) [setColor %W $::artscript(alfa_color) [%W itemconfigure $::artscript(alfa_color) -fill]] }
+	set ::widget_name(alfa_color) [$w.alpha_color create rectangle 1 1 15 15 -fill $::artscript(alfa_color) -width 1 -outline "grey20" -tags {alfa}]
+	$w.alpha_color bind alfa <Button-1> { set ::artscript(alfa_color) [setColor %W $::widget_name(alfa_color) [%W itemconfigure $::widget_name(alfa_color) -fill]] }
 	
 	ttk::separator $w.sep -orient vertical
 
