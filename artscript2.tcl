@@ -68,7 +68,18 @@ proc artscriptSettings {} {
 		sizes_set(texture) "256x256 512x512" \
 		sizes_set(default) "" \
 	]
-	#sizes       [list "2560x1440"  "1920x1080" "1680x1050" "1366x768" "1280x1024" "1280x720" "1024x768" "720x1050" "50%"] \
+	#Collage
+	set col_settings [dict create \
+		::collage_styles(neutral) "bg_color grey50 border_color grey40 label_color grey30 img_color grey50" \
+		::collage_styles(bright) "bg_color grey88 border_color grey66 label_color grey30 img_color grey99" \
+		::collage_styles(dark) "bg_color grey10 border_color grey20 label_color grey50 img_color grey5" \
+		::collage_styles(darker) "bg_color grey5 border_color grey10 label_color grey45 img_color black" \
+		{::collage_layouts(Photo sheet)} "ratio 3:2 wid 275 hei 183 col 6 row 5 range 30 border 1 padding 4 label {%f: (%G)} mode {}" \
+		{::collage_layouts(Storyboard)} "ratio 16:9 wid 500 hei 281 col 3 row 3 range 9 border 1 padding 8 label {%f} mode {}" \
+		{::collage_layouts(Image Strip v)} "ratio 4:3 wid 300 hei {} col 1 row {} range {} border 0 padding 0 label {} mode {Zero Geometry}" \
+		{::collage_layouts(Image Strip h)} "ratio 4:3 wid {} hei 300 col {} row 1 range {} border 0 padding 0 label {} mode {Zero Geometry}" \
+		{::collage_layouts(Square 3x3)} "ratio 1:1 wid 350 hei 350 col 3 row 3 range {} border 0 padding 2 label {} mode {}" \
+	]
 
 	#Suffix and prefix ops
 	set suf_settings [dict create   \
@@ -93,7 +104,7 @@ proc artscriptSettings {} {
 		iquality    92      \
 	]
 	#--==== END of Artscript Default Settings
-	set settings [dict merge $mis_settings $wat_settings $siz_settings $suf_settings $bool_settings $out_settings]
+	set settings [dict merge $mis_settings $wat_settings $siz_settings $col_settings $suf_settings $bool_settings $out_settings]
 	dict for {key value} $settings {
 		set ::$key [subst $value]
 	}
@@ -1823,13 +1834,9 @@ proc colStyle { w } {
 	$w.preview bind img <Button-1> { setColor %W 2 [%W itemconfigure 2 -fill] }
 
 	ttk::label $w.label_styles
-	set ::collage_styles(neutral) "bg_color grey50 border_color grey40 label_color grey30 img_color grey50"
-	set ::collage_styles(bright) "bg_color grey88 border_color grey66 label_color grey30 img_color grey99"
-	set ::collage_styles(dark) "bg_color grey10 border_color grey20 label_color grey50 img_color grey5"
-	set ::collage_styles(darker) "bg_color grey5 border_color grey10 label_color grey45 img_color black"
 
+	# Uses ::collage_styles() array
 	set swatches [lsort [getArrayNamesIfValue ::collage_styles]]
-
 	ttk::combobox $w.styles -width 0 -state readonly -values $swatches
 	bind $w.styles <<ComboboxSelected>> { setColageStyle $::collage_styles([%W get])}
 
@@ -1864,13 +1871,8 @@ proc colLayoutsSelect { w } {
 		-style no_indicator.TCheckbutton -image $::img_off -compound left]
 
 	ttk::label $w.label_layouts -text "Layouts:"
-
-	set {::collage_layouts(Photo sheet)} "ratio 3:2 wid 275 hei 183 col 6 row 5 range 30 border 1 padding 4 label {%f: (%G)}"
-	set {::collage_layouts(Storyboard)} "ratio 16:9 wid 500 hei 281 col 3 row 3 range 9 border 1 padding 8 label {%f}"
-	set {::collage_layouts(Image Strip v)} "ratio 4:3 wid 300 hei 225 col 1 row 8 range {} border 0 padding 2 label {}"
-	set {::collage_layouts(Image Strip h)} "ratio 4:3 wid 300 hei 225 col 8 row 1 range {} border 0 padding 2 label {}"
-	set {::collage_layouts(Square 3x3)} "ratio 1:1 wid 350 hei 350 col 3 row 3 range {} border 0 padding 2 label {}"
 	
+	# Uses ::collage_layouts() array
 	set swatches [lsort [getArrayNamesIfValue ::collage_layouts]]
 	ttk::combobox $w.layouts -width 16 -state readonly -values $swatches
 	bind $w.layouts <<ComboboxSelected>> { setColageStyle $::collage_layouts([%W get])}
