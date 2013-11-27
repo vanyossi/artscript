@@ -1650,10 +1650,12 @@ proc colBorderPreview { pixel } {
 }
 proc colPaddingPreview { } {
 	lassign {2 2 79 55} ox oy fx fy
-	set pixel [$::widget_name(tab_collage_padding) get]
-	set border [$::widget_name(tab_collage_border) get]
+	foreach var {padding border} {
+		set value [$::widget_name(tab_collage_${var}) get]
+		set $var [expr { $value eq {} ? 0 : $value }]
+	}
 
-	$::widget_name(col_canvas) coords $::canvas_Collage(img_color) [expr {$ox+$pixel+$border}] [expr { $oy+$pixel+$border }] [expr { $fx-$pixel-$border }] [expr { $fy-$pixel-$border }]
+	$::widget_name(col_canvas) coords $::canvas_Collage(img_color) [expr {$ox+$padding+$border}] [expr { $oy+$padding+$border }] [expr { $fx-$padding-$border }] [expr { $fy-$padding-$border }]
 	colBorderPreview $border
 }
 proc setColageStyle { style {erase true}} {
