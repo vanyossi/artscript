@@ -2073,8 +2073,13 @@ proc doCollage { files {step 1} args } {
 					set position [lindex $::artscript(magick_pos) [expr {int(rand()*9)}]]
 					lappend collage_names -gravity $position +repage
 				}
-				# TODO Make concatenate mode remove read in size
-				lappend collage_names [format {%s[%s]} $opath $rsize]
+				# Make concatenate mode remove read in size
+				if {$concatenate eq {}} {
+					set format {%s[%s]}
+				} else {
+					set format {%s}
+				}
+				lappend collage_names [format $format $opath $rsize]
 			}
 			# Force value 0 on col and row when left empty
 			foreach {var} {col row} {
