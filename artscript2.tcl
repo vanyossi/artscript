@@ -194,6 +194,7 @@ set ::hasinkscape [validate "inkscape"]
 set ::hascalligra [validate "calligraconverter"]
 #-====# Global file counter TODO: separate delete to a list
 set ::fc 1
+set ::artscript(magick_pos) [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
 
 # Get image properties Size, format and path of Image
 # Receives an absolute (f)ile path
@@ -1805,7 +1806,7 @@ proc colLabel { w } {
 	ttk::label $col_ops.prev -width 9 -text "" -anchor e
 	ttk::button $col_ops.show_prev -text "Estimate size" -style small.TButton -command [list colEstimateSize $col_ops.prev]
 	ttk::label $col_ops.label_mode -text "Mode:" -anchor e
-	set ::widget_name(tab_collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values {{} Concatenation {Zero geometry}} ]
+	set ::widget_name(tab_collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values {{} Concatenation {Zero geometry} {Crop}} ]
 
 	grid $col_ops.prev $col_ops.show_prev -sticky e
 	grid $col_ops.label_mode $col_ops.mode -sticky e
@@ -1981,11 +1982,13 @@ proc prepCollage { input_files } {
 	set pixel_space [expr {($border + $padding)*2} ]
 
 	#Add Conditional settings
-	lassign [list {} 0 {}] concatenate zero_geometry trim
+	lassign [list {} 0 {} 0] concatenate zero_geometry trim crop
 	if {$mode eq "Concatenation"} {
 		set concatenate {-mode Concatenate}
 	} elseif {$mode eq "Zero geometry"} {
 		set zero_geometry 1
+	} elseif {$mode eq "Crop"} {
+		set crop 1
 	}
 
 	# Set width height minus spacing from border padding.
@@ -2019,7 +2022,7 @@ proc prepCollage { input_files } {
 		dict set ::artscript_convert(collage_vars) $color [$::widget_name(col_canvas) itemcget $::canvas_Collage($color) -fill]
 	}
 	# Add row col size label range border padding to dict
-	foreach {value} {width height col row range border padding pixel_space concatenate zero_geometry trim} {
+	foreach {value} {width height col row range border padding pixel_space concatenate zero_geometry trim crop} {
 		dict set ::artscript_convert(collage_vars) $value [set $value]
 	}
 	puts $::artscript_convert(collage_vars)
@@ -2062,13 +2065,18 @@ proc doCollage { files {step 1} args } {
 				set clabel [colFilterLabel $id]
 
 				lassign [scan [dict get $::inputfiles $id size] "%dx%d"] wid hei
-				set rsize [getOutputSize $wid $hei $width $height]
+				set rsize [getSizeZoom $wid $hei $width $height]
 				if {$clabel ne {}} {
 					lappend collage_names -label $clabel
 				}
+				if {$crop} {
+					set position [lindex $::artscript(magick_pos) [expr {int(rand()*9)}]]
+					lappend collage_names -gravity $position +repage
+				}
+				# TODO Make concatenate mode remove read in size
 				lappend collage_names [format {%s[%s]} $opath $rsize]
 			}
-
+			# Force value 0 on col and row when left empty
 			foreach {var} {col row} {
 				set value [set $var]
 				set x$var [expr {($value eq {} || $value == 0) ? 1 : $value}]
@@ -2081,7 +2089,7 @@ proc doCollage { files {step 1} args } {
 			set geometry [expr { $zero_geometry ? "1x1+${padding}+${padding}\\<" : "${width}x${height}+${padding}+${padding}" }]
 			# puts $geometry
 
-			set Cmd [concat montage -quiet $collage_names \
+			set Cmd [concat montage -quiet [expr { $crop ? "-crop [list $geometry]" : {} }] $collage_names \
 				-geometry [list $geometry] $concatenate -tile ${col}x${row} \
 				-border $border -background $bg_color -bordercolor $border_color -fill $label_color \
 				"PNG32:$output_path" ]
@@ -2329,6 +2337,21 @@ proc getOutputSize { w h dw dh } {
 	return "${dw}x${dh}"
 }
 
+proc getSizeZoom { w h dw dh } {
+	set ratio [expr { $h / [format "%0.2f" $w]} ]
+	set dratio [expr { $dh / [format "%0.2f" $dw]} ]
+	if { $ratio > $dratio } {
+		set dh [ expr {round($dw * $ratio)} ]
+	} else {
+		if { $ratio < 1 } {
+			set dw [ expr {round($dh / $ratio)} ]
+		} else {
+			set dw [ expr {round($dh * $ratio)} ]
+		}
+	}
+	return "${dw}x${dh}"
+}
+
 # Calculates scaling destination for size in respect of chosen sizes
 # size, string WidthxHeight, the original file size,
 # Returns a list of wxh elements, Bool returns formated list
@@ -2371,9 +2394,9 @@ proc watermark {} {
 	set wmcmd {}
 	
 	# Positions list correspond to $::watemarkpos, but names as imagemagick needs
-	set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
-	set wmpossel   [lindex $magickpos [$::widget_name(wmpos) current] ]
-	set wmimpossel [lindex $magickpos [$::widget_name(wmipos) current] ]
+	# set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
+	set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(wmpos) current] ]
+	set wmimpossel [lindex $::artscript(magick_pos) [$::widget_name(wmipos) current] ]
 	# wmtxt watermarks wmsize wmcol wmcolswatch wmop wmpositions wmimsrc iwatermarks wmimpos wmimsize wmimcomp wmimop watsel watseltxt watselimg
 	#Watermarks, check if checkboxes selected
 	if { $::watseltxt } {
