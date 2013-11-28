@@ -1602,6 +1602,21 @@ proc sizeTreeOps { w } {
 	pack $w.separator -expand 1 -padx 12
 	return $w
 }
+
+proc sizeOptions { w } {
+	ttk::frame $w -padding {0 12 0 0}
+
+	ttk::label $w.label_operator -text "Mode:"
+
+	set size_operators [list Scale Stretch OnlyGrow OnlyShrink Zoom]
+	set ::widget_name(tab_resize_operators) [ttk::combobox $w.operator -width 12 -state readonly -values $size_operators ]
+	$w.operator set "OnlyShrink"
+	bind $w.operator <<ComboboxSelected>> { eventSize }
+
+	pack $w.label_operator $w.operator -side left
+
+	return $w
+}
 # Returns list of sizes with selected tag
 proc getSizesSel { {sizes {} } } {
 	set selected [$::widget_name(resize_tree) tag has selected]
@@ -1629,7 +1644,6 @@ proc eventSize { } {
 	}
 }
 
-# -	proc delSizecol { st id } { }
 
 proc tabResize { st } {
 	ttk::frame $st -padding 6
@@ -1649,8 +1663,10 @@ proc tabResize { st } {
 	
 	pack $w.title -before $w.rat -side top -fill x
 	pack $w.add -after $w.empty -side left
+
+	set size_options [sizeOptions $st.lef.options]
 	
-	addFrameTop $preset_browse $::widget_name(tab_resize_size)
+	addFrameTop $preset_browse $::widget_name(tab_resize_size) $size_options
 	pack [sizeTreeOps $st.rgt.size_ops ] -fill x
 	pack [sizeTreeList $st.rgt.size_tree] -expand 1 -fill both
 
@@ -2327,17 +2343,27 @@ proc getFinalSizelist {} {
 }
 # Returns scaled size fitting in destination measures
 # w xh = original dimension dw x dh = Destination size
-proc getOutputSize { w h dw dh } {
+proc getSizeScale { w h dw dh {mode "OnlyShrink"} } {
 	set ratio [expr { $h / [format "%0.2f" $w]} ]
 	set dratio [expr { $dh / [format "%0.2f" $dw]} ]
+	lassign [list $dw $dh] ow oh
+
 	if { $dratio > $ratio } {
 		set dh [ expr {round($h * $dw / [format "%0.2f" $w])} ]
 	} else {
 		set dw [ expr {round($w * $dh / [format "%0.2f" $h])} ]
 	}
-	# Do not allow to grow, at the moment is not supported
-	if { $dw > $w } {
-		return "${w}x${h}"
+	lassign [list [expr {$w * $h}] [expr {$ow * $oh}] ] a da
+
+	switch -- $mode {
+		OnlyShrink {
+			if { $da > $a } { return "${w}x${h}" }
+		}
+		OnlyGrow {
+			if { $da < $a } { puts "area is bigger" ;return "${w}x${h}" }
+		}
+		Stretch -
+		Zoom { return "${ow}x${oh}" } 
 	}
 	return "${dw}x${dh}"
 }
@@ -2378,8 +2404,9 @@ proc getOutputSizesForTree { size {formated 0}} {
 			set dest_h [lindex [split $dimension {x} ] 1]
 		}
 		# get final size
-		#set finalscale [getOutputSize {*}[concat [split $size {x} ] [split $dimension {x}]] ]
-		set finalscale [getOutputSize $cur_w $cur_h $dest_w $dest_h]
+		#set finalscale [getSizeScale {*}[concat [split $size {x} ] [split $dimension {x}]] ]
+		set mode [$::widget_name(tab_resize_operators) get]
+		set finalscale [getSizeScale $cur_w $cur_h $dest_w $dest_h $mode]
 		#Add resize filter (better quality)
 		lappend fsizes $finalscale
 	}
@@ -2442,23 +2469,43 @@ proc watermark {} {
 # unsharp = unsharp string options
 # return string
 proc getResize { size dsize filter unsharp} {
-	# Use processed scale from getOuputSizeForTree
-	set finalscale $dsize
+
 	# Operator is force size (!)
 	set operator "\\!"
-	set cur_w [lindex [split $size {x} ] 0]
-	set dest_w [lindex [split $dsize {x} ] 0]
-	
-	# Create string Colospace, filter, resize x N, original Colorspace
-	set resize "-colorspace RGB"
-	set resize [concat $resize $filter]
-	while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
-		set cur_w [expr {round($cur_w * 0.8)}]
-		set resize [concat $resize -resize 80% +repage $unsharp]
+	lassign [concat [split $size {x}] [split $dsize {x}] ] cur_w cur_h dest_w dest_h
+	lassign [list [expr {$cur_w * $cur_h}] [expr {$dest_w * $dest_h}] ] cur_area dest_area
+
+	if {[$::widget_name(tab_resize_operators) get] eq "Zoom"} {
+		set finalscale [getSizeZoom $cur_w $cur_h $dest_w $dest_h ]
+		set crop [format {-crop %sx%s+0+0} $dest_w $dest_h]
+	} else {
+		set finalscale $dsize
+		set crop {}
 	}
-	# Final resize output
-	set resize [concat $resize -resize ${finalscale}${operator} +repage "-colorspace sRGB" $unsharp]
 	
+	set resize "-colorspace RGB"
+	#Check if enlarging or not.
+	if {$cur_area > $dest_area} {
+		# Create string Colospace, filter, resize x N, original Colorspace
+		set resize [concat $resize $filter]
+		while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
+			set cur_w [expr {round($cur_w * 0.8)}]
+			set resize [concat $resize -resize 80% +repage $unsharp]
+			set resize [concat -resize ${finalscale}${operator}]
+		}
+	} else {
+		  # Only for IM 8.8 and beyond
+		  # -colorspace RGB +sigmoidal-contrast 7.5 \
+		  #         -filter LanczosRadius -distort Resize 500% \
+		  #         -sigmoidal-contrast 7.5 -colorspace sRGB {output}
+		  set contrast 1.0
+		  set resize [concat -colorspace RGB +sigmoidal-contrast $contrast -filter Lanczos ]
+		  set resize [concat -define filter:blur=.9264075766146068 -distort Resize ${finalscale} -sigmoidal-contrast $contrast ]
+	}
+
+	# Final resize output
+	set resize [concat $resize $crop +repage "-colorspace sRGB" $unsharp]
+
 	return $resize
 }
 
@@ -2772,7 +2819,7 @@ proc doConvert { files {step 1} args } {
 				# with -distort Resize instead of -resize "or LanczosRadius"
 				set filter "-interpolate bicubic -filter Parzen"
 				set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
-				set i 0
+
 				# get make resize string
 				set sizes [getOutputSizesForTree $size]
 				
