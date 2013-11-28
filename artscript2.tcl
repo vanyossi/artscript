@@ -1611,7 +1611,10 @@ proc sizeOptions { w } {
 	set size_operators [list Scale Stretch OnlyGrow OnlyShrink Zoom]
 	set ::widget_name(tab_resize_operators) [ttk::combobox $w.operator -width 12 -state readonly -values $size_operators ]
 	$w.operator set "OnlyShrink"
-	bind $w.operator <<ComboboxSelected>> { eventSize }
+	bind $w.operator <<ComboboxSelected>> { showOperatorOptions $::widget_name(tab_resize_size_options) [%W get] }
+
+	set ::widget_name(tab_resize_zoom_position) [ttk::combobox $w.zoom_position -width 12 -state readonly -values $::artscript(magick_pos)]
+	$w.zoom_position set "Center"
 
 	pack $w.label_operator $w.operator -side left
 
@@ -1624,6 +1627,15 @@ proc getSizesSel { {sizes {} } } {
 		lappend sizes [$::widget_name(resize_tree) set $item size]
 	}
 	return $sizes
+}
+
+proc showOperatorOptions { w mode } {
+	if {$mode eq "Zoom"} {
+		pack $w.zoom_position -after $w.operator -side left
+	} else {
+		catch {pack forget $w.zoom_position }
+	}
+	eventSize
 }
 
 #set to <<TreeviewSelect>>
@@ -1664,9 +1676,9 @@ proc tabResize { st } {
 	pack $w.title -before $w.rat -side top -fill x
 	pack $w.add -after $w.empty -side left
 
-	set size_options [sizeOptions $st.lef.options]
+	set ::widget_name(tab_resize_size_options) [sizeOptions $st.lef.options]
 	
-	addFrameTop $preset_browse $::widget_name(tab_resize_size) $size_options
+	addFrameTop $preset_browse $::widget_name(tab_resize_size) $::widget_name(tab_resize_size_options)
 	pack [sizeTreeOps $st.rgt.size_ops ] -fill x
 	pack [sizeTreeList $st.rgt.size_tree] -expand 1 -fill both
 
@@ -2477,7 +2489,8 @@ proc getResize { size dsize filter unsharp} {
 
 	if {[$::widget_name(tab_resize_operators) get] eq "Zoom"} {
 		set finalscale [getSizeZoom $cur_w $cur_h $dest_w $dest_h ]
-		set crop [format {-crop %sx%s+0+0} $dest_w $dest_h]
+		set position [$::widget_name(tab_resize_zoom_position) get]
+		set crop [format {-gravity %s -crop %sx%s+0+0} $position $dest_w $dest_h]
 	} else {
 		set finalscale $dsize
 		set crop {}
