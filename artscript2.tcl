@@ -473,7 +473,7 @@ proc putsHandlers {args} {
 }
 # Shows open dialog for supported types
 # Validates the input and updates the window title
-proc openFiles [list [list path $::env(HOME)]] {
+proc openFiles { {path .} } {
 	if {[info exists ::artscript(openpath)]} {
 		set path $::artscript(openpath)
 	}
@@ -488,10 +488,36 @@ proc openFiles [list [list path $::env(HOME)]] {
 	"
 	set files [tk_getOpenFile -filetypes $types -initialdir $path -multiple 1]
 	# Set initialdir global from files
+	puts [file dirname [lindex $files 0]]
 	set ::artscript(openpath) [file dirname [lindex $files 0]]
 
 	listValidate $files
 	updateWinTitle
+}
+# Shows open dialog for image types
+# Validates the input and updates the window title
+proc selectImageFile { w {path .} } {
+	if {[info exists ::artscript(imagepath)]} {
+		set path $::artscript(imagepath)
+	}
+	set types " \
+	{{Suported Images}  {.png .jpg .jpeg .gif} } \
+	{{PNG}           {.png}       } \
+	{{JPG, JPEG}     {.jpg .jpeg} } \
+	{{GIF}     {.gif} } \
+	"
+	set path [tk_getOpenFile -filetypes $types -initialdir $path -multiple 0]
+	if {$path ne {}} {
+		# Set initialdir global from path
+		set file [file tail $path]
+		set ::artscript(imagepath) [file dirname $path]
+
+		dict append ::iwatermarks $file $path
+		set iwatermarksk [dict keys $::iwatermarks]
+		$w configure -values $iwatermarksk
+		$w set $file
+		set ::wmimsrc [dict get $::iwatermarks $file]
+	}
 }
 
 # ----=== Gui proc events ===----
@@ -1134,6 +1160,7 @@ proc tabWatermark { wt } {
 	$wt.iwatermarks set [lindex $iwatermarksk 0]
 	set ::wmimsrc [dict get $::iwatermarks [lindex $iwatermarksk 0]]
 	bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel "$::widget_name(check-wm) $wt.cbim" }
+	ttk::button $wt.img_select -image $::folder_on -text "New" -style small.TButton -command [list selectImageFile $wt.iwatermarks]
 
 	# Image size box \%
 	ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
@@ -1179,19 +1206,11 @@ proc tabWatermark { wt } {
 	bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] watsel "$::widget_name(check-wm) $wt.cbim" }
 
 	set wtpadding 2
-	grid $wt.lsize $wt.lpos $wt.lop -row 1 -sticky ws
-	grid $wt.cbtx $wt.ltext $wt.watermarks $wt.fontsize $wt.position $wt.txop $wt.tolab -row 2 -sticky we -padx $wtpadding -pady $wtpadding
-	grid $wt.cbim $wt.limg $wt.iwatermarks $wt.imgsize $wt.iposition $wt.imop $wt.iolab -row 3 -sticky we -padx $wtpadding -pady $wtpadding
-	grid $wt.cbtx $wt.cbim -column 1 -padx 0 -ipadx 0
-	grid $wt.ltext $wt.limg -column 2
-	grid $wt.watermarks $wt.iwatermarks -column 3
-	grid $wt.lsize $wt.fontsize $wt.imgsize -column 4
-	grid $wt.lpos $wt.position $wt.iposition -column 5
-	grid $wt.lop $wt.txop $wt.imop -column 6
-	grid $wt.tolab $wt.iolab -column 7
-	grid $wt.st -row 4 -column 3 -columnspan 4 -sticky we -pady 4
-	grid columnconfigure $wt {3} -weight 1
-
+	grid x x x x $wt.lsize $wt.lpos $wt.lop -row 1 -sticky ws
+	grid $wt.cbtx $wt.ltext $wt.watermarks - $wt.fontsize $wt.position $wt.txop $wt.tolab -row 2 -sticky we -padx $wtpadding -pady $wtpadding
+	grid $wt.cbim $wt.limg $wt.iwatermarks $wt.img_select $wt.imgsize $wt.iposition $wt.imop $wt.iolab -row 3 -sticky we -padx $wtpadding -pady $wtpadding
+	grid $wt.st -row 4 -column 2 -columnspan 5 -sticky we -pady 4
+	grid columnconfigure $wt {2} -weight 2
 	pack $wt.st.txcol $wt.st.chos $wt.st.sep $wt.st.imstyle $wt.st.iblend -expand 1 -side left -fill x
 	pack configure $wt.st.txcol $wt.st.chos $wt.st.imstyle -expand 0
 	
@@ -1224,6 +1243,17 @@ RLn/TLn/Tb3/VcH/RcT/TsT/T8D/Xcn/WMP/Zcz/YM//adP/dN3/eAAAAAAAAAAAAAAAACH5BAAA
 AAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAKAAoAAAU3YIIghkGaYqOsbEMy
 SywzpeTcuFROT+9PBoElQixaBAJMZcnEIDOXqDSD3Giu2I0gIQAgv4NECAA7
     }
+    set ::folder_on [image create photo]
+    $::folder_on put {
+        R0lGODlhEAAQAPUAAG1BFXhIE4JPEoxWEZZdEKBkD6trDbVyDL95C8mACtOHCdmMCN6OCOKRB+KS
+COeXEeCdF+ydGeeiGOWrJuWvLfClI/WuLOyxKPSxLvWxLuSyMuu5NPm3NfLAN+zDQe3NTffPR/jO
+SPTWUfzeVvzfVvPbWfffXP7oYf/pYQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAEAACkAIf8LSW1hZ2VNYWdpY2sO
+Z2FtbWE9MC40NTQ1NDUALAAAAAAQABAAAAZ3wJRwSCwaj8RG4xGpWDgZJANFpYaiRwWVouh6v91E
+dVwaUxMIM8pUMJkRBzXbPT4YSHiSSPQpfPZ5BgUghB4Fh4gFHoQFBB2PG5EaBRqRG48EAxebnBMF
+E5ybAwISpaYQBRCmpQIBDq+wDguxrwEAt7i5ugBISEEAOw==
+    }
+
 }
 
 # Hides or shows height combobox depending if value is wxh or w%
