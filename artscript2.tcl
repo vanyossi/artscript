@@ -2853,12 +2853,12 @@ proc doConvert { files {step 1} args } {
 					}
 					
 					if {$preview eq {}} {
-						set soname \"[file join $outpath [getOutputName $opath $::outext $::ouprefix $::ousuffix $dimension] ]\"
+						set soname \"[file join $outpath [getOutputName $opath $::artscript_convert(outext) $::artscript_convert(ouprefix) $::artscript_convert(ousuffix) $dimension] ]\"
 					} else {
 						puts "Generating preview"
 						set soname "show:"
 					}
-					set convertCmd [concat convert -quiet \"$opath\" $trim $resize $::artscript_convert(wmark) [format $::alfaoff $::artscript(alfa_color)] $::artscript_convert(quality) $soname]
+					set convertCmd [concat convert -quiet \"$opath\" $trim $resize $::artscript_convert(wmark) $::artscript_convert(alfa_off) $::artscript_convert(quality) $soname]
 
 					runCommand $convertCmd [list doConvert $files 1 {*}$args]
 				}
@@ -2873,6 +2873,11 @@ proc doConvert { files {step 1} args } {
 proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 
 	pBarControl {} create 0 1
+
+	set ::artscript_convert(alfa_off) [format $::alfaoff $::artscript(alfa_color)]
+	foreach var {outext ouprefix ousuffix} {
+		set ::artscript_convert($var) [set ::$var]
+	}
 
 	set ::artscript_convert(files) [processIds $ids]
 	set ::artscript_convert(collage_ids) [list]
