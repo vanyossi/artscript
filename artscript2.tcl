@@ -1886,16 +1886,19 @@ proc colStyle { w } {
 }
 proc colSelect {} {
 	switch -- $::collage_sel {
-		0 {set ops {off ? "Convert" {prepConvert} } }
-		1 {set ops {on ! "Make Collage" {prepConvert "Collage"} } }
+		0 {set ops {off ? "Convert" {prepConvert} end} }
+		1 {set ops {on ! "Make Collage" {prepConvert "Collage"} end-2 } }
 	}
-	lassign $ops state mode convert_string convert_cmd
+	lassign $ops state mode convert_string convert_cmd format_range
 	set image [append ::img_$state]
 	$::widget_name(col_select) configure -image $image -text "Make Collage$mode"
 	$::option_tab tab $::cl -image $image
 	set ::artscript(bconvert_string) $convert_string
 	set ::artscript(bconvert_cmd) $convert_cmd
 	$::widget_name(convert-but) configure -text $convert_string -command $convert_cmd
+	# Disable unsupported formats for collage
+	$::widget_name(formats) configure -values [lrange $::artscript(formats) 0 $format_range]
+	if { [$::widget_name(formats) current] == -1 } { $::widget_name(formats) current 0 }
 }
 
 proc colLayoutsSelect { w } {
@@ -2194,10 +2197,10 @@ proc frameSuffix { w } {
 proc frameOutput { w } {
 	ttk::labelframe $w -text "Output & Quality" -padding {6 6 12}
 
-	set formats [list png jpg gif webp {webp lossy} ora {Rename}] ; # TODO ora and keep
+	set ::artscript(formats) [list png jpg gif webp {webp lossy} ora {Rename}]
 	ttk::label $w.label_format -text "Format:"
-	ttk::combobox $w.format -state readonly -width 9 -textvariable ::outext -values $formats
-	$w.format set [lindex $formats 0]
+	set ::widget_name(formats) [ttk::combobox $w.format -state readonly -width 9 -textvariable ::outext -values $::artscript(formats)]
+	$w.format set [lindex $::artscript(formats) 0]
 	bind $w.format <<ComboboxSelected>> [list setFormatOptions $w ]
 
 	ttk::label $w.label_quality -text "Quality:"
