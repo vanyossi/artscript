@@ -70,15 +70,15 @@ proc artscriptSettings {} {
 	]
 	#Collage
 	set col_settings [dict create \
-		::collage_styles(neutral) "bg_color grey50 border_color grey40 label_color grey30 img_color grey50" \
-		::collage_styles(bright) "bg_color grey88 border_color grey66 label_color grey30 img_color grey99" \
-		::collage_styles(dark) "bg_color grey10 border_color grey20 label_color grey50 img_color grey5" \
-		::collage_styles(darker) "bg_color grey5 border_color grey10 label_color grey45 img_color black" \
-		{::collage_layouts(Photo sheet)} "ratio 3:2 wid 275 hei 183 col 6 row 5 range 30 border 1 padding 4 label {%f: (%G)} mode {}" \
-		{::collage_layouts(Storyboard)} "ratio 16:9 wid 500 hei 281 col 3 row 3 range 9 border 1 padding 8 label {%f} mode {}" \
-		{::collage_layouts(Image Strip v)} "ratio 4:3 wid 300 hei {} col 1 row {} range {} border 0 padding 0 label {} mode {Zero Geometry}" \
-		{::collage_layouts(Image Strip h)} "ratio 4:3 wid {} hei 300 col {} row 1 range {} border 0 padding 0 label {} mode {Zero Geometry}" \
-		{::collage_layouts(Square 3x3)} "ratio 1:1 wid 350 hei 350 col 3 row 3 range {} border 0 padding 2 label {} mode {}" \
+		collage_styles(neutral) "bg_color grey50 border_color grey40 label_color grey30 img_color grey50" \
+		collage_styles(bright) "bg_color grey88 border_color grey66 label_color grey30 img_color grey99" \
+		collage_styles(dark) "bg_color grey10 border_color grey20 label_color grey50 img_color grey5" \
+		collage_styles(darker) "bg_color grey5 border_color grey10 label_color grey45 img_color black" \
+		{collage_layouts(Photo sheet)} "ratio 3:2 wid 275 hei 183 col 6 row 5 range 30 border 1 padding 4 label {%f: (%G)} mode {}" \
+		{collage_layouts(Storyboard)} "ratio 16:9 wid 500 hei 281 col 3 row 3 range 9 border 1 padding 8 label {%f} mode {}" \
+		{collage_layouts(Image Strip v)} "ratio 4:3 wid 300 hei {} col 1 row {} range {} border 0 padding 0 label {} mode {Zero Geometry}" \
+		{collage_layouts(Image Strip h)} "ratio 4:3 wid {} hei 300 col {} row 1 range {} border 0 padding 0 label {} mode {Zero Geometry}" \
+		{collage_layouts(Square 3x3)} "ratio 1:1 wid 350 hei 350 col 3 row 3 range {} border 0 padding 2 label {} mode {}" \
 	]
 
 	#Suffix and prefix ops
@@ -2900,11 +2900,15 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 	
 	do$type $::artscript_convert(files) 0 preview $preview
 }
+proc artscriptExit {} {
+	# Delete temporary files
+	catch {file delete {*}$::deleteFileList }
+}
 
 # ---=== Window options
 wm title . "Artscript $::version -- [getFilesTotal] Files selected"
 # Set close actions
-bind . <Destroy> [list catch {file delete {*}$::deleteFileList } ]
+bind . <Destroy> artscriptExit
 
 # We test if icon exist before addin it to the wm
 set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
