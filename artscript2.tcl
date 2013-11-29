@@ -102,6 +102,16 @@ proc artscriptSettings {} {
 	set out_settings [dict create \
 		outext      "png"   \
 		iquality    92      \
+		artscript(supported_files) [dict create \
+			all [list {Suported Images}     [dict get $mis_settings ext] ] \
+			magick [list {Suported Images}  {.png .jpg .jpeg .gif .bmp .miff .svg .tif .webp} ] \
+			calligra [list {KRA, ORA}       {.ora .kra}  ] \
+			inkscape [list {SVG, AI}        {.svg .ai}   ] \
+			gimp [list {XCF, PSD}           {.xcf .psd}  ] \
+			png [list {PNG}                 {.png}       ] \
+			jpg [list {JPG, JPEG}           {.jpg .jpeg} ] \
+			gif [list {GIF}                 {.gif} ] \
+		]
 	]
 	#--==== END of Artscript Default Settings
 	set settings [dict merge $mis_settings $wat_settings $siz_settings $col_settings $suf_settings $bool_settings $out_settings]
@@ -472,51 +482,38 @@ proc putsHandlers {args} {
 	return [dict keys $images]
 }
 # Shows open dialog for supported types
-# Validates the input and updates the window title
-proc openFiles { {path .} } {
-	if {[info exists ::artscript(openpath)]} {
-		set path $::artscript(openpath)
+proc openFiles { args } {
+	lassign [list {all calligra inkscape gimp png jpg gif} openpath 1 .] formats path_var multiple path
+	foreach {key value} $args {
+		set $key $value
 	}
-	set exts [list $::ext]
-	set types " \
-	 	\"{Suported Images}  $exts \"
-	{{KRA, ORA}      {.ora .kra}  } \
-	{{SVG, AI}       {.svg .ai}   } \
-	{{XCF, PSD}      {.xcf .psd}  } \
-	{{PNG}           {.png}       } \
-	{{JPG, JPEG}     {.jpg .jpeg} } \
-	"
-	set files [tk_getOpenFile -filetypes $types -initialdir $path -multiple 1]
-	# Set initialdir global from files
-	puts [file dirname [lindex $files 0]]
-	set ::artscript(openpath) [file dirname [lindex $files 0]]
+	if {[info exists ::artscript($path_var)]} { set path $::artscript($path_var) }
 
-	listValidate $files
+	foreach key $formats {
+		lappend types [dict get $::artscript(supported_files) $key]
+	}
+
+	# Get selected files and set path to file folders
+	set files [tk_getOpenFile -filetypes $types -initialdir $path -multiple $multiple]
+	set ::artscript($path_var) [file dirname [lindex $files 0]]
+
+	return $files
+}
+# Validates the input and updates the window title
+proc loadTreeFiles {} {
+	listValidate [openFiles]
 	updateWinTitle
 }
-# Shows open dialog for image types
-# Validates the input and updates the window title
-proc selectImageFile { w {path .} } {
-	if {[info exists ::artscript(imagepath)]} {
-		set path $::artscript(imagepath)
-	}
-	set types " \
-	{{Suported Images}  {.png .jpg .jpeg .gif} } \
-	{{PNG}           {.png}       } \
-	{{JPG, JPEG}     {.jpg .jpeg} } \
-	{{GIF}     {.gif} } \
-	"
-	set path [tk_getOpenFile -filetypes $types -initialdir $path -multiple 0]
+# Loads chosen file to watermark combobox
+proc loadImageWatermark {w args} {
+	set path [openFiles formats "magick png jpg gif" path_var imagepath multiple 0]
 	if {$path ne {}} {
-		# Set initialdir global from path
 		set file [file tail $path]
-		set ::artscript(imagepath) [file dirname $path]
-
 		dict append ::iwatermarks $file $path
 		set iwatermarksk [dict keys $::iwatermarks]
+		set ::wmimsrc [dict get $::iwatermarks $file] ; #TODO, move to watermark render funtion.
 		$w configure -values $iwatermarksk
 		$w set $file
-		set ::wmimsrc [dict get $::iwatermarks $file]
 	}
 }
 
@@ -1020,7 +1017,7 @@ proc guiTopBar { w } {
 	pack [ttk::frame $w] -side top -expand 0 -fill x
 	# ttk::label $w.title -text "Artscript 2.0.0"
 	ttk::separator $w.sep -orient vertical
-	ttk::button $w.add -text "Add files" -command { openFiles }
+	ttk::button $w.add -text "Add files" -command { loadTreeFiles }
 	pack $w.add $w.sep -side left -fill x
 	pack configure $w.sep -expand 1
 
@@ -1160,7 +1157,7 @@ proc tabWatermark { wt } {
 	$wt.iwatermarks set [lindex $iwatermarksk 0]
 	set ::wmimsrc [dict get $::iwatermarks [lindex $iwatermarksk 0]]
 	bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel "$::widget_name(check-wm) $wt.cbim" }
-	ttk::button $wt.img_select -image $::folder_on -text "New" -style small.TButton -command [list selectImageFile $wt.iwatermarks]
+	ttk::button $wt.img_select -image $::folder_on -text "New" -style small.TButton -command [list loadImageWatermark $wt.iwatermarks]
 
 	# Image size box \%
 	ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
