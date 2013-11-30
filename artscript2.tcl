@@ -2002,9 +2002,9 @@ proc colGetTileSize {} {
 	if {($width eq {}) && ($height eq {}) } {
 		return [list 1500 1500]
 	} elseif {$width eq {}} {
-		set width 1500
+		set width 0
 	} elseif {$height eq {}} {
-		set height 1500
+		set height 0
 	}
 	return [list $width $height]
 }
