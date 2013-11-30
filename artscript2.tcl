@@ -1776,7 +1776,7 @@ proc colSpacing { w } {
 	bind $::widget_name(tab_collage_padding) <ButtonRelease> { colPaddingPreview }
 	bind $::widget_name(tab_collage_padding) <KeyRelease> { colPaddingPreview }
 
-	grid $w.label_border $w.label_pad -sticky w
+	grid $w.label_border $w.label_pad -sticky w -pady {6 0}
 	grid $w.value_border $w.value_pad -sticky w
 	grid columnconfigure $w {0} -pad 6
 
@@ -1854,29 +1854,25 @@ proc colLabel { w } {
 		-validate key -validatecommand { string is print %P } ]
 	ttk::label $w.subst -text "%f => file.ext, %e => ext, %G => WxH"
 
-	ttk::checkbutton $w.col_mode -text "Concatenate" -variable ::concatenate
-	ttk::label $w.col_label_mode -text "(Images ignore tile size)"
-
 	set col_ops [ttk::frame $w.options -padding {12 0 0 0} ]
-	ttk::label $col_ops.prev -width 9 -text "" -anchor e
-	ttk::button $col_ops.show_prev -text "Estimate size" -style small.TButton -command [list colEstimateSize $col_ops.prev]
+	ttk::label $col_ops.prev -width 14 -text "" -anchor e
+	ttk::button $col_ops.show_prev -text "Estimate size" -style small.TButton -width 12 -command [list colEstimateSize $col_ops.prev]
 	ttk::label $col_ops.label_mode -text "Mode:" -anchor e
 	set ::widget_name(tab_collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values {{} Concatenation {Zero geometry} {Crop}} ]
 
 	grid $col_ops.prev $col_ops.show_prev -sticky e
 	grid $col_ops.label_mode $col_ops.mode -sticky e
-	grid configure $col_ops.prev $col_ops.label_mode -padx {0 6}
+	grid configure $col_ops.prev $col_ops.label_mode -padx {0 4}
 	grid columnconfigure $col_ops {0} -weight 1
-	grid rowconfigure $col_ops "all" -pad 4
+	grid rowconfigure $col_ops "all" -pad 4 -weight 1
 
-	# grid $w.col_mode $w.col_label_mode -sticky we
-	grid $w.label_title $w.label_text $col_ops -sticky we
-	grid $w.subst - -sticky we
-	grid configure $col_ops -columnspan 1
+	grid $w.label_title $w.label_text $col_ops -sticky nwe
+	grid $w.subst - -sticky nwe
+	grid configure $w.label_title $w.label_text -pady {2 0}
+	grid configure $col_ops -rowspan 2
 	grid columnconfigure $w {1} -weight 1
 	grid columnconfigure $w {2} -weight 2
 	grid rowconfigure $w {0 1} -pad 6
-
 
 	return $w
 }
