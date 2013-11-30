@@ -1164,7 +1164,7 @@ proc tabWatermark { wt } {
 		-validatecommand { string is integer %P }
 	$wt.imgsize set $::wmimsize
 	bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] watsel $::widget_name(check-wm) }
-	bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel "$::widget_name(check-wm) $wt.cbim"] }
+	bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel "$::widget_name(check-wm) $wt.cbim" }
 
 	# Image position
 	set ::widget_name(wmipos) [ttk::combobox $wt.iposition -state readonly -textvariable ::wmimpos -values $wmpositions -width 10]
