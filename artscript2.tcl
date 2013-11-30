@@ -2000,7 +2000,7 @@ proc colGetTileSize {} {
 	set height [$::widget_name(tab_collage_hei) get]
 
 	if {($width eq {}) && ($height eq {}) } {
-		return [list 1500 1500]
+		return [list 0 0]
 	} elseif {$width eq {}} {
 		set width 0
 	} elseif {$height eq {}} {
@@ -2050,8 +2050,8 @@ proc prepCollage { input_files } {
 		set $var [expr {$value - $pixel_space}]
 	}
 	if {($zero_geometry == 0) && ($concatenate eq {})} {
-		set width [expr {$width == (1500 - $pixel_space) ? $height : $width}]
-		set height [expr {$height == (1500 - $pixel_space) ? $width : $height}]
+		set width [expr {$width == (0 - $pixel_space) ? $height : $width}]
+		set height [expr {$height == (0 - $pixel_space) ? $width : $height}]
 	} else {
 		set trim {-trim}
 	}
@@ -2112,10 +2112,10 @@ proc doCollage { files {step 1} args } {
 			}
 
 			foreach id $range_pack {
-				set opath [dict get $::inputfiles $id path]
+				set path [dict get $::inputfiles $id path]
+				set opath $path
 				catch {set opath [dict get $::inputfiles $id tmp]}
 
-				#get label
 				set clabel [colFilterLabel $id]
 
 				lassign [scan [dict get $::inputfiles $id size] "%dx%d"] wid hei
@@ -2146,7 +2146,6 @@ proc doCollage { files {step 1} args } {
 			#Add filename to dict
 			set output_path [format {%s_%d.%s} "/tmp/collage-${::day}" $::artscript_convert(count) "png"]
 			set geometry [expr { $zero_geometry ? "1x1+${padding}+${padding}\\<" : "${width}x${height}+${padding}+${padding}" }]
-			# puts $geometry
 
 			set Cmd [concat montage -quiet [expr { $crop ? "-crop [list $geometry]" : {} }] $collage_names \
 				-geometry [list $geometry] $concatenate -tile ${col}x${row} \
@@ -2154,12 +2153,13 @@ proc doCollage { files {step 1} args } {
 				"PNG32:$output_path" ]
 			# puts $Cmd
 		}
-		runCommand $Cmd [list relaunchCollage $output_path $opath $fsize $files]
+		runCommand $Cmd [list relaunchCollage $output_path $path $files]
 	}}
 }
-proc relaunchCollage { file_generated destination size files } {
+proc relaunchCollage { file_generated destination files } {
 	# global fc deleteFileList
 	if {[file exists $file_generated]} {
+		set size [dict get [identifyFile $file_generated] size] 
 		set output_dir [file dirname $destination]
 		set name [file join $output_dir [file tail $file_generated]]
 
@@ -2353,9 +2353,11 @@ proc pBarUpdate { w gvar args } {
 # Controls the basic operation of create update and forget from main progressbar
 proc pBarControl { itext {action none} { delay 0 } {max 0} } {
 	updateTextLabel pbtext $itext
-	# event generate $::widget_name(pbar-label) <Expose> -when now
 	update idletasks
-	after $delay
+	if {$delay > 0} {
+		after idle [list after $delay [list set wait 1]]
+		vwait wait
+	}
 	switch -- $action {
 		"create" { 
 			pack $::widget_name(pbar-label) $::widget_name(pbar-main) -side left -expand 1 -fill x -padx 2 -pady 0
@@ -2574,7 +2576,7 @@ proc renameFiles { {index 0} {step 0} } {
 			set id [lindex $::artscript_convert(files) $index]
 			incr index
 			if {$id eq {}} {
-				pBarControl "Operations Done..." forget 600
+				pBarControl "Rename Images Done!" forget 600
 				puts "Rename done."
 				return
 			}
@@ -2666,7 +2668,7 @@ proc makeOra { index ilist } {
 	incr index
 	
 	if { $idnumber eq {} } {
-		pBarControl "All operations Done" forget 600
+		pBarControl "ORA Image Files Ready!" forget 600
 		return
 	}
 	
@@ -2832,7 +2834,7 @@ proc doConvert { files {step 1} args } {
 		incr ::artscript_convert(count)
 		
 		if { $idnumber eq {} } {
-			pBarControl "Operations Done..." forget 600
+			pBarControl "File Conversions Done!" forget 600
 			puts "Convert done."
 			# erase all collage from lists
 			if {[llength $::artscript_convert(collage_ids)] > 0} {
@@ -2905,7 +2907,7 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 	set ::artscript_convert(files) [processIds $ids]
 	set ::artscript_convert(collage_ids) [list]
 	if {[llength $::artscript_convert(files)] == 0} {
-		pBarControl "No files loaded!" forget 600
+		pBarControl "No images loaded!" forget 600
 		return -code break
 	}
 	#get watermark value
