@@ -1217,7 +1217,7 @@ proc tabWatermark { wt } {
 # --== Size options
 proc getArrayNamesIfValue { aname } {
 	foreach key [array name $aname] {
-		if {[llength $[set aname]($key)] > 0 } {
+		if {[llength [subst $[set aname]($key)]] > 0 } {
 			lappend presets $key
 		}
 	}
