@@ -50,7 +50,6 @@ proc artscriptSettings {} {
 		wmcolswatch     { }                 \
 		wmop            80                  \
 		wmpos           "BottomRight"       \
-		wmimsrc         { }                 \
 		iwatermarks     [dict create        \
 			"Logo" "/Path/to/logo"          \
 			"Client Watermark" "/path/to/watermarkimg" \
@@ -511,7 +510,6 @@ proc loadImageWatermark {w args} {
 		set file [file tail $path]
 		dict append ::iwatermarks $file $path
 		set iwatermarksk [dict keys $::iwatermarks]
-		set ::wmimsrc [dict get $::iwatermarks $file] ; #TODO, move to watermark render funtion.
 		$w configure -values $iwatermarksk
 		$w set $file
 	}
@@ -1150,13 +1148,12 @@ proc tabWatermark { wt } {
 	# Image watermark ops
 	ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable ::watselimg -command {turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
 	ttk::label $wt.limg -text "Image"
-	# dict get $dic key
+
 	# Get only the name for image list.
 	set iwatermarksk [dict keys $::iwatermarks]
-	ttk::combobox $wt.iwatermarks -state readonly -values $iwatermarksk
+	set ::widget_name(watermark_image) [ttk::combobox $wt.iwatermarks -state readonly -values $iwatermarksk]
 	$wt.iwatermarks set [lindex $iwatermarksk 0]
-	set ::wmimsrc [dict get $::iwatermarks [lindex $iwatermarksk 0]]
-	bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction wmimsrc [dict get $::iwatermarks [%W get]] watsel "$::widget_name(check-wm) $wt.cbim" }
+	bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction 0 0 watsel "$::widget_name(check-wm) $wt.cbim" }
 	ttk::button $wt.img_select -image $::folder_on -text "New" -style small.TButton -command [list loadImageWatermark $wt.iwatermarks]
 
 	# Image size box \%
@@ -2459,7 +2456,7 @@ proc getOutputSizesForTree { size {formated 0}} {
 }
 #Preproces functions
 # Renders watermark images based on parameters to tmp folder
-# global watseltxt wmtxt wmsize wmcol, watselimg wmimsrc wmimop wmimcomp
+# global watseltxt wmtxt wmsize wmcol, watselimg wmimop wmimcomp
 # returns string
 proc watermark {} {
 	global deleteFileList
@@ -2469,7 +2466,7 @@ proc watermark {} {
 	# set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
 	set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(wmpos) current] ]
 	set wmimpossel [lindex $::artscript(magick_pos) [$::widget_name(wmipos) current] ]
-	# wmtxt watermarks wmsize wmcol wmcolswatch wmop wmpositions wmimsrc iwatermarks wmimpos wmimsize wmimcomp wmimop watsel watseltxt watselimg
+	# wmtxt watermarks wmsize wmcol wmcolswatch wmop wmpositions iwatermarks wmimpos wmimsize wmimcomp wmimop watsel watseltxt watselimg
 	#Watermarks, check if checkboxes selected
 	if { $::watseltxt } {
 		set wmtmptx [file join "/tmp" "artk-tmp-wtmk.png" ]
@@ -2480,23 +2477,23 @@ proc watermark {} {
 		set wmtcmd [list convert -quiet -size ${width}x${height} xc:transparent -pointsize $::wmsize -gravity Center -fill $::wmcol -annotate 0 "$::wmtxt" -trim \( +clone -background $wmcolinv  -shadow 80x2+0+0 -channel A -level 0,60% +channel \) +swap +repage -gravity center -composite $wmtmptx]
 		catch { exec {*}$wmtcmd }
 		
-		lappend deleteFileList $wmtmptx ; # add wmtmp to delete list
+		lappend deleteFileList $wmtmptx
 		append wmcmd [list -gravity $wmpossel $wmtmptx -compose dissolve -define compose:args=$::wmop -geometry +5+5 -composite ]
-		# puts [subst $wmcmd] ; # unfold if string in {}
+
 	}
-	if { $::watselimg && [file exists $::wmimsrc] } {
+	set wmimsrc [dict get $::iwatermarks [$::widget_name(watermark_image) get]]
+	if { $::watselimg && [file exists $wmimsrc] } {
 		set identify {identify -quiet -format "%wx%h:%m:%M "}
-		if { [catch {set finfo [exec {*}$identify $::wmimsrc ] } msg ] } {
+		if { [catch {set finfo [exec {*}$identify $wmimsrc ] } msg ] } {
 			puts $msg	
 		} else {
 			set imfl [split $finfo { }]
 			set iminfo [lindex [split $imfl ":"] 0]
 			set size [lindex $iminfo 0]
 			set wmtmpim [file join "/tmp" "artk-tmp-wtmkim.png" ]
-			set wmicmd [ list convert -quiet -size $size xc:transparent -gravity Center $::wmimsrc -compose dissolve -define compose:args=$::wmimop -composite $wmtmpim]
+			set wmicmd [ list convert -quiet -size $size xc:transparent -gravity Center $wmimsrc -compose dissolve -define compose:args=$::wmimop -composite $wmtmpim]
 			catch { exec {*}$wmicmd }
-			
-			# set watval [concat -gravity $::wmimpos -draw "\"image $::wmimcomp 10,10 0,0 '$::wmimsrc'\""]
+
 			lappend deleteFileList $wmtmpim ; # add wmtmp to delete list
 			append wmcmd " " [list -gravity $wmimpossel $wmtmpim -compose $::wmimcomp -define compose:args=$::wmimop -geometry +10+10 -composite ]
 		}
