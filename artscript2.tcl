@@ -16,7 +16,20 @@
 #
 # ---------------------::::::::::::::------------------------
 package require Tk
-set ::version "v2.1.4"
+set ::version "v2.1.5"
+
+# Load drag and drop Unix
+proc tkdndLoad {} {
+	if {[catch {package require tkdnd}]} {
+		set DIR [file dirname [file normalize [info script]]]
+		source $DIR/tkdnd/tkdnd.tcl
+		foreach dll [glob -type f $DIR/tkdnd/*tkdnd*[info sharedlibextension]] {
+			catch {tkdnd::initialise $DIR/tkdnd [file tail $dll] tkdnd}
+		}
+	}
+	return -code ok
+}
+set ::artscript(tkdnd) [expr {[catch {tkdndLoad}] ? 0 : 1}]
 
 # Do not show .dot files by default. !fails in OSX
 catch {tk_getOpenFile foo bar}
@@ -1053,8 +1066,13 @@ proc guiMiddle { w } {
 	guiFileList $file_pane
 	guiThumbnail $file_pane
 	
-	# Add frame notebook to pane left.
+	if {$::artscript(tkdnd)} {
+		puts "Tk drag and drop enabled"
+		::tkdnd::drop_target register $w *
+		bind $w <<Drop>> { listValidate %D }
+	}
 
+	# Add frame notebook to pane left.
 	set ::option_tab [guiOptionTabs $paned_botom.n]
 	set gui_out [guiOutput $paned_botom.onam]
 	
@@ -1085,6 +1103,7 @@ proc guiFileList { w } {
 	bind $w.flist <Key-Delete> { removeTreeItem %W [%W selection] }
 	ttk::scrollbar $w.sscrl -orient vertical -command [list $w.flist yview ]
 	$::widget_name(flist) tag configure exists -foreground #f00
+
 	return $w
 }
 
