@@ -1,4 +1,8 @@
-To activate drag and drop
+tkDND necessary libraries are contained in this folder for linux.
+If for some reason does not work you can attempt to download
+and install using the following instructions:
+
+To activate drag and drop.
 
 Go to tkDND homepage
 http://sourceforge.net/projects/tkdnd/
