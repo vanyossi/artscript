@@ -6,7 +6,7 @@
 # Lines starting with "#" will be ignored
 # To use rename to presets.config (remove the "example")
 # Custom variables (only autor available v1.5)
-#autor=Your name
+autor=Autor
 
 # Use above variables like the example (ex. autor > $autor)
 # Other variables available: $date (current date), $year, $month, $day.
@@ -22,143 +22,132 @@
 # Anything below "preset=" will be loaded when artscript is called with argument ":preset"
 # ex ( $sh ~ artscript :preset collage file1.jpg file2.png file3.kra )
 # example above loads anything below "preset=collage"
-#preset=
+# preset=
 
 # Turn on remember last used settings. Default 0 (off)    1 = On
+# Settings will be saved in .artscriptrc file in the same directory the script is running
 artscript(remember_state)=0
 
-#-====Watermark options
-# watermark default text.
-#watxt=""
+#-==== Watermark options
+# watermark_text=""
 
 # watermark default list, follow example to add your own [listbox]
-#watermarks="http://example.wordpress.com" "example@example.com" "copyright (c) $year $autor"
+# watermark_text_list="http://example.wordpress.com" "example@example.com" "copyright (c) $year $autor"
 
 # watermark text size in points
-#wmsize=10
+# watermark_size=10
 
-# Text watermark position "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"
-#wmpos=South
+# Text	 watermark position "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"
+# watermark_position=BottomRight
 
-#-====image watermark options
-# Image path uri, it has to be an absolute path
-#wmimsrc=""
+# Text color in hex value (#fff, #ffffff) or tk colors http://www.tcl.tk/man/tcl8.4/TkCmd/colors.htm (white)
+# watermark_color=#ff3456
 
-# Image watermark position. "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"
-#wmimpos="NorthEast"
+# text opacity. 0 invisible, 100 opaque
+# watermark_text_opacity=70
 
-# Image size relative to image. (Not used v1.8)
-#wmimsize="90%"
+# watermark swatches. colors are set as Name Value pairs. Value must be in hex or tk name covention ()
+# watermark_color_swatches=""
+
+# Image path uri, "Name Path" pairs. path must be an absolute path
+# watermark_image_list="Image name" "/path/to/image.png" "Image name" "/path/to/image.png"
+
+# Image watermark position. "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"
+# watermark_image_position="BottomLeft"
+
+# Image size relative to image. (Not used v2.1)
+# watermark_image_size="90"
 
 # Image blending option. ( "Bumpmap" "Burn" "Color_Burn" "Color_Dodge" "Colorize" "Copy_Black" "Copy_Blue" "Copy_Cyan" "Copy_Green" "Copy_Magenta" "Copy_Opacity" "Copy_Red" "Copy_Yellow" "Darken" "DarkenIntensity" "Difference" "Divide" "Dodge" "Exclusion" "Hard_Light" "Hue" "Light" "Lighten" "LightenIntensity" "Linear_Burn" "Linear_Dodge" "Linear_Light" "Luminize" "Minus" "ModulusAdd" "ModulusSubtract" "Multiply" "Overlay" "Pegtop_Light" "Pin_Light" "Plus" "Saturate" "Screen" "Soft_Light" "Vivid_Light")
-#wmimcomp="Over"
+# watermark_image_style="Over"
 
-#-====Color options:
-# watermark text color in hex value (#fff, #ffffff) or tk colors http://www.tcl.tk/man/tcl8.4/TkCmd/colors.htm (white)
-#rgb=#fafafa
 
-# watermark opacity. 0.0 invisible, 1.0 opaque
-#opacity=0.7
+#-==== Size options
+# Sizes available in preset lists. Space separated values. Use name "default" to autload some values.
+# Example sizes_set(NAME_OF_PRESET) = "value1 value2 value3..."
+# sizes_set(default)="1920x1080 1680x1050 1280x1024 50% 1024x768 720x720 640x480"
 
-# watermark swatches. colors as hex or tk, follow example
-#wmswatch=#000 gray #fff
+# Resize scale operator. Scale Stretch OnlyGrow OnlyShrink Zoom
+# resize_operators=Zoom
 
-# Background detault color (Collage)
-#bgcolor=#444444
+# Operator Zoom crop position.
+# resize_zoom_position=North
 
-# Background opacity (Image needs to support alpha channel) (Collage)
-#bgop=.2
 
-# background swatches. colors as hex or tk, follow example
-#bgswatch=grey10 grey grey96
+#-==== Collage options
+# Set aspect ratio for collage tile size
+# collage_ratio=
 
-# Border default color (Collage)
-#bordercol=grey94
+# Tile width and height
+# collage_wid=
+# collage_hei=
 
-# Border opacity (colllage)
-#brop=.8
-
-# border color swatches. colors as hex or tk, follow example
-#brswatch=grey27 grey66 white
-
-# Label default color (Collage)
-#tfill=#ffffff
-
-# Label default opacity
-#tfop=.8
-
-# fill color swatches. colors as hex or tk, follow example
-#tswatch=grey16 gray88 white
-
-#-====Size and Montage:
-# Sizes available in size listbox, Space separated values [listbox]
-#sizes=1900x1080 40% 364x250
-
-# Size default value
-#sizext=300x300
-
-# Control border around each image in Collage. set 0 disable.
-#mborder=5
-
-# Control image spacing in Collage. set 0 no gap.
-#mspace=3
-
-# Default layout mode. 1x (1 column), 2x2 (2 Col by 2row), x2 (2 rows) (Collage)
-#tileval=
+# Layout options, column and rows
+# collage_col=
+# collage_row=
 
 # Number of images for each collage.
-#mrange=
+# collage_range=
 
-# Default label value, Collage
-# possible values http://www.imagemagick.org/script/escape.php
-#mlabel=
+# Default label value: Substitution strings.  http://www.imagemagick.org/script/escape.php
+# collage_label=
 
-# Defautl suffix name for Collage
-#mname=
+# Control border around each tile.
+# collage_border=
+
+# Control tile spacing.
+# collage_padding=
+
+Collage Mode: Concatenation "Zero geometry" Crop
+# collage_mode=
+
+# Collage background color
+# collage_bg_color=
+
+# Tile border color
+# collage_border_color=
+
+# Label color
+# collage_label_color=
+
+# Preview image bg color (This is only for preview, its helpfull to set equal to background color)
+# collage_img_color=
+
 
 #-====Extension & output
 # Default output extension
-#outextension=jpg
+# out_extension=
 
 # Image quality
-#iquality=80
+# image_quality=95
+
 
 #-====Suffix options
 # Suffix list options [listbox]
-#suffixes="net" "$date\_comic"
+# suffix_list="net" "arts" "read"
 
 #Default selected suffix
-#suffix=net
+# suffix=net
+
+#Default selected prefix
+# prefix=net
 
 #-====Selected operations, default false
-# Controls watermark insert. (true/false) add watermark
-#watsel=false
+# Controls watermark insert. (1 = true / 0 = false)
+# select_watermark=0
+# select_watermark_text=0
+# select_watermark_image=0
 
-# Controls Collage mode, (true/false) make a collage
-#tilesel=false
+# Controls suffix, collage. (1 = true / 0 = false)
+# select_suffix=0
+# select_collage=0
 
-# Controls Resizing options, (true/false) resize
-#sizesel=false
-
-# Controls add preffix instead of suffix, (true/false) preffix
-#prefixsel=false
+# Controls if files should be overwritten if there is a name collision or not.
+# overwrite=0
 
 
-#Config file example
-#Any value before the first "preset" key will be loaded as artscript default
-#iquality=75
-#wmpos=SouthEast
+# Any value defined after a preset will be loaded if artscript is called in the following form
+# $sh ~ artscript :preset strip file1.jpg file2.png ...
 
-#preset=bigcollage
-#Any value defined after a preset will be loaded if artscript is called in the following form
-# $sh ~ artscript :preset bigcollage file1.jpg file2.png ...
-#tilesel=true
-#tileval=5x6
-#mlabel=%f
-
-#preset=comicstrip
-# $sh ~ artscript :preset comicstrip file1.jpg file2.png ...
-#tilesel=true
-#tileval=1x
-#bgcolor=black
+# preset=strip
 
