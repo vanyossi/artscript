@@ -24,6 +24,9 @@
 # example above loads anything below "preset=collage"
 #preset=
 
+# Turn on remember last used settings. Default 0 (off)    1 = On
+artscript(remember_state)=0
+
 #-====Watermark options
 # watermark default text.
 #watxt=""

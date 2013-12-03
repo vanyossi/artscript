@@ -1,7 +1,7 @@
 #! /usr/bin/env wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: 2.1.4
+#  Version: 2.1.5
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #  License: GPLv3 
@@ -109,6 +109,7 @@ proc artscriptSettings {} {
 		overwrite   0               \
 		alfaoff		{}				\
 		artscript(alfa_color)	"white" \
+		artscript(remember_state) 0 \
 	]
 	#Extension & output
 	set out_settings [dict create \
@@ -545,7 +546,7 @@ proc setGValue {gvar value} {
 	if {$gvar != 0} {
 		upvar #0 $gvar var
 		set var $value
-		puts $var
+		# puts $var
 	}
 }
 # Toggles on state of checkbox using gvar
@@ -891,7 +892,7 @@ proc setColorAndContrast { w args } {
 	if { [catch {set col [setColor $w {*}$args]} msg] } {
 		return
 	}
-	$w itemconfigure $::canvasWatermark(main) -outline [getContrastColor $col]
+	$w itemconfigure $::canvas_element(watermark_main_color) -outline [getContrastColor $col]
 	set ::wmcol $col
 }
 
@@ -922,7 +923,7 @@ proc drawSwatch { w args } {
 		incr i
 		set ::canvasWatermark($i) [$w create rectangle $x $y [expr {$x+$cw}] [expr {$y+$ch-1}] -fill $swatch -width 1 -outline {gray26} -tags {swatch}]
 		set col [lindex [$w itemconfigure $::canvasWatermark($i) -fill] end]
-		$w bind $::canvasWatermark($i) <Button-1> [list setColorAndContrast $w $::canvasWatermark(main) $col 0 ]
+		$w bind $::canvasWatermark($i) <Button-1> [list setColorAndContrast $w $::canvas_element(watermark_main_color) $col 0 ]
 		if { $i == $chal } {
 			incr y $ch
 			set x [expr {$x-($cw*$i)}]
@@ -1145,22 +1146,22 @@ proc tabWatermark { wt } {
 	# Text watermark ops
 	ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable ::watseltxt -command { turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
 	ttk::label $wt.ltext -text "Text"
-	ttk::combobox $wt.watermarks -state readonly -textvariable ::wmtxt -values $::watermarks -width 28
+	set ::widget_name(watermark_text) [ttk::combobox $wt.watermarks -state readonly -textvariable ::wmtxt -values $::watermarks -width 28]
 	$wt.watermarks set [lindex $::watermarks 0]
 	
 	comboBoxEditEvents $wt.watermarks {bindsetAction 0 0 watsel "$::widget_name(check-wm) $wt.cbtx"}
 
 	# font size spinbox
 	set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
-	ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
-		-validatecommand { string is integer %P }
+	set ::widget_name(watermark_size) [ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
+			-validatecommand { string is integer %P }]
 	$wt.fontsize set $::wmsize
 	bind $wt.fontsize <ButtonRelease> { bindsetAction wmsize [%W get] watsel "$::widget_name(check-wm) $wt.cbtx"}
 	bind $wt.fontsize <KeyRelease> { bindsetAction wmsize [%W get] watsel "$::widget_name(check-wm) $wt.cbtx" }
 
 	set wmpositions	[list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"]
 	# Text position box 
-	set ::widget_name(wmpos) [ttk::combobox $wt.position -state readonly -textvariable ::wmpos -values $wmpositions -width 10]
+	set ::widget_name(watermark_position) [ttk::combobox $wt.position -state readonly -textvariable ::wmpos -values $wmpositions -width 10]
 	$wt.position set $::wmpos
 	bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 watsel "$::widget_name(check-wm) $wt.cbtx" }
 
@@ -1176,14 +1177,14 @@ proc tabWatermark { wt } {
 	ttk::button $wt.img_select -image $::folder_on -text "New" -style small.TButton -command [list loadImageWatermark $wt.iwatermarks]
 
 	# Image size box \%
-	ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
-		-validatecommand { string is integer %P }
+	set ::widget_name(watermark_im_size) [ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
+			-validatecommand { string is integer %P }]
 	$wt.imgsize set $::wmimsize
 	bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] watsel $::widget_name(check-wm) }
 	bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] watsel "$::widget_name(check-wm) $wt.cbim" }
 
 	# Image position
-	set ::widget_name(wmipos) [ttk::combobox $wt.iposition -state readonly -textvariable ::wmimpos -values $wmpositions -width 10]
+	set ::widget_name(watermark_im_position) [ttk::combobox $wt.iposition -state readonly -textvariable ::wmimpos -values $wmpositions -width 10]
 	$wt.iposition set $::wmimpos
 	bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 watsel "$::widget_name(check-wm) $wt.cbim" }
 
@@ -1193,10 +1194,10 @@ proc tabWatermark { wt } {
 		bindsetAction $gvar [format $ft $fl] $cvar "$::widget_name(check-wm) $wt.$cb"
 	}
 
-	ttk::scale $wt.txop -from 10 -to 100 -variable ::wmop -value $::wmop -orient horizontal -command { progressBarSet ::wmop ::watsel $wt cbtx "%.0f" }
+	set ::widget_name(watermark_text_opacity) [ttk::scale $wt.txop -from 10 -to 100 -variable ::wmop -value $::wmop -orient horizontal -command { progressBarSet ::wmop ::watsel $wt cbtx "%.0f" }]
 	ttk::label $wt.tolab -width 3 -textvariable ::wmop
 
-	ttk::scale $wt.imop -from 10 -to 100 -variable ::wmimop -value $::wmimop -orient horizontal -command { progressBarSet ::wmimop ::watsel $wt cbim "%.0f" }
+	set ::widget_name(watermark_im_opacity) [ttk::scale $wt.imop -from 10 -to 100 -variable ::wmimop -value $::wmimop -orient horizontal -command { progressBarSet ::wmimop ::watsel $wt cbim "%.0f" }]
 	ttk::label $wt.iolab -width 3 -textvariable ::wmimop
 
 	# Style options
@@ -1205,16 +1206,16 @@ proc tabWatermark { wt } {
 	ttk::label $wt.st.imstyle -text "Image Blending"
 	ttk::separator $wt.st.sep -orient vertical
 
-	canvas $wt.st.chos  -width 62 -height 26
+	set ::widget_name(watermark_canvas) [canvas $wt.st.chos  -width 62 -height 26]
 	
-	set ::canvasWatermark(main) [$wt.st.chos create rectangle 2 2 26 26 -fill $::wmcol -width 2 -outline [getContrastColor $::wmcol] -tags {watermark main}]
-	$wt.st.chos bind main <Button-1> { setColorAndContrast %W $::canvasWatermark(main) [%W itemconfigure $::canvasWatermark(main) -fill] }
+	set ::canvas_element(watermark_main_color) [$wt.st.chos create rectangle 2 2 26 26 -fill $::wmcol -width 2 -outline [getContrastColor $::wmcol] -tags {watermark main}]
+	$wt.st.chos bind main <Button-1> { setColorAndContrast %W $::canvas_element(watermark_main_color) [%W itemconfigure $::canvas_element(watermark_main_color) -fill] }
 
 	set wmswatch [getswatches $::wmcolswatch]
 	drawSwatch $wt.st.chos $wmswatch
 
 	set iblendmodes [list Bumpmap ColorBurn ColorDodge Darken Exclusion HardLight Hue Lighten LinearBurn LinearDodge LinearLight Multiply Overlay Over Plus Saturate Screen SoftLight VividLight]
-	ttk::combobox $wt.st.iblend -state readonly -textvariable ::wmimcomp -values $iblendmodes -width 12
+	set ::widget_name(watermark_im_style) [ttk::combobox $wt.st.iblend -state readonly -textvariable ::wmimcomp -values $iblendmodes -width 12]
 	$wt.st.iblend set $::wmimcomp
 	bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] watsel "$::widget_name(check-wm) $wt.cbim" }
 
@@ -1733,8 +1734,8 @@ proc colBorderPreview { pixel } {
 	if { $pixel eq {} } {
 		set pixel 0
 	}
-	lassign [$::widget_name(col_canvas) coords $::canvas_Collage(img_color)] ox oy fx fy
-	$::widget_name(col_canvas) coords $::canvas_Collage(border_color) [expr {$ox-$pixel}] [expr { $oy-$pixel }] [expr { $fx+$pixel }] [expr { $fy+$pixel }]
+	lassign [$::widget_name(collage_canvas) coords $::canvas_element(collage_img_color)] ox oy fx fy
+	$::widget_name(collage_canvas) coords $::canvas_element(collage_border_color) [expr {$ox-$pixel}] [expr { $oy-$pixel }] [expr { $fx+$pixel }] [expr { $fy+$pixel }]
 }
 proc colPaddingPreview { } {
 	lassign {2 2 79 55} ox oy fx fy
@@ -1743,7 +1744,7 @@ proc colPaddingPreview { } {
 		set $var [expr { $value eq {} ? 0 : $value }]
 	}
 
-	$::widget_name(col_canvas) coords $::canvas_Collage(img_color) [expr {$ox+$padding+$border}] [expr { $oy+$padding+$border }] [expr { $fx-$padding-$border }] [expr { $fy-$padding-$border }]
+	$::widget_name(collage_canvas) coords $::canvas_element(collage_img_color) [expr {$ox+$padding+$border}] [expr { $oy+$padding+$border }] [expr { $fx-$padding-$border }] [expr { $fy-$padding-$border }]
 	colBorderPreview $border
 }
 proc setColageStyle { style {erase true}} {
@@ -1753,7 +1754,7 @@ proc setColageStyle { style {erase true}} {
 	dict for {prop value} $style {
 		set type [split $prop {_}]
 		if { [lindex $type end] eq "color"} {
-			$::widget_name(col_canvas) itemconfigure $::canvas_Collage($prop) -fill $value
+			$::widget_name(collage_canvas) itemconfigure $::canvas_element(collage_$prop) -fill $value
 		} else {
 			# if {$erase} {
 			# 	setColageStyle [list $prop ""] false
@@ -1897,12 +1898,11 @@ proc colStyle { w } {
 	ttk::frame $w -padding {4 0}
 
 	ttk::label $w.label_head -text "Style:" -width 12 -anchor w -padding {0 0 0 6}
-
-	set ::widget_name(col_canvas) [canvas $w.preview -width 80 -height 78]
-	set ::canvas_Collage(bg_color) [$w.preview create rectangle 1 1 79 77 -fill "grey10" -width 1 -outline "grey20" -tags {bg click}]
-	set ::canvas_Collage(border_color) [$w.preview create rectangle 5 5 75 51 -fill "grey27" -width 0 -tags {border click}]
-	set ::canvas_Collage(img_color) [$w.preview create rectangle 5 5 75 51 -fill "grey5" -width 0 -tags {img}]
-	set ::canvas_Collage(label_color) [$w.preview create text 40 56 -text "label" -font "-size 14 -weight bold" -anchor n -fill "grey80" -tags {label click}]
+	set ::widget_name(collage_canvas) [canvas $w.preview -width 80 -height 78]
+	set ::canvas_element(collage_bg_color) [$w.preview create rectangle 1 1 79 77 -fill "grey10" -width 1 -outline "grey20" -tags {bg click}]
+	set ::canvas_element(collage_border_color) [$w.preview create rectangle 5 5 75 51 -fill "grey27" -width 0 -tags {border click}]
+	set ::canvas_element(collage_img_color) [$w.preview create rectangle 5 5 75 51 -fill "grey5" -width 0 -tags {img}]
+	set ::canvas_element(collage_label_color) [$w.preview create text 40 56 -text "label" -font "-size 14 -weight bold" -anchor n -fill "grey80" -tags {label click}]
 	$w.preview bind click <Button-1> { setColor %W [%W find closest %x %y] [%W itemconfigure [%W find closest %x %y] -fill] }
 	$w.preview bind img <Button-1> { setColor %W 2 [%W itemconfigure 2 -fill] }
 
@@ -1919,7 +1919,7 @@ proc colStyle { w } {
 	
 	# Update style preview with border padding values.
 	after idle colPaddingPreview
-	#$w.preview coords $::canvas_Collage(border) 15 15 65 51
+	#$w.preview coords $::canvas_element(collage_border) 15 15 65 51
 
 	return $w
 }
@@ -2089,7 +2089,7 @@ proc prepCollage { input_files } {
 
 	# Place color values
 	foreach {color} {bg_color border_color img_color label_color} {
-		dict set ::artscript_convert(collage_vars) $color [$::widget_name(col_canvas) itemcget $::canvas_Collage($color) -fill]
+		dict set ::artscript_convert(collage_vars) $color [$::widget_name(collage_canvas) itemcget $::canvas_element(collage_$color) -fill]
 	}
 	# Add row col size label range border padding to dict
 	foreach {value} {width height col row range border padding pixel_space concatenate zero_geometry trim crop} {
@@ -2221,10 +2221,10 @@ proc frameSuffix { w } {
 	set suflw [expr {int($suflw+($suflw*.2))}]
 	expr { $suflw > 16 ? [set suflw 16] : [set suflw] }
 
-	ttk::combobox $w.pre -width $suflw -state readonly -textvariable ::ouprefix -values $::suffixes
+	set ::widget_name(prefix) [ttk::combobox $w.pre -width $suflw -state readonly -textvariable ::ouprefix -values $::suffixes]
 	$w.pre set [lindex $::suffixes 0]
 	comboBoxEditEvents $w.pre {printOutname %W }
-	ttk::combobox $w.suf -width $suflw -state readonly -textvariable ::ousuffix -values $::suffixes
+	set ::widget_name(suffix) [ttk::combobox $w.suf -width $suflw -state readonly -textvariable ::ousuffix -values $::suffixes]
 	$w.suf set [lindex $::suffixes 0]
 	comboBoxEditEvents $w.suf {printOutname %W }
 
@@ -2243,7 +2243,7 @@ proc frameOutput { w } {
 	bind $w.format <<ComboboxSelected>> [list setFormatOptions $w ]
 
 	ttk::label $w.label_quality -text "Quality:"
-	ttk::scale $w.slider_qual -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }
+	set ::widget_name(quality) [ttk::scale $w.slider_qual -from 10 -to 100 -variable ::iquality -value $::iquality -orient horizontal -command { progressBarSet ::iquality 0 0 0 "%.0f" }]
 	ttk::label $w.slider_qual_val -width 4 -textvariable ::iquality
 
 	ttk::checkbutton $w.overwrite -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal {getOutputName $value $::outext $::ouprefix $::ousuffix} $::widget_name(flist) path output }
@@ -2483,8 +2483,8 @@ proc watermark {} {
 	
 	# Positions list correspond to $::watemarkpos, but names as imagemagick needs
 	# set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
-	set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(wmpos) current] ]
-	set wmimpossel [lindex $::artscript(magick_pos) [$::widget_name(wmipos) current] ]
+	set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(watermark_position) current] ]
+	set wmimpossel [lindex $::artscript(magick_pos) [$::widget_name(watermark_im_position) current] ]
 	# wmtxt watermarks wmsize wmcol wmcolswatch wmop wmpositions iwatermarks wmimpos wmimsize wmimcomp wmimop watsel watseltxt watselimg
 	#Watermarks, check if checkboxes selected
 	if { $::watseltxt } {
@@ -2941,15 +2941,101 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 	
 	do$type $::artscript_convert(files) 0 preview $preview
 }
-proc artscriptExit {} {
-	# Delete temporary files
-	catch {file delete {*}$::deleteFileList }
+
+proc artscriptSaveOnExit {} {
+	wm protocol . WM_DELETE_WINDOW {
+
+		if {$::artscript(remember_state) == 1} {
+		
+		    set save_settings [dict create]
+
+		    dict set save_settings sizes_selected [dict create values [array names ::sdict] selected [getSizesSel] ]
+		    dict set save_settings img_src [dict create values $::iwatermarks selection [$::widget_name(watermark_image) get]]
+
+		    foreach prop {tab_collage_ratio tab_collage_wid tab_collage_hei tab_collage_col tab_collage_row tab_collage_range tab_collage_border tab_collage_padding tab_collage_mode watermark_text watermark_position watermark_im_position watermark_im_style watermark_size watermark_text_opacity watermark_im_size watermark_im_opacity suffix prefix quality formats tab_resize_operators tab_resize_zoom_position} {
+					dict set save_settings get_values $prop [$::widget_name(${prop}) get]
+			}
+			foreach prop {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color} {
+				lassign [split $prop {_}] parent
+				dict set save_settings col_styles $prop [lindex [$::widget_name(${parent}_canvas) itemconfigure $::canvas_element($prop) -fill] end]
+			}
+			dict set save_settings entries tab_collage_label [$::widget_name(tab_collage_label) get]
+			foreach prop {::prefixsel ::collage_sel ::watsel ::watseltxt ::watselimg ::overwrite ::alfaoff ::iquality} {
+					dict set save_settings variables $prop [set $prop]
+			}
+
+			puts $::artscript_rc
+			set file [open $::artscript_rc w]
+			puts $file $save_settings
+			close $file
+		}
+
+		catch {file delete {*}$::deleteFileList }
+		exit
+	}
+}
+
+proc artscriptOpenState { } {
+
+	if {$::artscript(remember_state) == 0} {
+		return
+	}
+	set ::artscript_rc ".artscriptrc"
+	set ::artscript_rc [file join [file dirname [info script]] $::artscript_rc]
+
+	if {[file exists $::artscript_rc]} {
+
+		set ofile [open $::artscript_rc r]
+		set save_settings [read $ofile]
+		close $ofile
+
+		dict for {type elements} $save_settings {
+			switch -- $type {
+				"sizes_selected" {
+					dict for {name values} $elements {
+						puts "$name $values"
+						foreach size $values {
+							sizeTreeAdd $size nonselected off
+						}
+					}
+				}
+				"get_values" {
+					foreach {key value} $elements {
+						$::widget_name(${key}) set $value
+					}
+					setFormatOptions $::widget_name(frame-output)
+				}
+				"col_styles" {
+					foreach {key value} $elements {
+						lassign [split $key {_}] parent type color
+						$::widget_name(${parent}_canvas) itemconfigure $::canvas_element(${key}) -fill $value
+					}
+				}
+				"entries" {
+					foreach {key value} $elements {
+						$::widget_name(${key}) delete 0 end
+						$::widget_name(${key}) insert 0 $value
+					}
+				}
+				"img_src" {
+					set ::iwatermarks [dict get $elements values]
+					$::widget_name(watermark_image) set [dict get $elements selection]
+				}
+				"variables" {
+					foreach {key value} $elements {
+						set $key $value
+					}
+					colSelect
+				}
+			}
+		}
+	}
 }
 
 # ---=== Window options
 wm title . "Artscript $::version -- [getFilesTotal] Files selected"
 # Set close actions
-bind . <Destroy> artscriptExit
+bind . <Destroy> {artscriptExit %W}
 
 # We test if icon exist before addin it to the wm
 set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
@@ -2957,7 +3043,9 @@ if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 	wm iconphoto . -default $wmicon
 }
 
+
 # ---=== Construct GUI
+artscriptSaveOnExit
 artscriptStyles
 createImageVars
 # Pack Top: menubar. Middle: File, thumbnail, options, suffix output.
@@ -2967,5 +3055,6 @@ guiMiddle .f2
 guiStatusBar .f3
 
 # ---=== Validate input filetypes
+catch {artscriptOpenState}
 set argvnops [lrange $argv [llength $::ops] end]
 listValidate $argvnops
