@@ -18,19 +18,6 @@
 package require Tk
 set ::version "v2.1.5"
 
-# Load drag and drop Unix
-proc tkdndLoad {} {
-	if {[catch {package require tkdnd}]} {
-		set DIR [file dirname [file normalize [info script]]]
-		source $DIR/tkdnd/tkdnd.tcl
-		foreach dll [glob -type f $DIR/tkdnd/*tkdnd*[info sharedlibextension]] {
-			catch {tkdnd::initialise $DIR/tkdnd [file tail $dll] tkdnd}
-		}
-	}
-	return -code ok
-}
-set ::artscript(tkdnd) [expr {[catch {tkdndLoad}] ? 0 : 1}]
-
 # Do not show .dot files by default. !fails in OSX
 catch {tk_getOpenFile foo bar}
 set ::tk::dialog::file::showHiddenVar 0
@@ -39,6 +26,22 @@ set ::tk::dialog::file::showHiddenBtn 1
 #Set default theme to clam if supported
 catch {ttk::style theme use clam}
 namespace eval img { }
+
+# TkDND module lookup
+proc tkdndLoad {} {
+	if {[catch {package require tkdnd}]} {
+		set DIR [file dirname [file normalize [info script]]]
+		source $DIR/tkdnd/tkdnd.tcl
+		foreach dll [glob -type f $DIR/tkdnd/*tkdnd*[info sharedlibextension]] {
+			catch {tkdnd::initialise $DIR/tkdnd [file tail $dll] tkdnd}
+		}
+	}
+	puts "Tk drag and drop enabled"
+	::tkdnd::drop_target register .f2 *
+	bind .f2 <<Drop>> { listValidate %D }
+
+	return -code ok
+}
 
 # Loads default values for setting vars
 # Returns dict with all vars.
@@ -1066,12 +1069,6 @@ proc guiMiddle { w } {
 
 	guiFileList $file_pane
 	guiThumbnail $file_pane
-	
-	if {$::artscript(tkdnd)} {
-		puts "Tk drag and drop enabled"
-		::tkdnd::drop_target register $w *
-		bind $w <<Drop>> { listValidate %D }
-	}
 
 	# Add frame notebook to pane left.
 	set ::option_tab [guiOptionTabs $paned_botom.n]
@@ -2976,7 +2973,6 @@ proc artscriptSaveOnExit {} {
 }
 
 proc artscriptOpenState { } {
-
 	if {$::artscript(remember_state) == 0} {
 		return
 	}
@@ -2993,8 +2989,8 @@ proc artscriptOpenState { } {
 			switch -- $type {
 				"sizes_selected" {
 					dict for {name values} $elements {
-						puts "$name $values"
 						foreach size $values {
+							if {([lsearch -exact $::sizes_set(default) $size] > 0) && ($name eq "values")} { continue }
 							sizeTreeAdd $size nonselected off
 						}
 					}
@@ -3054,7 +3050,11 @@ guiTopBar .f1
 guiMiddle .f2
 guiStatusBar .f3
 
+# Load drag and drop Unix
+catch {tkdndLoad}
+
 # ---=== Validate input filetypes
 catch {artscriptOpenState}
+
 set argvnops [lrange $argv [llength $::ops] end]
 listValidate $argvnops
