@@ -1253,7 +1253,7 @@ E5ybAwISpaYQBRCmpQIBDq+wDguxrwEAt7i5ugBISEEAOw==
 # size => stringxstring or string%x
 # returns pair list
 proc sizeToggleWidgetWxH { size {name "resize"} } {
-	set w $::widget_name(tab_${name}_size)
+	set w $::widget_name(${name}_size)
 
 	scan $size "%d%s" width height
 	set sep [string index $height 0]
@@ -1300,23 +1300,23 @@ proc sizeRatioToFloat { w } {
 # Flips width and heigth field values and sets a new ratio if it's set
 proc sizeAlterRatio { name } {
 	# Get w and h values
-	set wid [$::widget_name(tab_${name}_wid) get]
-	set hei [$::widget_name(tab_${name}_hei) get]
+	set wid [$::widget_name(${name}_wid) get]
+	set hei [$::widget_name(${name}_hei) get]
 	
 	if { ($wid eq {}) || ($hei eq {}) } {
 		return 0
 	}
 	# reverse width and height values
-	$::widget_name(tab_${name}_wid) set $hei
-	$::widget_name(tab_${name}_hei) set $wid
+	$::widget_name(${name}_wid) set $hei
+	$::widget_name(${name}_hei) set $wid
 	
 	# Get current ratio, calculate new ratio, else format 2:3, reverse
-	set rawratio [$::widget_name(tab_${name}_ratio) get]
+	set rawratio [$::widget_name(${name}_ratio) get]
 	if { ($rawratio ne {}) && ([string is double $rawratio]) } {
 		set ratio [expr {[format "%.1f" $hei] / $wid}]
-		$::widget_name(tab_${name}_ratio) set $ratio
+		$::widget_name(${name}_ratio) set $ratio
 	} else {
-		$::widget_name(tab_${name}_ratio) set [join [lreverse [split $rawratio {:}]] {:}]
+		$::widget_name(${name}_ratio) set [join [lreverse [split $rawratio {:}]] {:}]
 		# $::widget_name(resize_ratio) set [ sizeRatioToFloat $::widget_name(resize_ratio) 1 ]
 	}
 }
@@ -1324,8 +1324,8 @@ proc sizeAlterRatio { name } {
 # Alter == wid or hei   w, widget father.
 proc sizeAlter { w alter name } {
 	set ratio [sizeRatioToFloat $w.rat]
-	set wid [$::widget_name(tab_${name}_wid) get]
-	set hei [$::widget_name(tab_${name}_hei) get]
+	set wid [$::widget_name(${name}_wid) get]
+	set hei [$::widget_name(${name}_hei) get]
 
 	if {($ratio != 0) && ($hei eq {})} {
 		set hei $wid
@@ -1358,7 +1358,7 @@ proc setDimentionRatio { r val {name "resize"} {mod "wid"} } {
 			set target "hei"
 		}
 	}
-	$::widget_name(tab_${name}_${target}) set $val
+	$::widget_name(${name}_${target}) set $val
 	return $r
 }
 # Add selected W and H from fields, selected and groupd "custom"
@@ -1419,25 +1419,25 @@ proc addSizeBox { w name } {
 	ttk::frame $w
 	
 	set ratiovals {1:1 1.4142 2:1 3:2 4:3 5:4 5:7 8:5 1.618 16:9 16:10 14:11 12:6 2.35 2.40}
-	set ::widget_name(tab_${name}_ratio) [ttk::combobox $w.rat -width 6 -state readonly -values $ratiovals -validate key -validatecommand { regexp {^(()|[0-9])+(()|(\.)|(:))?(([0-9])+|())$} %P } ]
+	set ::widget_name(${name}_ratio) [ttk::combobox $w.rat -width 6 -state readonly -values $ratiovals -validate key -validatecommand { regexp {^(()|[0-9])+(()|(\.)|(:))?(([0-9])+|())$} %P } ]
 	comboBoxEditEvents $w.rat [list sizeAlter $w wid $name]
 	#bind $w.rat <KeyRelease> [list sizeRatioToFloat $w.rat]
 	
 	ttk::label $w.lwxh -text ":" -font "-size 18" -anchor center
 	# set walppvals {2560 1920 1800 1680 1600 1440 1366 1280 1200 1080 1024 960 864 800 768 600}
-	set ::widget_name(tab_${name}_wid) [ ttk::spinbox $w.wid -width 5 -increment 10 -from 1 -to 5000 \
+	set ::widget_name(${name}_wid) [ ttk::spinbox $w.wid -width 5 -increment 10 -from 1 -to 5000 \
 	  -validate key -validatecommand { regexp {^(()|[0-9])+(()|%%)$} %P } ]
-	bind $::widget_name(tab_${name}_wid) <ButtonRelease> [list sizeAlter $w wid $name]
-	bind $::widget_name(tab_${name}_wid) <KeyRelease> [list sizeAlter $w wid $name]
+	bind $::widget_name(${name}_wid) <ButtonRelease> [list sizeAlter $w wid $name]
+	bind $::widget_name(${name}_wid) <KeyRelease> [list sizeAlter $w wid $name]
 
 	# comboBoxEditEvents $w.wid "sizeAlter $w wid $name"
 	# bind $w.wid <KeyRelease> [list sizeAlter $w "wid $name"]
 	# bind $w.wid <Shift-Button><Shift-Motion> { puts "[winfo pointerx .] %w"}
 
-	set ::widget_name(tab_${name}_hei) [ ttk::spinbox $w.hei -width 5 -increment 10 -from 1 -to 5000 \
+	set ::widget_name(${name}_hei) [ ttk::spinbox $w.hei -width 5 -increment 10 -from 1 -to 5000 \
 		-validate key -validatecommand { string is integer %P } ]
-	bind $::widget_name(tab_${name}_hei) <ButtonRelease> [list sizeAlter $w hei $name]
-	bind $::widget_name(tab_${name}_hei) <KeyRelease> [list sizeAlter $w hei $name]
+	bind $::widget_name(${name}_hei) <ButtonRelease> [list sizeAlter $w hei $name]
+	bind $::widget_name(${name}_hei) <KeyRelease> [list sizeAlter $w hei $name]
 	# comboBoxEditEvents $w.hei "sizeAlter $w hei $name"
 	# bind $w.hei <KeyRelease> [list sizeAlter $w "hei $name"]
 	
@@ -1463,13 +1463,13 @@ proc sizeEdit { w } {
 	set size [$w get]
 	set sizes [sizeToggleWidgetWxH $size]
 
-	set w $::widget_name(tab_resize_size)
+	set w $::widget_name(resize_size)
 	
 	dict with sizes {
 		$w.wid set $wid
 		$w.hei set $hei
 		#set ratio
-		$::widget_name(tab_resize_ratio) set [expr {[format "%.2f" $wid] / $hei}]
+		$::widget_name(resize_ratio) set [expr {[format "%.2f" $wid] / $hei}]
 	}
 	return 0
 }
@@ -1632,12 +1632,14 @@ proc sizeOptions { w } {
 	ttk::label $w.label_operator -text "Mode:"
 
 	set size_operators [list Scale Stretch OnlyGrow OnlyShrink Zoom]
-	set ::widget_name(tab_resize_operators) [ttk::combobox $w.operator -width 12 -state readonly -values $size_operators ]
-	$w.operator set "OnlyShrink"
-	bind $w.operator <<ComboboxSelected>> { showOperatorOptions $::widget_name(tab_resize_size_options) [%W get] }
+	set ::widget_name(resize_operators) [ttk::combobox $w.operator -width 12 -state readonly -values $size_operators ]
+	$w.operator set $::resize_operators
+	# Run after everything is processed
+	after idle {showOperatorOptions $::widget_name(resize_size_options) $::resize_operators}
+	bind $w.operator <<ComboboxSelected>> { showOperatorOptions $::widget_name(resize_size_options) [%W get] }
 
-	set ::widget_name(tab_resize_zoom_position) [ttk::combobox $w.zoom_position -width 12 -state readonly -values $::artscript(magick_pos)]
-	$w.zoom_position set "Center"
+	set ::widget_name(resize_zoom_position) [ttk::combobox $w.zoom_position -width 12 -state readonly -values $::artscript(magick_pos)]
+	$w.zoom_position set $::resize_zoom_position
 
 	pack $w.label_operator $w.operator -side left
 
@@ -1690,18 +1692,18 @@ proc tabResize { st } {
 	pack $st.rgt -expand 1 -fill both
 
 	set preset_browse [addPresetBrowser $st.lef.broswer]
-	set ::widget_name(tab_resize_size) [addSizeBox $st.lef.size "resize"]
+	set ::widget_name(resize_size) [addSizeBox $st.lef.size "resize"]
 	# pack widgets around addSizeBox
-	set w $::widget_name(tab_resize_size)
+	set w $::widget_name(resize_size)
 	ttk::label $w.title -text "Add custom size. ratio : wxh" -font "-size 12" 
 	ttk::button $w.add -text "+" -padding {2 0} -style small.TButton -command [list sizeTreeAddWxH $w.xmu $w.wid $w.hei]
 	
 	pack $w.title -before $w.rat -side top -fill x
 	pack $w.add -after $w.empty -side left
 
-	set ::widget_name(tab_resize_size_options) [sizeOptions $st.lef.options]
+	set ::widget_name(resize_size_options) [sizeOptions $st.lef.options]
 	
-	addFrameTop $preset_browse $::widget_name(tab_resize_size) $::widget_name(tab_resize_size_options)
+	addFrameTop $preset_browse $::widget_name(resize_size) $::widget_name(resize_size_options)
 	pack [sizeTreeOps $st.rgt.size_ops ] -fill x
 	pack [sizeTreeList $st.rgt.size_tree] -expand 1 -fill both
 
@@ -1719,7 +1721,7 @@ proc colBorderPreview { pixel } {
 proc colPaddingPreview { } {
 	lassign {2 2 79 55} ox oy fx fy
 	foreach var {padding border} {
-		set value [$::widget_name(tab_collage_${var}) get]
+		set value [$::widget_name(collage_${var}) get]
 		set $var [expr { $value eq {} ? 0 : $value }]
 	}
 
@@ -1740,11 +1742,11 @@ proc setColageStyle { style {erase true}} {
 			# }
 			switch -- $prop {
 				"label" {
-					$::widget_name(tab_collage_${prop}) delete 0 end
-					$::widget_name(tab_collage_${prop}) insert 0 $value
+					$::widget_name(collage_${prop}) delete 0 end
+					$::widget_name(collage_${prop}) insert 0 $value
 				}
 				"default" {
-					$::widget_name(tab_collage_${prop}) set $value
+					$::widget_name(collage_${prop}) set $value
 				}
 			}
 		}
@@ -1759,18 +1761,18 @@ proc colSpacing { w } {
 	set width 4
 
 	ttk::label $w.label_border -text "Border"
-	set ::widget_name(tab_collage_border) [ttk::spinbox $w.value_border -from 0 -to 10 -width $width \
+	set ::widget_name(collage_border) [ttk::spinbox $w.value_border -from 0 -to 10 -width $width \
 		-validate key -validatecommand { string is integer %P }]
-	$::widget_name(tab_collage_border) set 1
-	bind $::widget_name(tab_collage_border) <ButtonRelease> { colPaddingPreview }
-	bind $::widget_name(tab_collage_border) <KeyRelease> { colPaddingPreview }
+	$::widget_name(collage_border) set 1
+	bind $::widget_name(collage_border) <ButtonRelease> { colPaddingPreview }
+	bind $::widget_name(collage_border) <KeyRelease> { colPaddingPreview }
 
 	ttk::label $w.label_pad -text "Padding"
-	set ::widget_name(tab_collage_padding) [ttk::spinbox $w.value_pad -from 0 -to 20 -width $width \
+	set ::widget_name(collage_padding) [ttk::spinbox $w.value_pad -from 0 -to 20 -width $width \
 		-validate key -validatecommand { string is integer %P }]
-	$::widget_name(tab_collage_padding) set 6
-	bind $::widget_name(tab_collage_padding) <ButtonRelease> { colPaddingPreview }
-	bind $::widget_name(tab_collage_padding) <KeyRelease> { colPaddingPreview }
+	$::widget_name(collage_padding) set 6
+	bind $::widget_name(collage_padding) <ButtonRelease> { colPaddingPreview }
+	bind $::widget_name(collage_padding) <KeyRelease> { colPaddingPreview }
 
 	grid $w.label_border $w.label_pad -sticky w -pady {6 0}
 	grid $w.value_border $w.value_pad -sticky w
@@ -1779,7 +1781,7 @@ proc colSpacing { w } {
 	return $w
 }
 proc colGetRange {} {
-	lassign [list [$::widget_name(tab_collage_col) get] [$::widget_name(tab_collage_row) get]] col row
+	lassign [list [$::widget_name(collage_col) get] [$::widget_name(collage_row) get]] col row
 	# If value empty, we convert to 0.
 	foreach el {col row} {
 		set val [set $el]
@@ -1791,7 +1793,7 @@ proc colGetRange {} {
 proc colSetRange {} {
 	set range [colGetRange]
 	if { ($range != 0 ) } {
-		$::widget_name(tab_collage_range) set [format %.f $range]
+		$::widget_name(collage_range) set [format %.f $range]
 	}
 	return
 }
@@ -1803,17 +1805,17 @@ proc colLayout { w } {
 	# ttk::label $w.title -text "Layout:"
 
 	ttk::label $w.label_col -text "Columns:"
-	set ::widget_name(tab_collage_col) [ttk::spinbox $w.col -width $width -to 20 -command colSetRange \
+	set ::widget_name(collage_col) [ttk::spinbox $w.col -width $width -to 20 -command colSetRange \
 		-validate key -validatecommand { string is integer %P }]
 	ttk::label $w.label_row -text "Rows:" -padding {6 0 0}
-	set ::widget_name(tab_collage_row) [ttk::spinbox $w.row -width $width -to 20 -command colSetRange \
+	set ::widget_name(collage_row) [ttk::spinbox $w.row -width $width -to 20 -command colSetRange \
 		-validate key -validatecommand { string is integer %P }]
 	ttk::label $w.label_ran -text "Range:"
-	set ::widget_name(tab_collage_range) [ttk::spinbox $w.ran -width $width -from 1 -to 56 \
+	set ::widget_name(collage_range) [ttk::spinbox $w.ran -width $width -from 1 -to 56 \
 		-validate key -validatecommand { string is integer %P }]
 
-	bind $::widget_name(tab_collage_col) <KeyRelease> colSetRange
-	bind $::widget_name(tab_collage_row) <KeyRelease> colSetRange
+	bind $::widget_name(collage_col) <KeyRelease> colSetRange
+	bind $::widget_name(collage_row) <KeyRelease> colSetRange
 
 	grid $w.label_col $w.label_row $w.label_ran -sticky w
 	grid $w.col $w.row $w.ran -sticky w
@@ -1825,7 +1827,7 @@ proc colLayout { w } {
 
 proc colFilterLabel { id } {
 	#global inputfiles
-	set input [$::widget_name(tab_collage_label) get]
+	set input [$::widget_name(collage_label) get]
 	set text [split $input]
 	set ftext {}
 
@@ -1846,7 +1848,7 @@ proc colLabel { w } {
 	ttk::frame $w -padding {0 12 0 0}
 
 	ttk::label $w.label_title -text "Label:"
-	set ::widget_name(tab_collage_label) [ ttk::entry $w.label_text \
+	set ::widget_name(collage_label) [ ttk::entry $w.label_text \
 		-validate key -validatecommand { string is print %P } ]
 	ttk::label $w.subst -text "%f => file.ext, %e => ext, %G => WxH"
 
@@ -1854,7 +1856,7 @@ proc colLabel { w } {
 	ttk::label $col_ops.prev -width 14 -text "" -anchor e
 	ttk::button $col_ops.show_prev -text "Estimate size" -style small.TButton -width 12 -command [list colEstimateSize $col_ops.prev]
 	ttk::label $col_ops.label_mode -text "Mode:" -anchor e
-	set ::widget_name(tab_collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values {{} Concatenation {Zero geometry} {Crop}} ]
+	set ::widget_name(collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values {{} Concatenation {Zero geometry} {Crop}} ]
 
 	grid $col_ops.prev $col_ops.show_prev -sticky e
 	grid $col_ops.label_mode $col_ops.mode -sticky e
@@ -1954,17 +1956,17 @@ proc tabCollage { w } {
 	ttk::frame $w.lef.tilesize
 	ttk::label $w.lef.tilesize.separate
 
-	set ::widget_name(tab_collage_size) [addSizeBox $w.lef.tilesize.size "collage"]
-	pack $::widget_name(tab_collage_size) $w.lef.tilesize.separate [colLayout $w.lef.tilesize.layout] -side left
+	set ::widget_name(collage_size) [addSizeBox $w.lef.tilesize.size "collage"]
+	pack $::widget_name(collage_size) $w.lef.tilesize.separate [colLayout $w.lef.tilesize.layout] -side left
 	pack configure $w.lef.tilesize.separate -expand 1
 
-	set size_frame $::widget_name(tab_collage_size)
+	set size_frame $::widget_name(collage_size)
 	ttk::label $size_frame.title -text "Tile size. ratio : w x h" 
 	pack $size_frame.title -before $size_frame.rat -side top -fill x
 
 	addFrameTop $col_title $w.lef.tilesize [colLabel $w.lef.label]
 
-	# bind $w.lef.title.layouts <Tab> [list focus $::widget_name(tab_collage_size).rat ]
+	# bind $w.lef.title.layouts <Tab> [list focus $::widget_name(collage_size).rat ]
 
 	pack [colStyle $w.rgt.col_style ] -fill x
 	# pack [sizeTreeList $w.rgt.size_tree] -expand 1 -fill both
@@ -1975,7 +1977,7 @@ proc tabCollage { w } {
 # Estimate ouptput size. TODO make the code less repetitive with prepCollage 
 proc colEstimateSize { w } {
 	foreach {value} {border padding col row } {
-		set $value [$::widget_name(tab_collage_${value}) get]
+		set $value [$::widget_name(collage_${value}) get]
 	}
 	# Calculate space needed for padding and border
 	set pixel_space [expr {($border + $padding)*2} ]
@@ -1991,8 +1993,8 @@ proc colEstimateSize { w } {
 }
 
 proc colGetTileSize {} {
-	set width [$::widget_name(tab_collage_wid) get]
-	set height [$::widget_name(tab_collage_hei) get]
+	set width [$::widget_name(collage_wid) get]
+	set height [$::widget_name(collage_hei) get]
 
 	if {($width eq {}) && ($height eq {}) } {
 		return [list 0 0]
@@ -2024,7 +2026,7 @@ proc prepCollage { input_files } {
 
 	# get Border padding range col row
 	foreach {value} {border padding col row range mode} {
-		set $value [$::widget_name(tab_collage_${value}) get]
+		set $value [$::widget_name(collage_${value}) get]
 	}
 
 	# Calculate space needed for padding and border
@@ -2440,7 +2442,7 @@ proc getOutputSizesForTree { size {formated 0}} {
 		}
 		# get final size
 		#set finalscale [getSizeScale {*}[concat [split $size {x} ] [split $dimension {x}]] ]
-		set mode [$::widget_name(tab_resize_operators) get]
+		set mode [$::widget_name(resize_operators) get]
 		set finalscale [getSizeScale $cur_w $cur_h $dest_w $dest_h $mode]
 		#Add resize filter (better quality)
 		lappend fsizes $finalscale
@@ -2510,9 +2512,9 @@ proc getResize { size dsize filter unsharp} {
 	lassign [concat [split $size {x}] [split $dsize {x}] ] cur_w cur_h dest_w dest_h
 	lassign [list [expr {$cur_w * $cur_h}] [expr {$dest_w * $dest_h}] ] cur_area dest_area
 
-	if {[$::widget_name(tab_resize_operators) get] eq "Zoom"} {
+	if {[$::widget_name(resize_operators) get] eq "Zoom"} {
 		set finalscale [getSizeZoom $cur_w $cur_h $dest_w $dest_h ]
-		set position [$::widget_name(tab_resize_zoom_position) get]
+		set position [$::widget_name(resize_zoom_position) get]
 		set crop [format {-gravity %s -crop %sx%s+0+0} $position $dest_w $dest_h]
 	} else {
 		set finalscale $dsize
@@ -2922,7 +2924,7 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 }
 proc artscriptWidgetCatalogue {} {
 	set catalogue [dict create]
-	dict append catalogue get_values {tab_collage_ratio tab_collage_wid tab_collage_hei tab_collage_col tab_collage_row tab_collage_range tab_collage_border tab_collage_padding tab_collage_mode watermark_text watermark_position watermark_image_position watermark_image_style watermark_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality formats tab_resize_operators tab_resize_zoom_position}
+	dict append catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_position watermark_image_position watermark_image_style watermark_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality formats resize_operators resize_zoom_position}
 	dict append catalogue col_styles {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color}
 	dict append catalogue variables {::select_suffix ::select_collage ::select_watermark ::select_watermark_text ::select_watermark_image ::overwrite ::alfaoff ::image_quality}
 	return $catalogue
@@ -2987,7 +2989,7 @@ proc artscriptSaveOnExit {} {
 
 			    dict set save_settings sizes_selected [dict create values [array names ::sdict] selected [getSizesSel] ]
 			    dict set save_settings img_src [dict create values $::watermark_image_list selection [$::widget_name(watermark_image) get]]
-				dict set save_settings entries tab_collage_label [$::widget_name(tab_collage_label) get]
+				dict set save_settings entries collage_label [$::widget_name(collage_label) get]
 
 			    foreach prop $get_values {
 						dict set save_settings get_values $prop [$::widget_name(${prop}) get]
@@ -3047,9 +3049,9 @@ set ::hascalligra [validate "calligraconverter"]
 #-====# Global file counter TODO: separate delete to a list
 set ::fc 1
 set ::artscript(magick_pos) [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
+Construct
 
-
-# ---=== Construct GUI
+# ---===  GUI
 wm title . "Artscript $::version -- [getFilesTotal] Files selected"
 # Set close actions
 bind . <Destroy> {artscriptExit %W}
