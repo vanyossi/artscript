@@ -314,7 +314,7 @@ proc getOraKraSize { image_file filext } {
 # ltoval list
 proc listValidate { ltoval } {
 	# global fc
-	puts $ltoval
+
 	foreach i $ltoval {
 		# Call itself with directory contents if arg is dir
 		if {[file isdirectory $i]} {
@@ -2963,7 +2963,8 @@ proc artscriptSaveOnExit {} {
 					dict set save_settings variables $prop [set $prop]
 			}
 
-			puts $::artscript_rc
+			puts [format {Writing temporary settings file in %s
+			If you experience any problem, delete it to force refresh} $::artscript_rc]
 			set file [open $::artscript_rc w]
 			puts $file $save_settings
 			close $file
@@ -2992,7 +2993,7 @@ proc artscriptOpenState { } {
 				"sizes_selected" {
 					dict for {name values} $elements {
 						foreach size $values {
-							if {([lsearch -exact $::sizes_set(default) $size] > 0) && ($name eq "values")} { continue }
+							if {([lsearch -exact $::sizes_set(default) $size] >= 0) && ($name eq "values")} { continue }
 							sizeTreeAdd $size nonselected off
 						}
 					}
@@ -3016,8 +3017,16 @@ proc artscriptOpenState { } {
 					}
 				}
 				"img_src" {
-					set ::iwatermarks [dict get $elements values]
-					$::widget_name(watermark_image) set [dict get $elements selection]
+					dict for {name src} [dict get $elements values] {
+						if {[file exists $src]} {
+							dict append ::iwatermarks $name $src
+						}
+					}
+					$::widget_name(watermark_image) configure -values [dict keys $::iwatermarks]
+					set selection [dict get $elements selection]
+					if {[lsearch -exact [dict keys $::iwatermarks] $selection] >= 0 } {
+						$::widget_name(watermark_image) set $selection
+					}
 				}
 				"variables" {
 					foreach {key value} $elements {
