@@ -37,8 +37,10 @@ proc tkdndLoad {} {
 		}
 	}
 	puts "Tk drag and drop enabled"
-	::tkdnd::drop_target register .f2 *
-	bind .f2 <<Drop>> { listValidate %D }
+	foreach {type} {DND_Text DND_Files } {
+		::tkdnd::drop_target register .f2 $type
+		bind .f2 <<Drop:$type>> { listValidate %D }
+	}
 
 	return -code ok
 }
@@ -312,7 +314,7 @@ proc getOraKraSize { image_file filext } {
 # ltoval list
 proc listValidate { ltoval } {
 	# global fc
-
+	puts $ltoval
 	foreach i $ltoval {
 		# Call itself with directory contents if arg is dir
 		if {[file isdirectory $i]} {
@@ -3038,7 +3040,6 @@ set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
 if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 	wm iconphoto . -default $wmicon
 }
-
 
 # ---=== Construct GUI
 artscriptSaveOnExit
