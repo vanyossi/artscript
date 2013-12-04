@@ -3049,8 +3049,6 @@ proc artscriptOpenState { } {
 	if {$::artscript(remember_state) == 0} {
 		return
 	}
-	set ::artscript_rc ".artscriptrc"
-	set ::artscript_rc [file join [file dirname [info script]] $::artscript_rc]
 
 	if {[file exists $::artscript_rc]} {
 
@@ -3065,6 +3063,7 @@ proc artscriptOpenState { } {
 #-==== Global variable declaration
 array set ::settings [artscriptSettings]
 array set ::widget_name {}
+set ::artscript_rc [file join [file dirname [info script]] ".artscriptrc"]
 #-==== Global dictionaries, files values, files who process
 set ::inputfiles [dict create]
 set ::handlers [dict create]
