@@ -975,7 +975,7 @@ proc artscriptStyles {} {
 				}
 			}
 		}
-	ttk::style configure small.TButton -padding {6 0} -width 0
+	ttk::style configure small.TButton -padding {6 2 6 0} -width 0
 	ttk::style layout no_indicator.TCheckbutton { 
 		Checkbutton.padding -sticky nswe -children { 
 			Checkbutton.focus -side left -sticky w -children {
@@ -1213,24 +1213,23 @@ proc createImageVars {} {
 AAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAKAAoAAAUuYDEAZDmIUKqmI8S8
 MERCSm3LAI0oO4JDiKAQ5zAYjw5S8WhMDlywF+Q0KpFOIQA7
     }
-    set ::img_on [image create photo]
-    $::img_on put {
+	set ::img_on [image create photo]
+	$::img_on put {
         R0lGODlhCgAKAPQAAColMSolMiolMysnMislNCslNSslNiwlNi0nNjQ0Nrr/NLP/PL7/PMP/NLb/
 RLn/TLn/Tb3/VcH/RcT/TsT/T8D/Xcn/WMP/Zcz/YM//adP/dN3/eAAAAAAAAAAAAAAAACH5BAAA
 AAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAKAAoAAAU3YIIghkGaYqOsbEMy
 SywzpeTcuFROT+9PBoElQixaBAJMZcnEIDOXqDSD3Giu2I0gIQAgv4NECAA7
     }
-    set ::folder_on [image create photo]
-    $::folder_on put {
+	set ::folder_on [image create photo]
+	$::folder_on put {
         R0lGODlhEAAQAPUAAG1BFXhIE4JPEoxWEZZdEKBkD6trDbVyDL95C8mACtOHCdmMCN6OCOKRB+KS
 COeXEeCdF+ydGeeiGOWrJuWvLfClI/WuLOyxKPSxLvWxLuSyMuu5NPm3NfLAN+zDQe3NTffPR/jO
 SPTWUfzeVvzfVvPbWfffXP7oYf/pYQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAEAACkAIf8LSW1hZ2VNYWdpY2sO
-Z2FtbWE9MC40NTQ1NDUALAAAAAAQABAAAAZ3wJRwSCwaj8RG4xGpWDgZJANFpYaiRwWVouh6v91E
-dVwaUxMIM8pUMJkRBzXbPT4YSHiSSPQpfPZ5BgUghB4Fh4gFHoQFBB2PG5EaBRqRG48EAxebnBMF
-E5ybAwISpaYQBRCmpQIBDq+wDguxrwEAt7i5ugBISEEAOw==
+Z2FtbWE9MC40NTQ1NDUALAAAAAAQABAAAAZ4wEbjEalYOJmUcqlkoJ7PUJK5VDwpiqx2m01Av6Xv
+M4EQo0wFkxhxMKPV34OBRCeJRJ/C5143FECAHgWDhAUegAUEHYsbjRoFGo0biwQDF5eYEwUTmJcD
+AhKhohAFEKKhAgEOq6wOC62rAQCztLW2AFS5uru8vUtBADs=
     }
-
 }
 
 # Hides or shows height combobox depending if value is wxh or w%
