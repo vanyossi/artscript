@@ -473,7 +473,7 @@ proc putsHandlers {args} {
 }
 # Shows open dialog for supported types
 proc openFiles { args } {
-	lassign [list {all calligra inkscape gimp png jpg gif} openpath 1 .] formats path_var multiple path
+	lassign [list {all calligra inkscape gimp png jpg gif} openpath 1 . files] formats path_var multiple path mode
 	foreach {key value} $args { set $key $value	}
 
 	if {[info exists ::artscript($path_var)]} { set path $::artscript($path_var) }
@@ -481,16 +481,20 @@ proc openFiles { args } {
 	foreach key $formats {
 		lappend types [dict get $::artscript(supported_files) $key]
 	}
-
 	# Get selected files and set path to file folders
-	set files [tk_getOpenFile -filetypes $types -initialdir $path -multiple $multiple]
+	if {$mode eq "files"} {
+		set files [tk_getOpenFile -filetypes $types -initialdir $path -multiple $multiple]
+	} else {
+		set files [tk_chooseDirectory -initialdir $path -title "Choose a directory"]
+	}
+	
 	set ::artscript($path_var) [file dirname [lindex $files 0]]
 
 	return $files
 }
 # Validates the input and updates the window title
-proc loadTreeFiles {} {
-	listValidate [openFiles]
+proc loadTreeFiles { {mode files} } {
+	listValidate [openFiles mode $mode]
 	updateWinTitle
 }
 # Loads chosen file to watermark combobox
@@ -737,7 +741,7 @@ proc showThumb { w f {tryprev 1}} {
 	global inputfiles env
 
 	# Do not process if selection is multiple
-	if {[llength $f] > 1} {
+	if {[llength $f] > 1 || $f eq {} } {
 		return -code break
 	}
 	set ::artscript(preview_id) [$::widget_name(flist) set $f id]
@@ -994,11 +998,10 @@ proc addFrameTop { args } {
 }
 # Horizontal panel for placing operations that affect Artscript behaviour
 proc guiTopBar { w } {
-	pack [ttk::frame $w] -side top -expand 0 -fill x
+	pack [ttk::frame $w] -side top -expand 0 -fill x -padx 4
 	# ttk::label $w.title -text "Artscript 2.0.0"
 	ttk::separator $w.sep -orient vertical
-	ttk::button $w.add -text "Add files" -command { loadTreeFiles }
-	pack $w.add $w.sep -side left -fill x
+	pack $w.sep -side left -fill x
 	pack configure $w.sep -expand 1
 
 	if {[llength [dict keys $::presets]] > 1} {
@@ -1006,7 +1009,7 @@ proc guiTopBar { w } {
 		ttk::combobox $w.preset -state readonly -values [dict keys $::presets]
 		$w.preset set [lindex $::presets 0]
 		bind $w.preset <<ComboboxSelected>> { setUserPresets [%W get] }
-		pack $w.preset_label $w.preset -after $w.add -side left -ipady {2}
+		pack $w.preset_label $w.preset -before $w.sep -side left -ipady {2}
 	}
 	return $w
 }
@@ -1026,7 +1029,7 @@ proc guiAddChildren { w args } {
 proc guiMiddle { w } {
 	
 	set paned_big [guiMakePaned $w vertical]
-	pack $paned_big -side top -expand 1 -fill both
+	pack $paned_big -side top -expand 1 -fill both -padx 4
 
 	set file_pane $paned_big.fb
 	ttk::frame $file_pane
@@ -1045,7 +1048,7 @@ proc guiMiddle { w } {
 	$paned_botom pane $gui_out -weight 2
 	
 	pack $file_pane.flist -side left -expand 1 -fill both
-	pack $file_pane.sscrl $file_pane.thumb -side left -expand 0 -fill both
+	pack $file_pane.thumb -side left -expand 0 -fill both -pady 2
 	pack propagate $file_pane.thumb 0
 	pack $file_pane.thumb.im -expand 1 -fill both
 	
@@ -1053,20 +1056,56 @@ proc guiMiddle { w } {
 }
 
 proc guiFileList { w } {
+
+	ttk::frame $w.flist
+	ttk::frame $w.flist.action
+	ttk::frame $w.flist.tree
+
+	set a $w.flist.action
+	#set image [list -image $::folder_on -compound left]
+
+	ttk::button $a.add -text "Add files" -style small.TButton -command { loadTreeFiles }
+	ttk::button $a.add_folder -text "Add folder" -style small.TButton -command { loadTreeFiles folder }
+	ttk::label $a.select_label -text "Select"
+	ttk::button $a.select_all -text "All" -style small.TButton \
+		-command { $::widget_name(flist) selection add [$::widget_name(flist) children {}] }
+	ttk::button $a.select_inv -text "Inverse" -style small.TButton\
+		-command { $::widget_name(flist) selection toggle [$::widget_name(flist) children {}] }
+	ttk::button $a.select_none -text "None" -style small.TButton\
+		-command { $::widget_name(flist) selection remove [$::widget_name(flist) children {}] }
+	ttk::button $a.clear -text "Remove Selected" -style small.TButton \
+		-command { removeTreeItem $::widget_name(flist) [$::widget_name(flist) selection] }
+
+	ttk::label $a.sep
+	ttk::label $a.sep_sels
+
+	lassign [list $w.flist.tree.files $w.flist.tree.sscrl] tree_files tree_scroll
+
 	set fileheaders { id ext input size output osize }
-	set ::widget_name(flist) [ttk::treeview $w.flist -columns $fileheaders -show headings -yscrollcommand "$w.sscrl set"]
+	set ::widget_name(flist) [ttk::treeview $tree_files -columns $fileheaders -show headings -yscrollcommand "$tree_scroll set"]
 	foreach col $fileheaders {
 		set name [string totitle $col]
-		$w.flist heading $col -text $name -command [list treeSort $w.flist $col 0 ]
+		$tree_files heading $col -text $name -command [list treeSort $tree_files $col 0 ]
 	}
-	$w.flist column id -width 32 -stretch 0
-	$w.flist column ext -width 48 -stretch 0
-	$w.flist column size -width 86 -stretch 0
-	$w.flist column osize -width 86
-	bind $w.flist <<TreeviewSelect>> { showThumb $::widget_name(thumb-im) [%W selection] }
-	bind $w.flist <Key-Delete> { removeTreeItem %W [%W selection] }
-	ttk::scrollbar $w.sscrl -orient vertical -command [list $w.flist yview ]
+	$tree_files column id -width 32 -stretch 0
+	$tree_files column ext -width 48 -stretch 0
+	$tree_files column size -width 86 -stretch 0
+	$tree_files column osize -width 86
+
+	bind $tree_files <<TreeviewSelect>> { showThumb $::widget_name(thumb-im) [%W selection] }
+	bind $tree_files <Key-Delete> { removeTreeItem %W [%W selection] }
+	bind $::widget_name(flist) <Control-a> { $::widget_name(flist) selection add [$::widget_name(flist) children {}] }
+	bind $::widget_name(flist) <Control-d> { $::widget_name(flist) selection remove [$::widget_name(flist) children {}] }
+	bind $::widget_name(flist) <Control-i> { $::widget_name(flist) selection toggle [$::widget_name(flist) children {}] }
+
+	ttk::scrollbar $tree_scroll -orient vertical -command [list $tree_files yview ]
 	$::widget_name(flist) tag configure exists -foreground #f00
+
+	pack $a $w.flist.tree -side top -fill x
+	pack $a.add $a.add_folder $a.sep $a.select_label $a.select_all $a.select_inv $a.select_none $a.sep_sels $a.clear -side left -padx {0 2}
+	pack $tree_files $tree_scroll -side left -fill y
+	pack configure $a.sep $a.sep_sels $w.flist.tree $tree_files -expand 1 -fill both
+	pack configure $a.clear -padx 0
 
 	return $w
 }
@@ -2232,7 +2271,7 @@ proc guiStatusBar { w } {
 	# set default button Convert string
 	set ::artscript(bconvert_string) "Convert"
 	set ::artscript(bconvert_cmd) {prepConvert}
-	pack [ttk::frame $w] -side top -expand 0 -fill x
+	pack [ttk::frame $w] -side top -expand 0 -fill x -padx 4 -pady {0 4}
 	
 	ttk::frame $w.rev
 	ttk::frame $w.do
@@ -2248,7 +2287,7 @@ proc guiStatusBar { w } {
 	pack $w.rev.checkwm -side left
 	pack $w.rev -side left
 	pack $w.do -side right -expand 1 -fill x
-	pack $w.do.bconvert -side right -fill x -padx 6 -pady 8
+	pack $w.do.bconvert -side right -fill x -padx 2 -pady 8
 
 	return $w
 }
