@@ -41,16 +41,13 @@ proc tkdndLoad {} {
 		::tkdnd::drop_target register .f2 $type
 		bind .f2 <<Drop:$type>> { listValidate %D }
 	}
-
 	return -code ok
 }
 
-# Loads default values for setting vars
-# Returns dict with all vars.
+# Declare default values for setting vars
 proc artscriptSettings {} {
 	# Date values
-	set seconds [clock seconds]
-	set now [split [clock format $seconds -format %Y/%m/%d/%u] "/"]
+	set now [split [clock format [clock seconds] -format %Y/%m/%d/%u] "/"]
 	lassign $now ::year ::month ::day
 	set ::date [join [list $::year $::month $::day] "-"]
 	
@@ -101,7 +98,7 @@ proc artscriptSettings {} {
 		out_prefix    {}              \
 		out_suffix    {}              \
 	]
-			#General checkboxes
+	#General checkboxes
 	set bool_settings [dict create  \
 		artscript(select_watermark)        0          \
 		artscript(select_watermark_text)   0          \
@@ -133,12 +130,7 @@ proc artscriptSettings {} {
 	dict for {key value} $settings {
 		set ::$key [subst $value]
 	}
-    return $settings
-    # TODO array set ::settings $::artscript::usett
-	# puts "array $::settings(ext)"
 }
-#--=====
-# Don't modify below this line
 
 # Implement alert type call for tk_messageBox
 # type,icon,title,msg => string
@@ -159,7 +151,7 @@ proc validate {program} {
 # iname => file string, preffix suffix sizesuffix => string to append,
 # orloc => filepath: Used to return destination to orignal loc in case of tmp files (KRA,ORA)
 # returns filename.ext
-proc getOutputName { iname out_extension { prefix "" } { suffix {} } {sizesufix {}} } {
+proc getOutputName { iname out_extension { prefix {} } { suffix {} } { sizesufix {} } } {
 	
 	if {!$::artscript(select_suffix)} {
 		set prefix {}
@@ -175,10 +167,10 @@ proc getOutputName { iname out_extension { prefix "" } { suffix {} } {sizesufix 
 	
 	set dir [file normalize [file dirname $iname]]
 	set name [file rootname [file tail $iname]]
-	set lname [concat $prefix [list $name] $suffix $sizesufix ] ; # Name in brackets to protect white space
+	# Name in brackets to protect white space
+	set lname [concat $prefix [list $name] $suffix $sizesufix ]
 	append outname [join $lname "_"] "." [lindex $out_extension 0]
 	
-	#Add a counter if filename exists
 	if {!$::artscript(overwrite)} {
 		set tmpname $outname
 		while { [file exists [file join $dir "$outname"] ] } {
@@ -191,7 +183,7 @@ proc getOutputName { iname out_extension { prefix "" } { suffix {} } {sizesufix 
 	return $outname
 }
 
-# Parses the list $argv for (:key value) elements. breaks if strin is file
+# Parses the list $argv for (:key value) elements. breaks if string is file
 # returns list
 proc getUserOps { l } {
 	foreach f $l {
@@ -261,14 +253,13 @@ proc setDictEntries { id fpath size ext h {add 1}} {
 		dict set inputfiles $id $key $value
 	}
 	if {$add} {
-		addTreevalues $::widget_name(flist) $id ; # TODO set widget name as global
+		addTreevalues $::widget_name(flist) $id
 	}
 }
 	
 # Get contents from file and parse them into Size values.
 proc getOraKraSize { image_file filext } {
 	set size {}
-
 	switch -- $filext {
 	".ora" { set unzip_file {stack.xml} }
 	".kra" { set unzip_file {maindoc.xml} }
@@ -329,8 +320,8 @@ proc listValidate { ltoval } {
 					puts $msg
 					continue
 				}
-				set svgvals [lrange [split $svgcon {,}] end-1 end] ; # Get the last elements of first line == w x h
-				set size [expr {round([lindex $svgvals 0])}] ; # Make float to int. TODO check if format "%.0f" works best here
+				set svgvals [lrange [split $svgcon {,}] end-1 end]
+				set size [expr {round([lindex $svgvals 0])}]
 				append size "x" [expr {round([lindex $svgvals 1])}]
 			}
 			setDictEntries $::fc $i $size $filext "i"
@@ -364,9 +355,8 @@ proc listValidate { ltoval } {
 }
 
 # Searchs for presets.config in script directory, parses and set values from file to global
-# TODO return dict, use dict values to set master settings array
 proc getUserPresets {} {
-	global ops presets
+	global ops
 	set presets [dict create]
 	
 	set configfile "presets.config"
@@ -408,9 +398,9 @@ proc getUserPresets {} {
 			dict set presets $condict [lindex $i 0] [lindex $i 1]
 		}
 	}
+	return $presets
 }
-# Change settings values from $::presets dict "s"
-# s string, setting preset name
+# Change settings values from $::presets dict key "select"
 proc setUserPresets { select } {
 	if {$select eq {}} {
 		return 0
@@ -452,13 +442,12 @@ proc setUserPresets { select } {
 # get_del bool, true = get all files loaded
 # returns integer
 proc getFilesTotal { { get_del 0} } {
-	global inputfiles
 	
 	set count 0
 	set deleted 0
-	dict for {id datas} $inputfiles {
+	dict for {id datas} $::inputfiles {
 		incr count
-		if {[dict get $inputfiles $id deleted]} {
+		if {[dict get $::inputfiles $id deleted]} {
 			incr deleted
 		}
 	}
@@ -485,9 +474,8 @@ proc putsHandlers {args} {
 # Shows open dialog for supported types
 proc openFiles { args } {
 	lassign [list {all calligra inkscape gimp png jpg gif} openpath 1 .] formats path_var multiple path
-	foreach {key value} $args {
-		set $key $value
-	}
+	foreach {key value} $args { set $key $value	}
+
 	if {[info exists ::artscript($path_var)]} { set path $::artscript($path_var) }
 
 	foreach key $formats {
@@ -534,7 +522,6 @@ proc setGValue {gvar value} {
 	if {$gvar != 0} {
 		upvar #0 $gvar var
 		set var $value
-		# puts $var
 	}
 }
 # Toggles on state of checkbox using gvar
@@ -594,7 +581,6 @@ proc addTreevalues { w id } {
 		set values [list $id $ext $name $size $output $osize]
 		set ::img::imgid$id [$w insert {} end -values $values]
 	}
-	#Keep Gui with fresh news
 	updateWinTitle
 	update idletasks
 }
@@ -662,6 +648,7 @@ proc updateTextLabel { var value } {
 	set ltext $value
 	return
 }
+
 # Transform a read with the supplied script and writes it to dict and treeview
 # Script: script to run, w = widget, write/read = dict key or tree column
 proc treeAlterVal { {script {set $value}} w read write  } {
@@ -685,6 +672,7 @@ proc treeAlterVal { {script {set $value}} w read write  } {
 		}
 	}
 }
+
 # Updates checkbox state and output name values on tree (w)
 proc printOutname { w } {
 	if {$::artscript(select_suffix) || $w != 0} {
@@ -735,14 +723,12 @@ proc setThumbGif { path } {
 	catch {close $thumb_proc}
 	set thumb_proc [runCommand [concat convert -quiet $path GIF:$prevgif] [list set ::thumb_wait 1]]
 	vwait ::thumb_wait
-	# catch { exec convert -quiet $lthumb GIF:$prevgif }
 	catch {set oldimg $img}
 	catch {puts $img}
 	set img [image create photo -file $prevgif ]
 
 	$::widget_name(thumb-im) configure -compound image -image $img
 	catch {image delete $oldimg}
-	# catch {file delete $prevgif}
 }
 
 # Attempts to load a thumbnail from thumbnails folder if exists.
@@ -754,8 +740,7 @@ proc showThumb { w f {tryprev 1}} {
 	if {[llength $f] > 1} {
 		return -code break
 	}
-	# TODO, get value with no lindex: .t set $f id
-	set ::artscript(preview_id) [lindex [$::widget_name(flist) item $f -values] 0]
+	set ::artscript(preview_id) [$::widget_name(flist) set $f id]
 	
 	set path [dict get $inputfiles $::artscript(preview_id) path]
 	set filext [string tolower [file extension $path] ]
@@ -766,7 +751,7 @@ proc showThumb { w f {tryprev 1}} {
 	set lthumb "${thumbdir}/large/$thumbname.png"
 	set nthumb "${thumbdir}/normal/$thumbname.png"
 
-	# Displays preview in widget, Make proc of this.
+	# Displays preview in widget
 	if { [file exists $lthumb ] } {
 		setThumbGif $lthumb
 		return 
@@ -791,7 +776,7 @@ proc showThumb { w f {tryprev 1}} {
 # Scroll trough tabs on a notebook. (dir = direction)
 proc scrollTabs { w i {dir 1} } {
 		set tlist [llength [$w tabs]]
-		# Defines if we add or res
+
 		expr { $dir ? [set op "-"] : [set op ""] }
 		incr i ${op}1
 		if { $i < 0 } {
@@ -816,17 +801,16 @@ proc comboBoxEditEvents { w {script {optionOn artscript(select_watermark)} }} {
 # Convert RGB to HSV, to calculate contrast colors
 # Returns float list => hue, saturation, value, lightness, luma 
 proc rgbtohsv { r g b } {
-	set r1 [expr {$r/255.0}]
-	set g1 [expr {$g/255.0}]
-	set b1 [expr {$b/255.0}]
+	foreach color {r g b} {
+		set ${color}1 [expr {[set ${color}]/255.0}]
+	}
 	set max [expr {max($r1,$g1,$b1)}]
 	set min [expr {min($r1,$g1,$b1)}]
 	set delta [expr {$max-$min}]
 	set h -1
 	set s {}
-	set v $max
-	set l $v
-	set luma $l
+
+	lassign [lrepeat 3 $max] v l luma
 
 	if {$delta != 0} {
 		set l [expr { ($max + $min) / 2 } ]
@@ -861,11 +845,9 @@ proc setColor { w item col {chooser 1} } {
 	}
 	set col [lindex $col end]
 
-	#Call color chooser and store value to set canvas color and get rgb values
 	if { $chooser } {
 		set col [tk_chooseColor -title $title -initialcolor $col -parent .]
 	}
-	# User selected a color and not cancel then
 	if { $col ne "" } {
 		$w itemconfigure $item -fill $col
 	} else {
@@ -873,10 +855,10 @@ proc setColor { w item col {chooser 1} } {
 	}
 	return $col
 }
+
 # Calls color chooser and set contrast color for watermark text
 # w widget to modify, args pass to setColor
 proc setColorAndContrast { w args } {
-	# set col [setColor $w {*}$args]
 	if { [catch {set col [setColor $w {*}$args]} msg] } {
 		return
 	}
@@ -952,7 +934,6 @@ proc dec2rgb {r {g 0} {b UNSET} {clip 0}} {
 # colist list, sortby integer (index of rgbtohsv return vals)
 proc getswatches { {colist 0} {sortby 1}} {
 	# Set a default palette, colors have to be in rgb
-
 	set swcol { Black {0 0 0} English-red {208 0 0} {Dark crimson} {120 4 34} Orange {254 139 0} Sand {193 177 127}
 	Sienna {183 65 0} {Yellow ochre} {215 152 11} {Cobalt blue} {0 70 170} Blue {30 116 253} {Bright steel blue} {170
 	199 254} Mint {118 197 120} Aquamarine {192 254 233} {Forest green} {0 67 32} {Sea green} {64 155 104} Green-yellow
@@ -1005,7 +986,6 @@ proc artscriptStyles {} {
 }
 
 # ----=== Gui Construct ===----
-# TODO Make every frame a procedure to ease movement of the parts
 # Adds the widgets given top to bottom
 proc addFrameTop { args } {
 	foreach widget [list {*}$args] {
@@ -1034,7 +1014,8 @@ proc guiTopBar { w } {
 proc guiMakePaned { w orientation } {
 	ttk::panedwindow $w -orient $orientation
 	return $w
-	}
+}
+
 # Add children to panedwindows or notebooks
 proc guiAddChildren { w args } {
 	foreach widget $args {
@@ -1141,8 +1122,8 @@ proc tabWatermark { wt } {
 	bind $wt.fontsize <ButtonRelease> { bindsetAction watermark_size [%W get] artscript(select_watermark) "$::widget_name(check-wm) $wt.cbtx"}
 	bind $wt.fontsize <KeyRelease> { bindsetAction watermark_size [%W get] artscript(select_watermark) "$::widget_name(check-wm) $wt.cbtx" }
 
-	set wmpositions	[list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"]
 	# Text position box 
+	set wmpositions	[list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"]
 	set ::widget_name(watermark_position) [ttk::combobox $wt.position -state readonly -textvariable ::watermark_position -values $wmpositions -width 10]
 	$wt.position set $::watermark_position
 	bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 artscript(select_watermark) "$::widget_name(check-wm) $wt.cbtx" }
@@ -1302,14 +1283,12 @@ proc sizeRatioToFloat { w } {
 }
 # Flips width and heigth field values and sets a new ratio if it's set
 proc sizeAlterRatio { name } {
-	# Get w and h values
 	set wid [$::widget_name(${name}_wid) get]
 	set hei [$::widget_name(${name}_hei) get]
 	
 	if { ($wid eq {}) || ($hei eq {}) } {
 		return 0
 	}
-	# reverse width and height values
 	$::widget_name(${name}_wid) set $hei
 	$::widget_name(${name}_hei) set $wid
 	
@@ -1320,9 +1299,9 @@ proc sizeAlterRatio { name } {
 		$::widget_name(${name}_ratio) set $ratio
 	} else {
 		$::widget_name(${name}_ratio) set [join [lreverse [split $rawratio {:}]] {:}]
-		# $::widget_name(resize_ratio) set [ sizeRatioToFloat $::widget_name(resize_ratio) 1 ]
 	}
 }
+
 # Changes dimension, width or height in respect to Aspect ratio
 # Alter == wid or hei   w, widget father.
 proc sizeAlter { w alter name } {
@@ -1376,13 +1355,11 @@ proc sizeTreeAddWxH { operator width height } {
 	if { $size eq "x"} {
 		return
 	}
-	# set size [join [list $wid $hei] "x" ]
 	sizeTreeAdd $size
 	return
 }
 # Add all preset values to sizeTree
-proc sizeTreeAddPreset { w } {
-	set preset [$w get]
+proc sizeTreeAddPreset { preset } {
 	if { $preset eq {} } {
 		return
 	}
@@ -1411,9 +1388,7 @@ proc sizeTreeAdd { size {sel "selected"} {state "on"} } {
 		$::widget_name(resize_tree) item [set ::sdict_$size] -tag selected
 		set ::sdict($size) {on}
 	}
-	# Check if sizes set
 	eventSize
-	#puts [set $val]
 	return
 }
 
@@ -1424,27 +1399,18 @@ proc addSizeBox { w name } {
 	set ratiovals {1:1 1.4142 2:1 3:2 4:3 5:4 5:7 8:5 1.618 16:9 16:10 14:11 12:6 2.35 2.40}
 	set ::widget_name(${name}_ratio) [ttk::combobox $w.rat -width 6 -state readonly -values $ratiovals -validate key -validatecommand { regexp {^(()|[0-9])+(()|(\.)|(:))?(([0-9])+|())$} %P } ]
 	comboBoxEditEvents $w.rat [list sizeAlter $w wid $name]
-	#bind $w.rat <KeyRelease> [list sizeRatioToFloat $w.rat]
 	
 	ttk::label $w.lwxh -text ":" -font "-size 18" -anchor center
-	# set walppvals {2560 1920 1800 1680 1600 1440 1366 1280 1200 1080 1024 960 864 800 768 600}
 	set ::widget_name(${name}_wid) [ ttk::spinbox $w.wid -width 5 -increment 10 -from 1 -to 5000 \
 	  -validate key -validatecommand { regexp {^(()|[0-9])+(()|%%)$} %P } ]
 	bind $::widget_name(${name}_wid) <ButtonRelease> [list sizeAlter $w wid $name]
 	bind $::widget_name(${name}_wid) <KeyRelease> [list sizeAlter $w wid $name]
 
-	# comboBoxEditEvents $w.wid "sizeAlter $w wid $name"
-	# bind $w.wid <KeyRelease> [list sizeAlter $w "wid $name"]
-	# bind $w.wid <Shift-Button><Shift-Motion> { puts "[winfo pointerx .] %w"}
-
 	set ::widget_name(${name}_hei) [ ttk::spinbox $w.hei -width 5 -increment 10 -from 1 -to 5000 \
 		-validate key -validatecommand { string is integer %P } ]
 	bind $::widget_name(${name}_hei) <ButtonRelease> [list sizeAlter $w hei $name]
 	bind $::widget_name(${name}_hei) <KeyRelease> [list sizeAlter $w hei $name]
-	# comboBoxEditEvents $w.hei "sizeAlter $w hei $name"
-	# bind $w.hei <KeyRelease> [list sizeAlter $w "hei $name"]
 	
-	# comboBoxEditEvents $w.wid$id "eventSize $w $id"
 	ttk::label $w.xmu -text "x" -font "-size 18" -anchor center
 	ttk::label $w.empty
 	bind $w.xmu <Button> [list sizeAlterRatio $name]
@@ -1467,11 +1433,9 @@ proc sizeEdit { w } {
 	set sizes [sizeToggleWidgetWxH $size]
 
 	set w $::widget_name(resize_size)
-	
 	dict with sizes {
 		$w.wid set $wid
 		$w.hei set $hei
-		#set ratio
 		$::widget_name(resize_ratio) set [expr {[format "%.2f" $wid] / $hei}]
 	}
 	return 0
@@ -1491,11 +1455,10 @@ proc addPresetBrowser { w } {
 	bind $w.preset.sets <<ComboboxSelected>> [list sizeSetPreset %W $w.set_sizes.size]
 	$w.preset.sets set [lindex $presets 0]
 
-	ttk::button $w.preset.add -text "+" -padding {2 0} -style small.TButton -command [list sizeTreeAddPreset $w.preset.sets]
+	ttk::button $w.preset.add -text "+" -padding {2 0} -style small.TButton -command {sizeTreeAddPreset [$::widget_name(size_preset_list) get]}
 	
 	ttk::combobox $w.set_sizes.size -state readonly
 	bind $w.set_sizes.size <<ComboboxSelected>> [list sizeEdit %W]
-	# ttk::button $w.set_sizes.edit -text "Edit" -width 6 -style small.TButton -command [list sizeEdit $w.set_sizes.size]
 	ttk::button $w.set_sizes.add -text "+" -padding {2 0} -style small.TButton -command [list sizeTreeAddPresetChild $w.set_sizes.size]
 	
 	pack $w.preset $w.set_sizes -side top -expand 1 -fill x
@@ -1530,8 +1493,6 @@ proc sizeTreeList { w } {
 	bind $w.sizetree <Key-Delete> { sizeTreeDelete [%W selection] }
 	bind $w.sizetree <KeyRelease> { eventSize }
 
-	# bind $w.sizetree <<TreeviewSelect>> eventSize
-
 	ttk::scrollbar $w.sscrl -orient vertical -command [list $w.sizetree yview ]
 	
 	pack $w.sizetree $w.sscrl -side left -fill both
@@ -1545,18 +1506,10 @@ proc sizeTreeList { w } {
 		$w.sizetree heading $col -text $name -command [list treeSort $w.sizetree $col 0 ]
 	}
 	
-    # Set images to tags
     $w.sizetree tag configure selected -image $::img_on
     $w.sizetree tag configure nonselected -image $::img_off
     
-    # Add values for each array key
-    # puts [array names ::sizes]
-	foreach size $::sizes_set(default) {
-		set ::sdict_$size [$w.sizetree insert {} end -tag nonselected -values "$size $name"]
-		# default selecte state, off.
-		set ::sdict($size) {off}
-		#puts [set [subst ::sdict$size]]
-	}
+	sizeTreeAddPreset default
 	return $w
 }
 # Selects size for processing, setting tag as selected
@@ -1583,7 +1536,6 @@ proc sizeTreeToggle { w sel {x 0} {y 0} } {
 		}
 		$w item [set ::sdict_$val] -tag $tag
 	}
-	#recalculate sizes
 	eventSize
 }
 # Sets selected tag to given treeview ids
@@ -1637,8 +1589,6 @@ proc sizeOptions { w } {
 	set size_operators [list Scale Stretch OnlyGrow OnlyShrink Zoom]
 	set ::widget_name(resize_operators) [ttk::combobox $w.operator -width 12 -state readonly -values $size_operators ]
 	$w.operator set "OnlyShrink"
-	# Run after everything is processed
-	# after idle {showOperatorOptions $::widget_name(resize_size_options) $::resize_operators}
 	bind $w.operator <<ComboboxSelected>> { showOperatorOptions $::widget_name(resize_size_options) [%W get] }
 
 	set ::widget_name(resize_zoom_position) [ttk::combobox $w.zoom_position -width 12 -state readonly -values $::artscript(magick_pos)]
@@ -1674,12 +1624,8 @@ proc eventSize { } {
 	treeAlterVal {getOutputSizesForTree $value 1} $::widget_name(flist) size osize
 
 	if { [llength $sizes] > 0 } {
-		#$::widget_name(st-right-ins) configure -text "[llength $sizes] Sizes set"
 		$::option_tab tab $::st -image $::img_on
-		# bindsetAction 0 0 select_size $::widget_name(check-sz)
 	} else {
-		# $::widget_name(check-sz) invoke
-		# $::widget_name(st-right-ins) configure -text ""
 		$::option_tab tab $::st -image $::img_off
 	}
 }
@@ -1732,17 +1678,11 @@ proc colPaddingPreview { } {
 	colBorderPreview $border
 }
 proc setColageStyle { style {erase true}} {
-	# if {!$::artscript(select_collage)} {
-	# 	$::widget_name(col_select) invoke
-	# }
 	dict for {prop value} $style {
 		set type [split $prop {_}]
 		if { [lindex $type end] eq "color"} {
 			$::widget_name(collage_canvas) itemconfigure $::canvas_element(collage_$prop) -fill $value
 		} else {
-			# if {$erase} {
-			# 	setColageStyle [list $prop ""] false
-			# }
 			switch -- $prop {
 				"label" {
 					$::widget_name(collage_${prop}) delete 0 end
@@ -1805,8 +1745,6 @@ proc colLayout { w } {
 	ttk::frame $w ; #-padding {0 4 0 0}
 	set width 4
 
-	# ttk::label $w.title -text "Layout:"
-
 	ttk::label $w.label_col -text "Columns:"
 	set ::widget_name(collage_col) [ttk::spinbox $w.col -width $width -to 20 -command colSetRange \
 		-validate key -validatecommand { string is integer %P }]
@@ -1829,7 +1767,6 @@ proc colLayout { w } {
 }
 
 proc colFilterLabel { id } {
-	#global inputfiles
 	set input [$::widget_name(collage_label) get]
 	set text [split $input]
 	set ftext {}
@@ -1892,7 +1829,6 @@ proc colStyle { w } {
 
 	ttk::label $w.label_styles
 
-	# Uses ::collage_styles() array
 	set swatches [lsort [getArrayNamesIfValue ::collage_styles]]
 	set ::widget_name(collage_styles) [ttk::combobox $w.styles -width 0 -state readonly -values $swatches]
 	bind $w.styles <<ComboboxSelected>> { setColageStyle $::collage_styles([%W get])}
@@ -1903,7 +1839,6 @@ proc colStyle { w } {
 	
 	# Update style preview with border padding values.
 	after idle colPaddingPreview
-	#$w.preview coords $::canvas_element(collage_border) 15 15 65 51
 
 	return $w
 }
@@ -1932,7 +1867,6 @@ proc colLayoutsSelect { w } {
 
 	ttk::label $w.label_layouts -text "Layouts:"
 	
-	# Uses ::collage_layouts() array
 	set swatches [lsort [getArrayNamesIfValue ::collage_layouts]]
 	set ::widget_name(collage_layouts) [ttk::combobox $w.layouts -width 16 -state readonly -values $swatches]
 	bind $w.layouts <<ComboboxSelected>> { setColageStyle $::collage_layouts([%W get])}
@@ -1947,7 +1881,7 @@ proc colLayoutsSelect { w } {
 }
 proc tabCollage { w } {
 	ttk::frame $w -padding 6
-	# main divisions
+
 	ttk::frame $w.lef
 	ttk::frame $w.rgt
 
@@ -1969,11 +1903,7 @@ proc tabCollage { w } {
 
 	addFrameTop $col_title $w.lef.tilesize [colLabel $w.lef.label]
 
-	# bind $w.lef.title.layouts <Tab> [list focus $::widget_name(collage_size).rat ]
-
 	pack [colStyle $w.rgt.col_style ] -fill x
-	# pack [sizeTreeList $w.rgt.size_tree] -expand 1 -fill both
-	# pack [ttk::button $w.ac -text "run" -command getSizesSel ] -side bottom
 
 	return $w
 }
@@ -2031,7 +1961,6 @@ proc prepCollage { input_files } {
 	foreach {value} {border padding col row range mode} {
 		set $value [$::widget_name(collage_${value}) get]
 	}
-
 	# Calculate space needed for padding and border
 	set pixel_space [expr {($border + $padding)*2} ]
 
@@ -2083,7 +2012,6 @@ proc prepCollage { input_files } {
 	return $range_lists
 }
 proc doCollage { files {step 1} args } {
-	# global inputfiles
 	switch $step {
 	0 {
 		if {$::artscript_convert(extract)} {
@@ -2105,7 +2033,6 @@ proc doCollage { files {step 1} args } {
 		dict with ::artscript_convert(collage_vars) {
 			# Stop process if no more collages in cue
 			if { ($range_pack eq {}) } {
-				# set ::artscript_convert(extract) false
 				puts "All collages assembled"
 				doConvert $::artscript_convert(collage_ids) 0 trim $trim
 				return
@@ -2239,14 +2166,9 @@ proc frameOutput { w } {
 	ttk::separator $w.sep -orient vertical
 
 	grid $w.label_quality $w.slider_qual_val $w.slider_qual - -row 1 -sticky we
-	#grid configure $w.label_quality -column 1
-	#grid configure $w.slider_qual -column 2 -columnspan 2 -sticky we
 	grid configure $w.slider_qual_val -column 4 -sticky w
 	grid x x $w.label_format $w.format x -row 2 -sticky we
-	# grid configure $w.label_format -column 2
-	# grid configure $w.format -column 3
 	grid $w.overwrite - - $w.alfa_off - - -row 3 -sticky we
-	# grid configure $w.format $w.slider_qual_val -sticky we
 	grid configure $w.label_quality $w.label_format -sticky e
 	place $w.alpha_color -in $w.alfa_off -relx .92 -y 1 -anchor ne
 
@@ -2260,7 +2182,6 @@ proc frameOutput { w } {
 # Alters ouput widgets to show format output options
 # w = widget name
 proc setFormatOptions { w } {
-	# update listname
 	treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output
 	$::widget_name(convert-but) configure -text $::artscript(bconvert_string) -command $::artscript(bconvert_cmd)
 	$::widget_name(thumb-prev) state !disabled
@@ -2444,10 +2365,9 @@ proc getOutputSizesForTree { size {formated 0}} {
 			set dest_h [lindex [split $dimension {x} ] 1]
 		}
 		# get final size
-		#set finalscale [getSizeScale {*}[concat [split $size {x} ] [split $dimension {x}]] ]
 		set mode [$::widget_name(resize_operators) get]
 		set finalscale [getSizeScale $cur_w $cur_h $dest_w $dest_h $mode]
-		#Add resize filter (better quality)
+		#TODO Add resize filter (better quality)
 		lappend fsizes $finalscale
 	}
 	#Do not return repeated sizes
@@ -2459,18 +2379,15 @@ proc getOutputSizesForTree { size {formated 0}} {
 }
 #Preproces functions
 # Renders watermark images based on parameters to tmp folder
-# global artscript(select_watermark_text) watermark_text watermark_size watermark_color, artscript(select_watermark_image) wmimop wmimcomp
 # returns string
 proc watermark {} {
 	global deleteFileList
 	set wmcmd {}
 	
 	# Positions list correspond to $::watemarkpos, but names as imagemagick needs
-	# set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
 	set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(watermark_position) current] ]
 	set wmimpossel [lindex $::artscript(magick_pos) [$::widget_name(watermark_image_position) current] ]
-	# watermark_text watermarks watermark_size watermark_color watermark_text_opacity wmpositions iwatermarks wmimpos wmimsize wmimcomp wmimop select_watermark artscript(select_watermark_text) artscript(select_watermark_image)
-	#Watermarks, check if checkboxes selected
+
 	if { $::artscript(select_watermark_text) } {
 		set wmtmptx [file join "/tmp" "artk-tmp-wtmk.png" ]
 		set width [expr {[string length $::watermark_text] * 3 * ceil($::watermark_size/4.0)}]
@@ -2535,15 +2452,10 @@ proc getResize { size dsize filter unsharp} {
 			set resize [concat -resize ${finalscale}${operator}]
 		}
 	} else {
-		  # Only for IM 8.8 and beyond
-		  # -colorspace RGB +sigmoidal-contrast 7.5 \
-		  #         -filter LanczosRadius -distort Resize 500% \
-		  #         -sigmoidal-contrast 7.5 -colorspace sRGB {output}
 		  set contrast 1.0
 		  set resize [concat -colorspace RGB +sigmoidal-contrast $contrast -filter Lanczos ]
 		  set resize [concat -define filter:blur=.9264075766146068 -distort Resize ${finalscale} -sigmoidal-contrast $contrast ]
 	}
-
 	# Final resize output
 	set resize [concat $resize $crop +repage "-colorspace sRGB" $unsharp]
 
@@ -2564,7 +2476,6 @@ proc getQuality { ext } {
 }
 
 proc renameFiles { {index 0} {step 0} } {
-	# global inputfiles
 	switch -exact -- $step {
 		0 {
 			pBarControl {} create 0 1
@@ -2597,7 +2508,6 @@ proc renameFiles { {index 0} {step 0} } {
 # Adds command to fileevent handler
 # cmd exec command, script last cmd executed
 proc runCommand {cmd script {var ""}} {
-    # output command $cmd
     set f [open "| $cmd 2>@1" r]
     fconfigure $f -blocking false
     fileevent $f readable  [list handleFileEvent $f $script $var]
@@ -2751,18 +2661,15 @@ proc processHandlerFiles { index ilist {step 1}} {
 				set i $id(path)
 				set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"$outname\" \"$outname\") )(gimp-quit 0)"
 				#run gimp command, it depends on file extension to do transforms.
-				# catch { exec gimp -i -b $cmd } msg
 				set extractCmd [list gimp -i -b $cmd]
 			}
 			if { $handler($imgv) == {i} } {
 				puts "Rendering Ink Scapes"
 				# output 100%, resize imagick
-				# catch { exec inkscape $id(path) -z -C -d 90 -e $outname } msg
 				set extractCmd [list inkscape $id(path) -z -C -d 90 -e $outname]
 			}
 			if { $handler($imgv) == {k} } {
 				puts "Rendering Kriters: Calligraconvert always return errors!"
-				# catch { exec calligraconverter --batch -- $id(path) $outname } msg
 				set extractCmd [list calligraconverter --batch -- $id(path) $outname]
 			}
 			runCommand $extractCmd [list relauchHandler $index $ilist]
@@ -2794,7 +2701,6 @@ proc relauchHandler {index ilist} {
 		dict set ::inputfiles $imgv tmp $outname
 		lappend ::deleteFileList $outname
 	}
-	# array unset handler
 	after idle [list after 0 [list processHandlerFiles $index $ilist]]
 	return
 }
@@ -2910,11 +2816,11 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 		pBarControl "No images loaded!" forget 600
 		return -code break
 	}
-	#get watermark value
 	set ::artscript_convert(wmark) [watermark]
 	set ::artscript_convert(quality) [getQuality $::out_extension]
 
-	set ::artscript_convert(extract) true ; #controls all extracts are done before convert
+ 	#controls all extracts are done before convert
+	set ::artscript_convert(extract) true
 	
 	#process Gimp Calligra and inkscape to Tmp files
 	set ::artscript_convert(files) [processIds $ids]
@@ -3061,7 +2967,7 @@ proc artscriptOpenState { } {
 }
 
 #-==== Global variable declaration
-array set ::settings [artscriptSettings]
+artscriptSettings
 array set ::widget_name {}
 set ::artscript_rc [file join [file dirname [info script]] ".artscriptrc"]
 #-==== Global dictionaries, files values, files who process
@@ -3089,7 +2995,7 @@ if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 }
 
 #-==== Get user presets from file
-getUserPresets
+set ::presets [getUserPresets]
 
 artscriptSaveOnExit
 artscriptStyles
