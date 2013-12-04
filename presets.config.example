@@ -14,6 +14,9 @@ autor=Autor
 # Filling listboxes
 # ex (watermarks="http://example.wordpress.com" "example@example.com" "copyright (c) $year $autor")
 
+
+# Default options
+
 # Presets
 # If no preset value is defined any uncommented value will be loaded by default.
 # See end of file to view an example
@@ -26,13 +29,13 @@ autor=Autor
 
 # Turn on remember last used settings. Default 0 (off)    1 = On
 # Settings will be saved in .artscriptrc file in the same directory the script is running
-artscript(remember_state)=0
+# remember_state=1
 
 #-==== Watermark options
-# watermark_text=""
+# watermark_text=
 
 # watermark default list, follow example to add your own [listbox]
-# watermark_text_list="http://example.wordpress.com" "example@example.com" "copyright (c) $year $autor"
+# watermark_text_list="http://example.site.com" "example@example.com" "copyright (c) $year $autor"
 
 # watermark text size in points
 # watermark_size=10
@@ -46,8 +49,8 @@ artscript(remember_state)=0
 # text opacity. 0 invisible, 100 opaque
 # watermark_text_opacity=70
 
-# watermark swatches. colors are set as Name Value pairs. Value must be in hex or tk name covention ()
-# watermark_color_swatches=""
+# watermark swatches. colors are set as Name Value pairs. Value must be in hex or tk name covention
+# watermark_color_swatches=Black black English-red #D00000 "Dark crimson" #780422 Orange #FE8B00
 
 # Image path uri, "Name Path" pairs. path must be an absolute path
 # watermark_image_list="Image name" "/path/to/image.png" "Image name" "/path/to/image.png"
@@ -65,7 +68,7 @@ artscript(remember_state)=0
 #-==== Size options
 # Sizes available in preset lists. Space separated values. Use name "default" to autload some values.
 # Example sizes_set(NAME_OF_PRESET) = "value1 value2 value3..."
-# sizes_set(default)="1920x1080 1680x1050 1280x1024 50% 1024x768 720x720 640x480"
+# sizes_set(default)=1920x1080 1680x1050 1280x1024 50% 1024x768 720x720 640x480
 
 # Resize scale operator. Scale Stretch OnlyGrow OnlyShrink Zoom
 # resize_operators=Zoom
@@ -116,21 +119,21 @@ Collage Mode: Concatenation "Zero geometry" Crop
 
 #-====Extension & output
 # Default output extension
-# out_extension=
+# format=jpg
 
 # Image quality
 # image_quality=95
 
 
 #-====Suffix options
-# Suffix list options [listbox]
-# suffix_list="net" "arts" "read"
+# Suffix list options
+# suffix_list=net arts read
 
-#Default selected suffix
-# suffix=net
+# Default selected suffix
+# out_suffix=net
 
 #Default selected prefix
-# prefix=net
+# out_prefix=net
 
 #-====Selected operations, default false
 # Controls watermark insert. (1 = true / 0 = false)
@@ -146,8 +149,17 @@ Collage Mode: Concatenation "Zero geometry" Crop
 # overwrite=0
 
 
+# ====::::: Presets
+
+# Preset name, put next to the equal simbol, no quoting. Follow examples
+# Anything below "preset=" will be loaded when artscript is called with argument ":preset"
+# By default setting no "preset" value means that all values go to "default" preset
+# ex ( $sh ~ artscript :preset collage file1.jpg file2.png file3.kra )
+# example above loads anything below "preset=collage"
+# preset=
+
 # Any value defined after a preset will be loaded if artscript is called in the following form
 # $sh ~ artscript :preset strip file1.jpg file2.png ...
 
 # preset=strip
-
+# watermark_color_swatches=

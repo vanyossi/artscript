@@ -1,7 +1,7 @@
 #! /usr/bin/env wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: 2.1.5
+#  Version: 2.1.6
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #  License: GPLv3 
@@ -16,7 +16,7 @@
 #
 # ---------------------::::::::::::::------------------------
 package require Tk
-set ::version "v2.1.5"
+set ::version "v2.1.6"
 
 # Do not show .dot files by default. !fails in OSX
 catch {tk_getOpenFile foo bar}
@@ -60,22 +60,19 @@ proc artscriptSettings {} {
 		autor "Autor" \
 	]
 	# Watermark options
-	set wat_settings [dict create \
-		watermark_text  {}                 \
-		watermark_text_list      [list {Copyright (c) $::autor} {http://www.yourwebsite.com} {Artwork: $::autor} {$::date}] \
-		watermark_size          10                  \
-		watermark_color           "#000000"           \
-		watermark_color_swatches     {}                 \
-		watermark_text_opacity            80                  \
-		watermark_position           "BottomRight"       \
-		watermark_image_list     [dict create        \
-			"Logo" "/Path/to/logo"          \
-			"Client Watermark" "/path/to/watermarkimg" \
-		] \
-		watermark_image_position         "Center"            \
-		watermark_image_size        "0"                 \
-		watermark_image_style        "Over"              \
-		watermark_image_opacity          100                 \
+	set wat_settings [dict create     \
+		watermark_text  {}            \
+		watermark_text_list           [list {Copyright (c) $::autor} {http://www.yourwebsite.com} {Artwork: $::autor} {$::date}] \
+		watermark_size                10                  \
+		watermark_color               "#000000"           \
+		watermark_text_opacity        80                  \
+		watermark_position            "BottomRight"       \
+		watermark_image_list          [dict create ] \
+		watermark_image_position      "Center"            \
+		watermark_image_size          "0"                 \
+		watermark_image_style         "Over"              \
+		watermark_image_opacity       100                 \
+		artscript(watermark_color_swatches)     {}        \
 		]
 	#Sizes
 	set siz_settings [dict create \
@@ -106,20 +103,20 @@ proc artscriptSettings {} {
 	]
 			#General checkboxes
 	set bool_settings [dict create  \
-		select_watermark      0               \
-		select_watermark_text   0               \
-		select_watermark_image   0               \
-		select_collage     0               \
-		select_suffix   0               \
-		overwrite   0               \
-		alfaoff		{}				\
-		artscript(alfa_color)	"white" \
-		artscript(remember_state) 0 \
+		artscript(select_watermark)        0          \
+		artscript(select_watermark_text)   0          \
+		artscript(select_watermark_image)  0          \
+		artscript(select_collage)          0          \
+		artscript(select_suffix)           0          \
+		artscript(overwrite)               0          \
+		artscript(alfaoff)		           {}         \
+		artscript(alfa_color)	           "white"    \
+		artscript(remember_state)          0          \
 	]
 	#Extension & output
 	set out_settings [dict create \
 		out_extension      "png"   \
-		image_quality    92      \
+		artscript(image_quality)    92      \
 		artscript(supported_files) [dict create \
 			all [list {Suported Images}     [dict get $mis_settings ext] ] \
 			magick [list {Suported Images}  {.png .jpg .jpeg .gif .bmp .miff .svg .tif .webp} ] \
@@ -164,7 +161,7 @@ proc validate {program} {
 # returns filename.ext
 proc getOutputName { iname out_extension { prefix "" } { suffix {} } {sizesufix {}} } {
 	
-	if {!$::select_suffix} {
+	if {!$::artscript(select_suffix)} {
 		set prefix {}
 		set suffix {}
 	} else {
@@ -182,7 +179,7 @@ proc getOutputName { iname out_extension { prefix "" } { suffix {} } {sizesufix 
 	append outname [join $lname "_"] "." [lindex $out_extension 0]
 	
 	#Add a counter if filename exists
-	if {!$::overwrite} {
+	if {!$::artscript(overwrite)} {
 		set tmpname $outname
 		while { [file exists [file join $dir "$outname"] ] } {
 			set outname $tmpname
@@ -370,6 +367,7 @@ proc listValidate { ltoval } {
 # TODO return dict, use dict values to set master settings array
 proc getUserPresets {} {
 	global ops presets
+	set presets [dict create]
 	
 	set configfile "presets.config"
 	set configfile [file join [file dirname [info script]] $configfile]
@@ -391,9 +389,9 @@ proc getUserPresets {} {
 			return 0
 		}
 		#declare default dictionary to add defaut config values
-		 set ::preset "default"
+		 set preset "default"
 		 if {[dict exists $ops ":preset"]} {
-			lappend ::preset [dict get $ops ":preset"]
+			lappend preset [dict get $ops ":preset"]
 		 }
 		#iterate list and populate dictionary with values
 		set default true
@@ -413,35 +411,40 @@ proc getUserPresets {} {
 }
 # Change settings values from $::presets dict "s"
 # s string, setting preset name
-proc setUserPresets { s } {
-	global presets
-	if {![info exists presets]} {
+proc setUserPresets { select } {
+	if {$select eq {}} {
 		return 0
 	}
+	set preset_values [dict get $::presets $select]
+	array set preset $preset_values
 
-    # TODO remove this list of global tcl vars. set all user vars in a pair list value, or array.
-    set gvars {tcl_rcFileName|tcl_version|argv0|argv|tcl_interactive|tk_library|
-    tk_version|auto_path|errorCode|tk_strictMotif|errorInfo|auto_index|env|tcl_p
-    kgPath|tcl_patchLevel|argc|tk_patchLevel|tcl_library|tcl_platform}
-	
-	#set values according to preset
-	dict for {key value} [dict get $presets $s] {
-		if { ![regexp $gvars $key ] } {
-			# Dirty fix: TODO we should set preset on an array
-			set value [string map {{$} {$::}} $value]
-			if { [catch {set keyval [eval list [string trim $value]] } msg] } {
-				puts $msg
-			} else {
-				if {[llength $keyval] > 1} { 
-					set ::$key $keyval
-				} else {
-					set ::$key [string trim $keyval "{}"]
-				}
-			}
-		#puts [eval list [set $key] ]
-		#set ::$key [eval concat $tmpkey]
+	set catalogue [artscriptWidgetCatalogue]
+	dict with catalogue {
+	    set settings [dict create]
+
+	    catch { dict set settings sets [dict filter $preset_values key sizes_set*] }
+	    catch { dict lappend settings sets {*}[dict filter $preset_values key collage_sty*] }
+	    catch { dict lappend settings sets {*}[dict filter $preset_values key collage_lay*] }
+	    catch { dict set settings img_src [dict create values $preset(watermark_image_list) selection {}] }
+		catch { dict set settings entries collage_label $preset(collage_label) }
+
+	    foreach prop $get_values {
+			catch {dict set settings get_values $prop $preset(${prop})}
+		}
+		foreach prop $col_styles {
+			catch {dict set settings col_styles $prop $preset(${prop})}
+		}
+		foreach prop [concat $variables $preset_variables] {
+			catch {dict set settings variables $prop $preset(${prop})}
+		}
+		foreach prop $lists {
+			catch {dict set settings lists $prop $preset(${prop})}
 		}
 	}
+	puts "Presets config name keys changed drastically from v2.0 to 2.1\n \
+	If your presets does not load please review presets.config.example file to check the new names."
+	artscriptSetWidgetValues $settings
+
 	return
 }
 	
@@ -684,8 +687,8 @@ proc treeAlterVal { {script {set $value}} w read write  } {
 }
 # Updates checkbox state and output name values on tree (w)
 proc printOutname { w } {
-	if {$::select_suffix || $w != 0} {
-		bindsetAction 0 0 select_suffix $::widget_name(cb-prefix)
+	if {$::artscript(select_suffix) || $w != 0} {
+		bindsetAction 0 0 artscript(select_suffix) $::widget_name(cb-prefix)
 	}
 	treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output
 }
@@ -801,7 +804,7 @@ proc scrollTabs { w i {dir 1} } {
 }
 
 # Defines combobox editable events.
-proc comboBoxEditEvents { w {script {optionOn select_watermark} }} {
+proc comboBoxEditEvents { w {script {optionOn artscript(select_watermark)} }} {
 	bind $w <<ComboboxSelected>> $script
 	bind $w <Button-3> { %W configure -state normal }
 	bind $w <Control-Button-1> { %W configure -state normal }
@@ -1018,12 +1021,12 @@ proc guiTopBar { w } {
 	pack $w.add $w.sep -side left -fill x
 	pack configure $w.sep -expand 1
 
-
-	if {[info exists ::presets]} {
+	if {[llength [dict keys $::presets]] > 1} {
+		ttk::label $w.preset_label -text "Load preset:"
 		ttk::combobox $w.preset -state readonly -values [dict keys $::presets]
-		$w.preset set "default"
+		$w.preset set [lindex $::presets 0]
 		bind $w.preset <<ComboboxSelected>> { setUserPresets [%W get] }
-		pack $w.preset -after $w.add -side left
+		pack $w.preset_label $w.preset -after $w.add -side left -ipady {2}
 	}
 	return $w
 }
@@ -1123,49 +1126,49 @@ proc tabWatermark { wt } {
 	ttk::label $wt.lop -text "Opacity" -width 10
 
 	# Text watermark ops
-	ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable ::select_watermark_text -command { turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
+	ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark_text) -command { turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
 	ttk::label $wt.ltext -text "Text"
 	set ::widget_name(watermark_text) [ttk::combobox $wt.watermarks -state readonly -textvariable ::watermark_text -values $::watermark_text_list -width 28]
 	$wt.watermarks set [lindex $::watermark_text_list 0]
 	
-	comboBoxEditEvents $wt.watermarks {bindsetAction 0 0 select_watermark "$::widget_name(check-wm) $wt.cbtx"}
+	comboBoxEditEvents $wt.watermarks {bindsetAction 0 0 artscript(select_watermark) "$::widget_name(check-wm) $wt.cbtx"}
 
 	# font size spinbox
 	set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
 	set ::widget_name(watermark_size) [ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
 			-validatecommand { string is integer %P }]
 	$wt.fontsize set $::watermark_size
-	bind $wt.fontsize <ButtonRelease> { bindsetAction watermark_size [%W get] select_watermark "$::widget_name(check-wm) $wt.cbtx"}
-	bind $wt.fontsize <KeyRelease> { bindsetAction watermark_size [%W get] select_watermark "$::widget_name(check-wm) $wt.cbtx" }
+	bind $wt.fontsize <ButtonRelease> { bindsetAction watermark_size [%W get] artscript(select_watermark) "$::widget_name(check-wm) $wt.cbtx"}
+	bind $wt.fontsize <KeyRelease> { bindsetAction watermark_size [%W get] artscript(select_watermark) "$::widget_name(check-wm) $wt.cbtx" }
 
 	set wmpositions	[list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"]
 	# Text position box 
 	set ::widget_name(watermark_position) [ttk::combobox $wt.position -state readonly -textvariable ::watermark_position -values $wmpositions -width 10]
 	$wt.position set $::watermark_position
-	bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 select_watermark "$::widget_name(check-wm) $wt.cbtx" }
+	bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 artscript(select_watermark) "$::widget_name(check-wm) $wt.cbtx" }
 
 	# Image watermark ops
-	ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable ::select_watermark_image -command {turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
+	ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark_image) -command {turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
 	ttk::label $wt.limg -text "Image"
 
 	# Get only the name for image list.
 	set iwatermarksk [dict keys $::watermark_image_list]
 	set ::widget_name(watermark_image) [ttk::combobox $wt.iwatermarks -state readonly -values $iwatermarksk]
 	$wt.iwatermarks set [lindex $iwatermarksk 0]
-	bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction 0 0 select_watermark "$::widget_name(check-wm) $wt.cbim" }
+	bind $wt.iwatermarks <<ComboboxSelected>> { bindsetAction 0 0 artscript(select_watermark) "$::widget_name(check-wm) $wt.cbim" }
 	ttk::button $wt.img_select -image $::folder_on -text "New" -style small.TButton -command [list loadImageWatermark $wt.iwatermarks]
 
 	# Image size box \%
 	set ::widget_name(watermark_image_size) [ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
 			-validatecommand { string is integer %P }]
 	$wt.imgsize set $::watermark_image_size
-	bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] select_watermark $::widget_name(check-wm) }
-	bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] select_watermark "$::widget_name(check-wm) $wt.cbim" }
+	bind $wt.imgsize <ButtonRelease> { bindsetAction wmimsize [%W get] artscript(select_watermark) $::widget_name(check-wm) }
+	bind $wt.imgsize <KeyRelease> { bindsetAction wmimsize [%W get] artscript(select_watermark) "$::widget_name(check-wm) $wt.cbim" }
 
 	# Image position
 	set ::widget_name(watermark_image_position) [ttk::combobox $wt.iposition -state readonly -textvariable ::watermark_image_position -values $wmpositions -width 10]
 	$wt.iposition set $::watermark_image_position
-	bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 select_watermark "$::widget_name(check-wm) $wt.cbim" }
+	bind $wt.iposition <<ComboboxSelected>> { bindsetAction 0 0 artscript(select_watermark) "$::widget_name(check-wm) $wt.cbim" }
 
 	# Opacity scales
 	# Set a given float as integer, TODO uplevel to set local context variable an not global namespace
@@ -1173,10 +1176,10 @@ proc tabWatermark { wt } {
 		bindsetAction $gvar [format $ft $fl] $cvar "$::widget_name(check-wm) $wt.$cb"
 	}
 
-	set ::widget_name(watermark_text_opacity) [ttk::scale $wt.txop -from 10 -to 100 -variable ::watermark_text_opacity -value $::watermark_text_opacity -orient horizontal -command { progressBarSet ::watermark_text_opacity ::select_watermark $wt cbtx "%.0f" }]
+	set ::widget_name(watermark_text_opacity) [ttk::scale $wt.txop -from 10 -to 100 -variable ::watermark_text_opacity -value $::watermark_text_opacity -orient horizontal -command { progressBarSet ::watermark_text_opacity ::artscript(select_watermark) $wt cbtx "%.0f" }]
 	ttk::label $wt.tolab -width 3 -textvariable ::watermark_text_opacity
 
-	set ::widget_name(watermark_image_opacity) [ttk::scale $wt.imop -from 10 -to 100 -variable ::watermark_image_opacity -value $::watermark_image_opacity -orient horizontal -command { progressBarSet ::watermark_image_opacity ::select_watermark $wt cbim "%.0f" }]
+	set ::widget_name(watermark_image_opacity) [ttk::scale $wt.imop -from 10 -to 100 -variable ::watermark_image_opacity -value $::watermark_image_opacity -orient horizontal -command { progressBarSet ::watermark_image_opacity ::artscript(select_watermark) $wt cbim "%.0f" }]
 	ttk::label $wt.iolab -width 3 -textvariable ::watermark_image_opacity
 
 	# Style options
@@ -1190,13 +1193,13 @@ proc tabWatermark { wt } {
 	set ::canvas_element(watermark_main_color) [$wt.st.chos create rectangle 2 2 26 26 -fill $::watermark_color -width 2 -outline [getContrastColor $::watermark_color] -tags {watermark main}]
 	$wt.st.chos bind main <Button-1> { setColorAndContrast %W $::canvas_element(watermark_main_color) [%W itemconfigure $::canvas_element(watermark_main_color) -fill] }
 
-	set wmswatch [getswatches $::watermark_color_swatches]
+	set wmswatch [getswatches $::artscript(watermark_color_swatches)]
 	drawSwatch $wt.st.chos $wmswatch
 
 	set iblendmodes [list Bumpmap ColorBurn ColorDodge Darken Exclusion HardLight Hue Lighten LinearBurn LinearDodge LinearLight Multiply Overlay Over Plus Saturate Screen SoftLight VividLight]
 	set ::widget_name(watermark_image_style) [ttk::combobox $wt.st.iblend -state readonly -textvariable ::watermark_image_style -values $iblendmodes -width 12]
 	$wt.st.iblend set $::watermark_image_style
-	bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] select_watermark "$::widget_name(check-wm) $wt.cbim" }
+	bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] artscript(select_watermark) "$::widget_name(check-wm) $wt.cbim" }
 
 	set wtpadding 2
 	grid x x x x $wt.lsize $wt.lpos $wt.lop -row 1 -sticky ws
@@ -1484,7 +1487,7 @@ proc addPresetBrowser { w } {
 
 	set presets [lsort [getArrayNamesIfValue ::sizes_set]]
 
-	ttk::combobox $w.preset.sets -state readonly -values $presets
+	set ::widget_name(size_preset_list) [ttk::combobox $w.preset.sets -state readonly -values $presets]
 	bind $w.preset.sets <<ComboboxSelected>> [list sizeSetPreset %W $w.set_sizes.size]
 	$w.preset.sets set [lindex $presets 0]
 
@@ -1633,13 +1636,13 @@ proc sizeOptions { w } {
 
 	set size_operators [list Scale Stretch OnlyGrow OnlyShrink Zoom]
 	set ::widget_name(resize_operators) [ttk::combobox $w.operator -width 12 -state readonly -values $size_operators ]
-	$w.operator set $::resize_operators
+	$w.operator set "OnlyShrink"
 	# Run after everything is processed
-	after idle {showOperatorOptions $::widget_name(resize_size_options) $::resize_operators}
+	# after idle {showOperatorOptions $::widget_name(resize_size_options) $::resize_operators}
 	bind $w.operator <<ComboboxSelected>> { showOperatorOptions $::widget_name(resize_size_options) [%W get] }
 
 	set ::widget_name(resize_zoom_position) [ttk::combobox $w.zoom_position -width 12 -state readonly -values $::artscript(magick_pos)]
-	$w.zoom_position set $::resize_zoom_position
+	$w.zoom_position set [lindex $::artscript(magick_pos) 0]
 
 	pack $w.label_operator $w.operator -side left
 
@@ -1729,7 +1732,7 @@ proc colPaddingPreview { } {
 	colBorderPreview $border
 }
 proc setColageStyle { style {erase true}} {
-	# if {!$::select_collage} {
+	# if {!$::artscript(select_collage)} {
 	# 	$::widget_name(col_select) invoke
 	# }
 	dict for {prop value} $style {
@@ -1891,7 +1894,7 @@ proc colStyle { w } {
 
 	# Uses ::collage_styles() array
 	set swatches [lsort [getArrayNamesIfValue ::collage_styles]]
-	ttk::combobox $w.styles -width 0 -state readonly -values $swatches
+	set ::widget_name(collage_styles) [ttk::combobox $w.styles -width 0 -state readonly -values $swatches]
 	bind $w.styles <<ComboboxSelected>> { setColageStyle $::collage_styles([%W get])}
 
 	pack $w.label_head [colSpacing $w.space] -side top -expand 1 -fill x -ipady 2
@@ -1905,7 +1908,7 @@ proc colStyle { w } {
 	return $w
 }
 proc colSelect {} {
-	switch -- $::select_collage {
+	switch -- $::artscript(select_collage) {
 		0 {set ops {off ? "Convert" {prepConvert} end} }
 		1 {set ops {on ! "Make Collage" {prepConvert "Collage"} end-2 } }
 	}
@@ -1917,21 +1920,21 @@ proc colSelect {} {
 	set ::artscript(bconvert_cmd) $convert_cmd
 	$::widget_name(convert-but) configure -text $convert_string -command $convert_cmd
 	# Disable unsupported formats for collage
-	$::widget_name(formats) configure -values [lrange $::artscript(formats) 0 $format_range]
-	if { [$::widget_name(formats) current] == -1 } { $::widget_name(formats) current 0 }
+	$::widget_name(format) configure -values [lrange $::artscript(formats) 0 $format_range]
+	if { [$::widget_name(format) current] == -1 } { $::widget_name(format) current 0 }
 }
 
 proc colLayoutsSelect { w } {
 	ttk::frame $w -padding {0 0 0 6}
-	set ::select_collage 0
-	set ::widget_name(col_select) [ttk::checkbutton $w.sel_collage -text "Make Collage?" -variable ::select_collage -command colSelect \
+	set ::artscript(select_collage) 0
+	set ::widget_name(col_select) [ttk::checkbutton $w.sel_collage -text "Make Collage?" -variable ::artscript(select_collage) -command colSelect \
 		-style no_indicator.TCheckbutton -image $::img_off -compound left]
 
 	ttk::label $w.label_layouts -text "Layouts:"
 	
 	# Uses ::collage_layouts() array
 	set swatches [lsort [getArrayNamesIfValue ::collage_layouts]]
-	ttk::combobox $w.layouts -width 16 -state readonly -values $swatches
+	set ::widget_name(collage_layouts) [ttk::combobox $w.layouts -width 16 -state readonly -values $swatches]
 	bind $w.layouts <<ComboboxSelected>> { setColageStyle $::collage_layouts([%W get])}
 
 	ttk::label $w.separator
@@ -2174,7 +2177,7 @@ proc relaunchCollage { file_generated destination files } {
 proc guiOutput { w } {
 
 	ttk::frame $w
-	set ::widget_name(cb-prefix) [ttk::checkbutton $w.cbpre -onvalue 1 -offvalue 0 -variable ::select_suffix -text "Suffix and Prefix" -command {printOutname 0 } ]
+	set ::widget_name(cb-prefix) [ttk::checkbutton $w.cbpre -onvalue 1 -offvalue 0 -variable ::artscript(select_suffix) -text "Suffix and Prefix" -command {printOutname 0 } ]
 	ttk::labelframe $w.efix -text "Suffix and Prefix" -labelwidget $w.cbpre -padding 6
 
 	frameSuffix $w.efix
@@ -2219,16 +2222,16 @@ proc frameOutput { w } {
 
 	set ::artscript(formats) [list png jpg gif webp {webp lossy} ora {Rename}]
 	ttk::label $w.label_format -text "Format:"
-	set ::widget_name(formats) [ttk::combobox $w.format -state readonly -width 9 -textvariable ::out_extension -values $::artscript(formats)]
+	set ::widget_name(format) [ttk::combobox $w.format -state readonly -width 9 -textvariable ::out_extension -values $::artscript(formats)]
 	$w.format set [lindex $::artscript(formats) 0]
 	bind $w.format <<ComboboxSelected>> [list setFormatOptions $w ]
 
 	ttk::label $w.label_quality -text "Quality:"
-	set ::widget_name(quality) [ttk::scale $w.slider_qual -from 10 -to 100 -variable ::image_quality -value $::image_quality -orient horizontal -command { progressBarSet ::image_quality 0 0 0 "%.0f" }]
-	ttk::label $w.slider_qual_val -width 4 -textvariable ::image_quality
+	set ::widget_name(quality) [ttk::scale $w.slider_qual -from 10 -to 100 -variable ::artscript(image_quality) -value $::artscript(image_quality) -orient horizontal -command { progressBarSet ::artscript(image_quality) 0 0 0 "%.0f" }]
+	ttk::label $w.slider_qual_val -width 4 -textvariable ::artscript(image_quality)
 
-	ttk::checkbutton $w.overwrite -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::overwrite -command { treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output }
-	ttk::checkbutton $w.alfa_off -text "Remove Alfa" -onvalue "-background %s -alpha remove" -offvalue "" -variable ::alfaoff
+	ttk::checkbutton $w.overwrite -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::artscript(overwrite) -command { treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output }
+	ttk::checkbutton $w.alfa_off -text "Remove Alfa" -onvalue "-background %s -alpha remove" -offvalue "" -variable ::artscript(alfaoff)
 	canvas $w.alpha_color -width 16 -height 16
 	set ::widget_name(alfa_color) [$w.alpha_color create rectangle 1 1 15 15 -fill $::artscript(alfa_color) -width 1 -outline "grey20" -tags {alfa}]
 	$w.alpha_color bind alfa <Button-1> { set ::artscript(alfa_color) [setColor %W $::widget_name(alfa_color) [%W itemconfigure $::widget_name(alfa_color) -fill]] }
@@ -2263,39 +2266,39 @@ proc setFormatOptions { w } {
 	$::widget_name(thumb-prev) state !disabled
 	switch -glob -- $::out_extension {
 		jpg	{
-			set ::image_quality 92 
+			set ::artscript(image_quality) 92 
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 10 -to 100
 		}
 		png	{
-			set ::image_quality 9
+			set ::artscript(image_quality) 9
 			$w.label_quality configure -text "Compress:"
 			$w.slider_qual configure -from 0 -to 9
 		}
 		gif	{
-			set ::image_quality 256
+			set ::artscript(image_quality) 256
 			$w.label_quality configure -text "Colors:"
 			$w.slider_qual configure -from 1 -to 256
 		}
 		ora	{
-			set ::image_quality 0
+			set ::artscript(image_quality) 0
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 0 -to 0
 			$::widget_name(convert-but) configure -text "Make ORA" -command {prepOra}
 			$::widget_name(thumb-prev) state disabled
 		}
 		webp { 
-			set ::image_quality 100 
+			set ::artscript(image_quality) 100 
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 10 -to 100
 		}
 		webp* { 
-			set ::image_quality 60
+			set ::artscript(image_quality) 60
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 10 -to 100
 		}
 		Rename {
-			set ::image_quality 0
+			set ::artscript(image_quality) 0
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 0 -to 0
 			$::widget_name(convert-but) configure -text "Rename" -command {renameFiles}
@@ -2314,7 +2317,7 @@ proc guiStatusBar { w } {
 	ttk::frame $w.rev
 	ttk::frame $w.do
 	
-	set ::widget_name(check-wm) [ttk::checkbutton $w.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable ::select_watermark -command { turnOffChildCB select_watermark "$wt.cbim" select_watermark_image "$wt.cbtx" select_watermark_text }]
+	set ::widget_name(check-wm) [ttk::checkbutton $w.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark) -command { turnOffChildCB artscript(select_watermark) "$wt.cbim" artscript(select_watermark_image) "$wt.cbtx" artscript(select_watermark_text) }]
 	# set ::widget_name(check-sz) [ttk::checkbutton $w.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable ::select_size]
 
 	set ::widget_name(pbar-main) [ttk::progressbar $w.do.pbar -maximum [getFilesTotal] -variable ::cur -length "260"]
@@ -2456,7 +2459,7 @@ proc getOutputSizesForTree { size {formated 0}} {
 }
 #Preproces functions
 # Renders watermark images based on parameters to tmp folder
-# global select_watermark_text watermark_text watermark_size watermark_color, select_watermark_image wmimop wmimcomp
+# global artscript(select_watermark_text) watermark_text watermark_size watermark_color, artscript(select_watermark_image) wmimop wmimcomp
 # returns string
 proc watermark {} {
 	global deleteFileList
@@ -2466,9 +2469,9 @@ proc watermark {} {
 	# set magickpos [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
 	set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(watermark_position) current] ]
 	set wmimpossel [lindex $::artscript(magick_pos) [$::widget_name(watermark_image_position) current] ]
-	# watermark_text watermarks watermark_size watermark_color watermark_text_opacity wmpositions iwatermarks wmimpos wmimsize wmimcomp wmimop select_watermark select_watermark_text select_watermark_image
+	# watermark_text watermarks watermark_size watermark_color watermark_text_opacity wmpositions iwatermarks wmimpos wmimsize wmimcomp wmimop select_watermark artscript(select_watermark_text) artscript(select_watermark_image)
 	#Watermarks, check if checkboxes selected
-	if { $::select_watermark_text } {
+	if { $::artscript(select_watermark_text) } {
 		set wmtmptx [file join "/tmp" "artk-tmp-wtmk.png" ]
 		set width [expr {[string length $::watermark_text] * 3 * ceil($::watermark_size/4.0)}]
 		set height [expr {[llength [split $::watermark_text {\n}]] * 30 * ceil($::watermark_size/8.0)}]
@@ -2482,7 +2485,7 @@ proc watermark {} {
 
 	}
 	set wmimsrc [dict get $::watermark_image_list [$::widget_name(watermark_image) get]]
-	if { $::select_watermark_image && [file exists $wmimsrc] } {
+	if { $::artscript(select_watermark_image) && [file exists $wmimsrc] } {
 		set identify {identify -quiet -format "%wx%h:%m:%M "}
 		if { [catch {set finfo [exec {*}$identify $wmimsrc ] } msg ] } {
 			puts $msg	
@@ -2551,11 +2554,11 @@ proc getResize { size dsize filter unsharp} {
 # returns string
 proc getQuality { ext } {
 	switch -glob -- $ext {
-		jpg	{ set quality "-sampling-factor 1x1,1x,1x1 -quality $::image_quality" }
-		png	{ set quality "-type TrueColorMatte -define png:format=png32 -define png:compression-level=$::image_quality -define png:compresion-filter=4" }
-		gif	{ set quality "-channel RGBA -separate \( +clone -dither FloydSteinberg -remap pattern:gray50 \) +swap +delete -combine -channel RGB -dither FloydSteinberg -colors $::image_quality" }
-		webp { set quality "-quality $::image_quality -define webp:auto-filter=true -define webp:lossless=true -define webp:method=5" }
-		webp* { set quality "-quality $::image_quality -define webp:auto-filter=true -define webp:lossless=false -define webp:alpha-quality=100"}
+		jpg	{ set quality "-sampling-factor 1x1,1x,1x1 -quality $::artscript(image_quality)" }
+		png	{ set quality "-type TrueColorMatte -define png:format=png32 -define png:compression-level=$::artscript(image_quality) -define png:compresion-filter=4" }
+		gif	{ set quality "-channel RGBA -separate \( +clone -dither FloydSteinberg -remap pattern:gray50 \) +swap +delete -combine -channel RGB -dither FloydSteinberg -colors $::artscript(image_quality)" }
+		webp { set quality "-quality $::artscript(image_quality) -define webp:auto-filter=true -define webp:lossless=true -define webp:method=5" }
+		webp* { set quality "-quality $::artscript(image_quality) -define webp:auto-filter=true -define webp:lossless=false -define webp:alpha-quality=100"}
 	}
 	return $quality
 }
@@ -2896,7 +2899,7 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 
 	pBarControl {} create 0 1
 
-	set ::artscript_convert(alfa_off) [format $::alfaoff $::artscript(alfa_color)]
+	set ::artscript_convert(alfa_off) [format $::artscript(alfaoff) $::artscript(alfa_color)]
 	foreach var {out_extension out_prefix out_suffix} {
 		set ::artscript_convert($var) [set ::$var]
 	}
@@ -2922,23 +2925,36 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 	
 	do$type $::artscript_convert(files) 0 preview $preview
 }
+
 proc artscriptWidgetCatalogue {} {
 	set catalogue [dict create]
-	dict append catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_position watermark_image_position watermark_image_style watermark_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality formats resize_operators resize_zoom_position}
+
+	dict append catalogue variables {select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state}
+	dict append catalogue preset_variables {watermark_color_swatches}
 	dict append catalogue col_styles {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color}
-	dict append catalogue variables {::select_suffix ::select_collage ::select_watermark ::select_watermark_text ::select_watermark_image ::overwrite ::alfaoff ::image_quality}
+	dict append catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_position watermark_image_position watermark_image_style watermark_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position}
+	dict append catalogue lists {watermark_text_list suffix_list}
 	return $catalogue
 }
+
 proc artscriptSetWidgetValues { dictionary } {
 	dict for {type elements} $dictionary {
 		switch -- $type {
 			"sizes_selected" {
+				sizeTreeDelete [array names ::sdict]
 				dict for {name values} $elements {
 					foreach size $values {
 						if {([lsearch -exact $::sizes_set(default) $size] >= 0) && ($name eq "values")} { continue }
 						sizeTreeAdd $size nonselected off
 					}
 				}
+			}
+			"sets" {
+				foreach {key value} $elements { set ::$key $value }
+				$::widget_name(size_preset_list) configure -values [lsort [getArrayNamesIfValue ::sizes_set]]
+				$::widget_name(collage_styles) configure -values [lsort [getArrayNamesIfValue ::collage_styles]]
+				$::widget_name(collage_layouts) configure -values [lsort [getArrayNamesIfValue ::collage_layouts]]
+
 			}
 			"get_values" {
 				foreach {key value} $elements {
@@ -2972,9 +2988,23 @@ proc artscriptSetWidgetValues { dictionary } {
 			}
 			"variables" {
 				foreach {key value} $elements {
-					set $key $value
+					set ::artscript($key) $value
 				}
 				colSelect
+				puts $::artscript(watermark_color_swatches)
+				drawSwatch $::widget_name(watermark_canvas) [getswatches $::artscript(watermark_color_swatches)]
+			}
+			"lists" {
+				foreach {key value} $elements {
+					if {$key eq "suffix_list"} {
+						set value [lsort [lappend value "$::date" %mtime {}]]
+						$::widget_name(out_prefix) configure -values $value
+						$::widget_name(out_suffix) configure -values $value
+					} elseif {$key eq "watermark_text_list"} {
+						global year month day autor
+						$::widget_name(watermark_text) configure -values [subst $value]
+					}
+				}
 			}
 		}
 	}
@@ -2999,7 +3029,7 @@ proc artscriptSaveOnExit {} {
 					dict set save_settings col_styles $prop [lindex [$::widget_name(${parent}_canvas) itemconfigure $::canvas_element($prop) -fill] end]
 				}
 				foreach prop $variables {
-						dict set save_settings variables $prop [set $prop]
+						dict set save_settings variables $prop [set ::artscript($prop)]
 				}
 			}
 
@@ -3039,9 +3069,6 @@ array set ::widget_name {}
 set ::inputfiles [dict create]
 set ::handlers [dict create]
 set ::ops [getUserOps $argv]
-#-==== Get user presets from file
-getUserPresets
-setUserPresets "default"
 #-==== Find Optional dependencies (as global to search file only once)
 set ::hasgimp [validate "gimp"]
 set ::hasinkscape [validate "inkscape"]
@@ -3049,9 +3076,9 @@ set ::hascalligra [validate "calligraconverter"]
 #-====# Global file counter TODO: separate delete to a list
 set ::fc 1
 set ::artscript(magick_pos) [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
-Construct
 
-# ---===  GUI
+
+# ---===  GUI Construct
 wm title . "Artscript $::version -- [getFilesTotal] Files selected"
 # Set close actions
 bind . <Destroy> {artscriptExit %W}
@@ -3062,9 +3089,13 @@ if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 	wm iconphoto . -default $wmicon
 }
 
+#-==== Get user presets from file
+getUserPresets
+
 artscriptSaveOnExit
 artscriptStyles
 createImageVars
+
 # Pack Top: menubar. Middle: File, thumbnail, options, suffix output.
 # Bottom: status bar
 guiTopBar .f1
@@ -3074,6 +3105,8 @@ guiStatusBar .f3
 # Load drag and drop Unix
 catch {tkdndLoad}
 
+# Set user presets
+setUserPresets [lindex [dict key $::presets] 0]
 # ---=== Validate input filetypes
 catch {artscriptOpenState}
 
