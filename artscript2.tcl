@@ -2487,8 +2487,8 @@ proc getResize { size dsize filter unsharp} {
 		while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
 			set cur_w [expr {round($cur_w * 0.8)}]
 			set resize [concat $resize -resize 80% +repage $unsharp]
-			set resize [concat -resize ${finalscale}${operator}]
 		}
+		set resize [concat -resize ${finalscale}${operator}]
 	} else {
 		  set contrast 1.0
 		  set resize [concat -colorspace RGB +sigmoidal-contrast $contrast -filter Lanczos ]
