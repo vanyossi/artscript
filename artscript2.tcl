@@ -2504,6 +2504,7 @@ proc getOutputSizesForTree { size {formated 0}} {
 proc watermark {} {
 	global deleteFileList
 	set wmcmd {}
+	set wm_im_sel [$::widget_name(watermark_image) get]
 	
 	# Positions list correspond to $::watemarkpos, but names as imagemagick needs
 	set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(watermark_position) current] ]
@@ -2520,8 +2521,9 @@ proc watermark {} {
 		
 		lappend deleteFileList $wmtmptx
 		append wmcmd [list -gravity $wmpossel $wmtmptx -compose dissolve -define compose:args=$::watermark_text_opacity -geometry +5+5 -composite ]
-
 	}
+	if {$wm_im_sel eq {}} { return $wmcmd }
+
 	set wmimsrc [dict get $::watermark_image_list [$::widget_name(watermark_image) get]]
 	if { $::artscript(select_watermark_image) && [file exists $wmimsrc] } {
 		set identify {identify -quiet -format "%wx%h:%m:%M "}
@@ -3032,6 +3034,7 @@ proc artscriptSetWidgetValues { dictionary } {
 					} elseif {$key eq "watermark_text_list"} {
 						global year month day autor
 						$::widget_name(watermark_text) configure -values [subst $value]
+						$::widget_name(watermark_text) current 0 
 					}
 				}
 			}
