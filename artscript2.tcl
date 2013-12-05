@@ -170,7 +170,6 @@ proc getOutputName { iname out_extension { prefix {} } { suffix {} } { sizesufix
 	# Name in brackets to protect white space
 	set lname [concat $prefix [list $name] $suffix $sizesufix ]
 	append outname [join $lname "_"] "." [lindex $out_extension 0]
-	
 	if {!$::artscript(overwrite)} {
 		set tmpname $outname
 		while { [file exists [file join $dir "$outname"] ] } {
@@ -972,14 +971,8 @@ proc getswatches { {colist 0} {sortby 1}} {
 
 # Ttk style modifiers
 proc artscriptStyles {} {
-	ttk::style layout small.TButton {
-		Button.border -sticky nswe -border 1 -children {
-			Button.focus -sticky nswe -children {
-				Button.padding -sticky nswe -children {Button.label -expand 0 -side left -sticky nswe}
-				}
-			}
-		}
-	ttk::style configure small.TButton -padding {6 2 6 0} -width 0
+	ttk::style configure menu.TButton -padding {6 2} -width 0
+	ttk::style configure small.TButton -padding {6 0} -width 0
 	ttk::style layout no_indicator.TCheckbutton { 
 		Checkbutton.padding -sticky nswe -children { 
 			Checkbutton.focus -side left -sticky w -children {
@@ -1048,7 +1041,7 @@ proc guiMiddle { w } {
 	$paned_botom pane $gui_out -weight 2
 	
 	pack $file_pane.flist -side left -expand 1 -fill both
-	pack $file_pane.thumb -side left -expand 0 -fill both -pady 2
+	pack $file_pane.thumb -side left -expand 0 -fill both -pady {6 0}
 	pack propagate $file_pane.thumb 0
 	pack $file_pane.thumb.im -expand 1 -fill both
 	
@@ -1062,18 +1055,25 @@ proc guiFileList { w } {
 	ttk::frame $w.flist.tree
 
 	set a $w.flist.action
-	#set image [list -image $::folder_on -compound left]
 
-	ttk::button $a.add -text "Add files" -style small.TButton -command { loadTreeFiles }
-	ttk::button $a.add_folder -text "Add folder" -style small.TButton -command { loadTreeFiles folder }
+	set compound left
+	#set image [list -image [list $::plus_normal active $::plus_g focus $::plus_g] -compound $compund]
+	set im_add [list $::folder_on]
+	set im_selall [list $::select_all]
+	set im_selinv [list $::select_inv]
+	set im_selnone [list $::select_none]
+	set im_remove [list $::symbol_x]
+
+	ttk::button $a.add -text "Add files" -image $im_add -compound $compound -style menu.TButton -command { loadTreeFiles }
+	ttk::button $a.add_folder -text "Add folder" -image $im_add -compound $compound -style menu.TButton -command { loadTreeFiles folder }
 	ttk::label $a.select_label -text "Select"
-	ttk::button $a.select_all -text "All" -style small.TButton \
+	ttk::button $a.select_all -text "All" -image $im_selall -compound $compound -style menu.TButton \
 		-command { $::widget_name(flist) selection add [$::widget_name(flist) children {}] }
-	ttk::button $a.select_inv -text "Inverse" -style small.TButton\
+	ttk::button $a.select_inv -text "Inverse" -image $im_selinv -compound $compound -style menu.TButton\
 		-command { $::widget_name(flist) selection toggle [$::widget_name(flist) children {}] }
-	ttk::button $a.select_none -text "None" -style small.TButton\
+	ttk::button $a.select_none -text "None" -image $im_selnone -compound $compound -style menu.TButton\
 		-command { $::widget_name(flist) selection remove [$::widget_name(flist) children {}] }
-	ttk::button $a.clear -text "Remove Selected" -style small.TButton \
+	ttk::button $a.clear -text "Remove Selected" -image $im_remove -compound $compound -style menu.TButton \
 		-command { removeTreeItem $::widget_name(flist) [$::widget_name(flist) selection] }
 
 	ttk::label $a.sep
@@ -1102,7 +1102,7 @@ proc guiFileList { w } {
 	$::widget_name(flist) tag configure exists -foreground #f00
 
 	pack $a $w.flist.tree -side top -fill x
-	pack $a.add $a.add_folder $a.sep $a.select_label $a.select_all $a.select_inv $a.select_none $a.sep_sels $a.clear -side left -padx {0 2}
+	pack $a.add $a.sep $a.select_label $a.select_all $a.select_inv $a.select_none $a.sep_sels $a.clear -side left -padx {0 2}
 	pack $tree_files $tree_scroll -side left -fill y
 	pack configure $a.sep $a.sep_sels $w.flist.tree $tree_files -expand 1 -fill both
 	pack configure $a.clear -padx 0
@@ -1118,6 +1118,25 @@ proc guiThumbnail { w } {
 }
 
 # --== Option tabs
+proc guiTabCheckbox {w previous selected} {
+	set tabs [$w tabs]
+	set prev_index [lsearch $tabs $previous]
+	if {$prev_index == $selected} {
+		guiTabToggleCheck [$w tab $selected]
+	}
+}
+proc guiTabToggleCheck {args} {
+	set vals {*}$args
+	dict with vals {
+		if {$::tab_on == ${-image}} {
+			set image {}
+		} else {
+			set image $::tab_on
+		}
+		$::option_tab tab $::widget_name(tab_${-text}) -image $image
+	}
+}
+
 proc guiOptionTabs { w } {
 	ttk::notebook $w
 	ttk::notebook::enableTraversal $w
@@ -1125,13 +1144,16 @@ proc guiOptionTabs { w } {
 	bind $w <ButtonPress-4> { scrollTabs %W [%W index current] 1 }
 	bind $w <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
 	
-	set ::wt [tabWatermark $w.wm]
-	set ::st [tabResize $w.sz]
-	set ::cl [tabCollage $w.cl]
+	set ::widget_name(tab_Watermark) [tabWatermark $w.wm]
+	set ::widget_name(tab_Resize) [tabResize $w.sz]
+	set ::widget_name(tab_Collage) [tabCollage $w.cl]
+	set ::wt $::widget_name(tab_Watermark) ; #TODO remove, bidsetACtion locks this variable name
+
+	# bind $w <Button> {guiTabCheckbox %W [%W select] [%W identify tab %x %y]}
 	
-	$w add $::wt -text "Watermark" -underline 0
-	$w add $::st -text "Resize" -underline 0 -sticky nsew -image $::img_off -compound right
-	$w add $::cl -text "Collage" -underline 0 -sticky nsew -image $::img_off -compound right
+	$w add $::widget_name(tab_Watermark) -text "Watermark" -underline 0 -compound left
+	$w add $::widget_name(tab_Resize) -text "Resize" -underline 0 -sticky nsew -compound left
+	$w add $::widget_name(tab_Collage) -text "Collage" -underline 0 -sticky nsew -compound left
 
 	return $w
 }
@@ -1146,8 +1168,7 @@ proc tabWatermark { wt } {
 	ttk::label $wt.lop -text "Opacity" -width 10
 
 	# Text watermark ops
-	ttk::checkbutton $wt.cbtx -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark_text) -command { turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
-	ttk::label $wt.ltext -text "Text"
+	ttk::checkbutton $wt.cbtx -text "Text" -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark_text) -command { turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
 	set ::widget_name(watermark_text) [ttk::combobox $wt.watermarks -state readonly -textvariable ::watermark_text -values $::watermark_text_list -width 28]
 	$wt.watermarks set [lindex $::watermark_text_list 0]
 	
@@ -1168,8 +1189,7 @@ proc tabWatermark { wt } {
 	bind $wt.position <<ComboboxSelected>> { bindsetAction 0 0 artscript(select_watermark) "$::widget_name(check-wm) $wt.cbtx" }
 
 	# Image watermark ops
-	ttk::checkbutton $wt.cbim -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark_image) -command {turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
-	ttk::label $wt.limg -text "Image"
+	ttk::checkbutton $wt.cbim -text "Image"  -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark_image) -command {turnOffParentCB $::widget_name(check-wm) $wt.cbtx $wt.cbim}
 
 	# Get only the name for image list.
 	set iwatermarksk [dict keys $::watermark_image_list]
@@ -1222,11 +1242,11 @@ proc tabWatermark { wt } {
 	bind $wt.st.iblend <<ComboboxSelected>> { bindsetAction wmimcomp [%W get] artscript(select_watermark) "$::widget_name(check-wm) $wt.cbim" }
 
 	set wtpadding 2
-	grid x x x x $wt.lsize $wt.lpos $wt.lop -row 1 -sticky ws
-	grid $wt.cbtx $wt.ltext $wt.watermarks - $wt.fontsize $wt.position $wt.txop $wt.tolab -row 2 -sticky we -padx $wtpadding -pady $wtpadding
-	grid $wt.cbim $wt.limg $wt.iwatermarks $wt.img_select $wt.imgsize $wt.iposition $wt.imop $wt.iolab -row 3 -sticky we -padx $wtpadding -pady $wtpadding
-	grid $wt.st -row 4 -column 2 -columnspan 5 -sticky we -pady 4
-	grid columnconfigure $wt {2} -weight 2
+	grid x x x $wt.lsize $wt.lpos $wt.lop -row 1 -sticky ws
+	grid $wt.cbtx $wt.watermarks - $wt.fontsize $wt.position $wt.txop $wt.tolab -row 2 -sticky we -padx $wtpadding -pady $wtpadding
+	grid $wt.cbim $wt.iwatermarks $wt.img_select $wt.imgsize $wt.iposition $wt.imop $wt.iolab -row 3 -sticky we -padx $wtpadding -pady $wtpadding
+	grid $wt.st -row 4 -column 1 -columnspan 5 -sticky we -pady 4
+	grid columnconfigure $wt {1} -weight 2
 	pack $wt.st.txcol $wt.st.chos $wt.st.sep $wt.st.imstyle $wt.st.iblend -expand 1 -side left -fill x
 	pack configure $wt.st.txcol $wt.st.chos $wt.st.imstyle -expand 0
 	
@@ -1247,28 +1267,90 @@ proc getArrayNamesIfValue { aname } {
 proc createImageVars {} { 
 	set ::img_off [image create photo]
 	$::img_off put {
-        R0lGODlhCgAKAPQQACUlJSYmJicnJygoKCkpKTQ0NOjo6Orq6u3t7fDw8PPz8/T09Pb29vf39/n5
-+f39/f///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAAA
-AAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAKAAoAAAUuYDEAZDmIUKqmI8S8
-MERCSm3LAI0oO4JDiKAQ5zAYjw5S8WhMDlywF+Q0KpFOIQA7
+        R0lGODlhDAAMAPMAAJKNg5aSh5iTiuDe2+Lg3OTj3+fm4urp5u3s6fDv7fLy8PX18/j49/n5+Pv7
++gAAACH5BAAAAAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAMAAwAAAQyMIBJ
+qxwk6zxm+WA4GWRpTkeqrhPivvCUzHQ9KXiuT0vv/xOGcEicNBoOpDIJEFSezQgAOw== 
     }
 	set ::img_on [image create photo]
 	$::img_on put {
-        R0lGODlhCgAKAPQAAColMSolMiolMysnMislNCslNSslNiwlNi0nNjQ0Nrr/NLP/PL7/PMP/NLb/
-RLn/TLn/Tb3/VcH/RcT/TsT/T8D/Xcn/WMP/Zcz/YM//adP/dN3/eAAAAAAAAAAAAAAAACH5BAAA
-AAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAKAAoAAAU3YIIghkGaYqOsbEMy
-SywzpeTcuFROT+9PBoElQixaBAJMZcnEIDOXqDSD3Giu2I0gIQAgv4NECAA7
+        R0lGODlhDAAMAPUAAFJZPkpIQVRZQXuuK4CuN4rGK4zGLo3GMY7GNY/GOJHGPJLGP6//MbL/ObP/
+O5PGQpXGRpbGSbj/SLj/S7v/T8D/XsL/Y8T/ZsX/acb/bMf/b8n/c8n/dMr/dM3/fM7/f87/gdD/
+hdH/h9D/iNT/j9X/lNX/ldb/l9f/m9n/ntv/pNz/pgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAAAAAAAIf8LSW1hZ2VNYWdpY2sO
+Z2FtbWE9MC40NTQ1NDUALAAAAAAMAAwAAAZmQEBgSCwKB4WkMjkYGhgMh0TigBqGBwcF0+lgKI7D
+EDHRjEqlkWaCGFdAJZWq9KkkhopLCLVaoUIXCkMPFnApKSUgFoIBhB1nJCEdFg9DEBoYGx4fGxoa
+EEMEEaMQpBEEAQJFq6lBADs=
     }
+    set ::tab_on [image create photo]
+	$::tab_on put {
+R0lGODlhCgAKAPMAAB4cGSMhHigmIywrJzEwLDY1MTs6Nj48OAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAACH5BAEAAAgAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAKAAoAAAQhEMlJ
+J7ighs2n+NInSMNAlRJBUKpUvC4sGXRdHfhR7VIEADs=
+    }
+	set ::tab_off [image create photo]
+	$::tab_off put {
+R0lGODlhCgAKAPAAAAAAAAAAACH5BAEAAAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUA
+LAAAAAAKAAoAAAIIhI+py+0PYysAOw==
+	}
 	set ::folder_on [image create photo]
 	$::folder_on put {
-        R0lGODlhEAAQAPUAAG1BFXhIE4JPEoxWEZZdEKBkD6trDbVyDL95C8mACtOHCdmMCN6OCOKRB+KS
-COeXEeCdF+ydGeeiGOWrJuWvLfClI/WuLOyxKPSxLvWxLuSyMuu5NPm3NfLAN+zDQe3NTffPR/jO
-SPTWUfzeVvzfVvPbWfffXP7oYf/pYQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAEAACkAIf8LSW1hZ2VNYWdpY2sO
-Z2FtbWE9MC40NTQ1NDUALAAAAAAQABAAAAZ4wEbjEalYOJmUcqlkoJ7PUJK5VDwpiqx2m01Av6Xv
-M4EQo0wFkxhxMKPV34OBRCeJRJ/C5143FECAHgWDhAUegAUEHYsbjRoFGo0biwQDF5eYEwUTmJcD
-AhKhohAFEKKhAgEOq6wOC62rAQCztLW2AFS5uru8vUtBADs=
+        R0lGODlhEAAOAPUAACIgHCgmITQyLT89N0dEPkpGPkxIQFBMRFVQSVlVTWZhWmplXmhmXm5pYm9s
+ZHBsZHBtZXJuZnRwaXd1bXl0bHh2c315cXt5dX98dIB9dIaEe4uHfouIf42JgI6KgY6Lg56akZ2a
+lLy6tNra2Ojo5+/v7wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAEAACYAIf8LSW1hZ2VNYWdpY2sO
+Z2FtbWE9MC40NTQ1NDUALAAAAAAQAA4AAAZ3wIJwKDQZj8bCYMksIJEFgXRKrBoCl2y2wu0CAIaN
+Q0Quj87n7wGUabtBpHj8i+gw7nhQab//JiwQgYIgIYWFEhIdEBOMjRyPkI8gChiVlpeXFAwanJ2e
+ngwNHx0fo6WkpqMNEBESga4QrrKxEAUEBLa5uLe2uEEAOw==
     }
+    set ::select_all [image create photo]
+	$::select_all put {
+R0lGODlhDgAOAPMAAB0cGSEfHDQxLDo4MkE/OUlGP0tIQFBNRlFOR1ZUTF5bUmViWWhlXLq1qwAA
+AAAAACH5BAAAAAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAOAA4AAAQ3MIBJ
+6wwi673HaGAoekRpnmdRiGyjHnAsy0nSirWi7zy/LLfQj0EsGo+MIAjJbDoPhqh0Gj1EAAA7 
+    }
+    set ::select_none [image create photo]
+	$::select_none put {
+R0lGODlhDgAOAPMAACwqJSwqJjQxLDo4MkE/OUlGP1BNRlZUTF5bUmViWWhlW2hlXK2rpry5s9za
+1QAAACH5BAAAAAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAOAA4AAAQvEMhJ
+qWAu683E2KA2EGFIFCVoGOlmHK12IHGGJLWTLPnC177eohFrLBS+pDKpiAAAOw== 
+    }
+    set ::select_inv [image create photo]
+	$::select_inv put {
+R0lGODlhDgAOAPMAAB0cGSEfHDQxLDo4MkE/OUI/OUlGP0tIQFBNRlFOR1ZUTF1aUl5bUmViWWhl
+XNza1SH5BAAAAAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAOAA4AAAQ8MIBJ
+6wwi673HeGAoekRpnqdhiOyjInAsy0pt3zfTtkzzoKhHw7FjOYiMpHL5OBZFx6h06kAcrtjsFREB
+ADs= 
+    }
+    set ::symbol_x [image create photo]
+	$::symbol_x put {
+R0lGODlhDgAOAPMAAC8tKDAsKTg1MTg2MEE+OEI+OElGQElHQFJPSFNPSFtXUFtYUGRhV2RhWGhl
+XAAAACH5BAEAAA8AIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAOAA4AAAQr8MlJ
+q704B0BBsEIohcJVnGhmGIeRPUicZMqyPItyMQ0j8T6LgzJ8GY/HCAA7 
+    }
+    set ::plus_b [image create photo]
+	$::plus_b put {
+    	R0lGODlhDgAOAPMAABw3PCAoJxdGURNVZg9legt0jwaDpAKSuQCaxAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAACH5BAEAAAkAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAOAA4AAAQjMMlJ
+    q702BEwB4JMggNIwYESqrlThvjBmGGRyHDWC5HvtYxEAOw==
+}
+	set ::plus_g [image create photo]
+		$::plus_g put {
+		R0lGODlhDgAOAPMAACYqGi8/FzhTE0l8DEFoEFKRCVulBWS6AmjEAAAAAAAAAAAAAAAAAAAAAAAA
+	AAAAACH5BAEAAAkAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAOAA4AAAQjMMlJ
+	q70WAExD4JMggBJBYEOqrlThvjBmGGRyHDWC5HvtYxEAOw==
+	}
+	set ::plus_normal [image create photo]
+		$::plus_normal put {
+		R0lGODlhDgAOAPMAACYkIC8tKDg2MEE+OElHQFJPSFtYUGRhWGhlXAAAAAAAAAAAAAAAAAAAAAAA
+	AAAAACH5BAEAAAkAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAOAA4AAAQjMMlJ
+	q70WAExD4JMggNIwYESqrlThvjBmGGRyHDWC5HvtYxEAOw==
+	}
+	set ::plus_r [image create photo]
+		$::plus_r put {
+			R0lGODlhDgAOAPMAACwhGkAiF1UjE30mDGklEJEoCaYpBboqAsQrAAAAAAAAAAAAAAAAAAAAAAAA
+	AAAAACH5BAEAAAkAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAAAOAA4AAAQjMMlJ
+	q70WAExD4JMggBJBYEOqrlThvjBmGGRyHDWC5HvtYxEAOw==
+	}
 }
 
 # Hides or shows height combobox depending if value is wxh or w%
@@ -1493,11 +1575,11 @@ proc addPresetBrowser { w } {
 	bind $w.preset.sets <<ComboboxSelected>> [list sizeSetPreset %W $w.set_sizes.size]
 	$w.preset.sets set [lindex $presets 0]
 
-	ttk::button $w.preset.add -text "+" -padding {2 0} -style small.TButton -command {sizeTreeAddPreset [$::widget_name(size_preset_list) get]}
+	ttk::button $w.preset.add -text "+" -image [list $::plus_normal active $::plus_g focus $::plus_g] -padding {2 0} -style small.TButton -command {sizeTreeAddPreset [$::widget_name(size_preset_list) get]}
 	
 	ttk::combobox $w.set_sizes.size -state readonly
 	bind $w.set_sizes.size <<ComboboxSelected>> [list sizeEdit %W]
-	ttk::button $w.set_sizes.add -text "+" -padding {2 0} -style small.TButton -command [list sizeTreeAddPresetChild $w.set_sizes.size]
+	ttk::button $w.set_sizes.add -text "+" -image [list $::plus_normal active $::plus_g focus $::plus_g] -padding {2 0} -style small.TButton -command [list sizeTreeAddPresetChild $w.set_sizes.size]
 	
 	pack $w.preset $w.set_sizes -side top -expand 1 -fill x
 	pack $w.set_sizes -pady 6
@@ -1607,7 +1689,7 @@ proc sizeTreeOps { w } {
 	ttk::label $w.selectl -text "Select:"
 	ttk::button $w.all -text "all" -style small.TButton -command {$::widget_name(resize_tree) selection add [$::widget_name(resize_tree) children {}] }
 	ttk::button $w.inv -text "inv." -style small.TButton -command {$::widget_name(resize_tree) selection toggle [$::widget_name(resize_tree) children {}] }
-	ttk::button $w.sels -text "sels" -image $::img_on -style small.TButton -padding {2} -command {$::widget_name(resize_tree) selection set [$::widget_name(resize_tree) tag has selected]}
+	ttk::button $w.sels -text "sels" -image $::img_on -style small.TButton -padding {2 1} -command {$::widget_name(resize_tree) selection set [$::widget_name(resize_tree) tag has selected]}
 
 	#Set focus on tree after pressing the buttons
 	foreach widget [list $w.all $w.inv $w.sels] {
@@ -1662,9 +1744,9 @@ proc eventSize { } {
 	treeAlterVal {getOutputSizesForTree $value 1} $::widget_name(flist) size osize
 
 	if { [llength $sizes] > 0 } {
-		$::option_tab tab $::st -image $::img_on
+		$::option_tab tab $::widget_name(tab_Resize) -image $::tab_on
 	} else {
-		$::option_tab tab $::st -image $::img_off
+		$::option_tab tab $::widget_name(tab_Resize) -image {}
 	}
 }
 
@@ -1683,7 +1765,7 @@ proc tabResize { st } {
 	# pack widgets around addSizeBox
 	set w $::widget_name(resize_size)
 	ttk::label $w.title -text "Add custom size. ratio : wxh" -font "-size 12" 
-	ttk::button $w.add -text "+" -padding {2 0} -style small.TButton -command [list sizeTreeAddWxH $w.xmu $w.wid $w.hei]
+	ttk::button $w.add -text "+" -image [list $::plus_normal active $::plus_g focus $::plus_g] -padding {2 0} -style small.TButton -command [list sizeTreeAddWxH $w.xmu $w.wid $w.hei]
 	
 	pack $w.title -before $w.rat -side top -fill x
 	pack $w.add -after $w.empty -side left
@@ -1882,13 +1964,13 @@ proc colStyle { w } {
 }
 proc colSelect {} {
 	switch -- $::artscript(select_collage) {
-		0 {set ops {off ? "Convert" {prepConvert} end} }
-		1 {set ops {on ! "Make Collage" {prepConvert "Collage"} end-2 } }
+		0 {set ops {{} ? "Convert" {prepConvert} end} }
+		1 {set ops {$::tab_on ! "Make Collage" {prepConvert "Collage"} end-2 } }
 	}
-	lassign $ops state mode convert_string convert_cmd format_range
-	set image [append ::img_$state]
-	$::widget_name(col_select) configure -image $image -text "Make Collage$mode"
-	$::option_tab tab $::cl -image $image
+	lassign $ops image mode convert_string convert_cmd format_range
+	#set image [append ::tab_$state]
+	$::widget_name(col_select) configure -text "Make Collage$mode"
+	$::option_tab tab $::widget_name(tab_Collage) -image [subst $image]
 	set ::artscript(bconvert_string) $convert_string
 	set ::artscript(bconvert_cmd) $convert_cmd
 	$::widget_name(convert-but) configure -text $convert_string -command $convert_cmd
@@ -1901,7 +1983,7 @@ proc colLayoutsSelect { w } {
 	ttk::frame $w -padding {0 0 0 6}
 	set ::artscript(select_collage) 0
 	set ::widget_name(col_select) [ttk::checkbutton $w.sel_collage -text "Make Collage?" -variable ::artscript(select_collage) -command colSelect \
-		-style no_indicator.TCheckbutton -image $::img_off -compound left]
+		-style no_indicator.TCheckbutton -image [list $::img_off selected $::img_on]  -compound left]
 
 	ttk::label $w.label_layouts -text "Layouts:"
 	
