@@ -2523,8 +2523,7 @@ proc watermark {} {
 		append wmcmd [list -gravity $wmpossel $wmtmptx -compose dissolve -define compose:args=$::watermark_text_opacity -geometry +5+5 -composite ]
 	}
 	if {$wm_im_sel eq {}} { return $wmcmd }
-
-	set wmimsrc [dict get $::watermark_image_list [$::widget_name(watermark_image) get]]
+	set wmimsrc [dict get $::watermark_image_list $wm_im_sel]
 	if { $::artscript(select_watermark_image) && [file exists $wmimsrc] } {
 		set identify {identify -quiet -format "%wx%h:%m:%M "}
 		if { [catch {set finfo [exec {*}$identify $wmimsrc ] } msg ] } {
@@ -2548,8 +2547,7 @@ proc watermark {} {
 # size = image size, dsize = destination size, filter = resize filter
 # unsharp = unsharp string options
 # return string
-proc getResize { size dsize filter unsharp } {
-
+proc getResize { size dsize } {
 	# Operator is force size (!)
 	set operator "\\!"
 	lassign [concat [split $size {x}] [split $dsize {x}] ] cur_w cur_h dest_w dest_h
@@ -2563,17 +2561,24 @@ proc getResize { size dsize filter unsharp } {
 		set finalscale $dsize
 		set crop {}
 	}
-	
+
+	# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
+	# with -distort Resize instead of -resize Lanczos "or LanczosRadius"
+	set sigma [format %.2f [expr { ( (1 / ([format %.1f $dest_w] / $cur_w)) / 4 ) * .8 }] ]
+	set filter "-interpolate bicubic -filter LanczosRadius -define filter:blur=.9891028367558475"
+	set unsharp "	-unsharp 0x$sigma+0.80+0.010"
+	# set filter "-interpolate bicubic -filter Parzen"
+	# set unsharp [string repeat "-unsharp 0x0.55+0.25+0.010 " 1]
+
 	set resize "-colorspace RGB"
 	#Check if enlarging or not.
 	if {$cur_area > $dest_area} {
-		# Create string Colorspace, filter, resize x N, original Colorspace
 		set resize [concat $resize $filter]
-		while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
-			set cur_w [expr {round($cur_w * 0.8)}]
-			set resize [concat $resize -resize 80% +repage $unsharp]
-		}
-		set resize [concat $resize -resize ${finalscale}${operator}]
+		# while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
+		# 	set cur_w [expr {round($cur_w * 0.8)}]
+		# 	set resize [concat $resize -resize 80% +repage $unsharp]
+		# }
+		set resize [concat $resize -distort Resize ${finalscale}${operator}]
 	} else {
 		  set contrast 1.0
 		  set resize [concat -colorspace RGB +sigmoidal-contrast $contrast -filter Lanczos ]
@@ -2884,11 +2889,6 @@ proc doConvert { files {step 1} args } {
 				if {[dict exists $datas tmp]} {
 					set opath $tmp
 				}
-				# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
-				# use "-interpolate bicubic -filter Lanczos -define filter:blur=.9891028367558475" SLOW but best
-				# with -distort Resize instead of -resize "or LanczosRadius"
-				set filter "-interpolate bicubic -filter Parzen"
-				set unsharp [string repeat "-unsharp 0.48x0.48+0.60+0.012 " 1]
 
 				# get make resize string
 				set sizes [getOutputSizesForTree $size]
@@ -2897,7 +2897,7 @@ proc doConvert { files {step 1} args } {
 					incr i
 					set resize {}
 					if { $size != $osize } {
-						set resize [getResize $size $dimension $filter $unsharp]
+						set resize [getResize $size $dimension]
 					}
 					puts "converting... $name"
 					pBarControl "Converting... ${name} to $dimension" update
