@@ -3112,7 +3112,7 @@ wm protocol . WM_DELETE_WINDOW { artscriptSaveOnExit }
 bind . <Control-q> { artscriptSaveOnExit }
 
 # We test if icon exist before addin it to the wm
-set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
+set wmiconpath [file join [file dirname [info script]] icons "artscript.gif"]
 if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 	wm iconphoto . -default $wmicon
 }
