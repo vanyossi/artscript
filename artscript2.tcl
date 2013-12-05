@@ -1,7 +1,7 @@
 #! /usr/bin/env wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: 2.1.6
+#  Version: 2.1.7
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #  License: GPLv3 
@@ -16,7 +16,7 @@
 #
 # ---------------------::::::::::::::------------------------
 package require Tk
-set ::version "v2.1.6"
+set ::version "v2.1.7"
 
 # Do not show .dot files by default. !fails in OSX
 catch {tk_getOpenFile foo bar}
@@ -410,8 +410,9 @@ proc setUserPresets { select } {
 	set catalogue [artscriptWidgetCatalogue]
 	dict with catalogue {
 	    set settings [dict create]
-
-	    catch { dict set settings sets [dict filter $preset_values key sizes_set*] }
+	    set sizes_presets [dict filter $preset_values key sizes_set*]
+	    # catch { dict set settings sizes_selected [dict create values [dict get $sizes_presets sizes_set(default)] selected {} ]}
+	    catch { dict set settings sets $sizes_presets }
 	    catch { dict lappend settings sets {*}[dict filter $preset_values key collage_sty*] }
 	    catch { dict lappend settings sets {*}[dict filter $preset_values key collage_lay*] }
 	    catch { dict set settings img_src [dict create values $preset(watermark_image_list) selection {}] }
@@ -433,6 +434,7 @@ proc setUserPresets { select } {
 	puts "Presets config name keys changed drastically from v2.0 to 2.1\n \
 	If your presets does not load please review presets.config.example file to check the new names."
 	artscriptSetWidgetValues $settings
+	sizeTreeAddPreset default
 
 	return
 }
@@ -1105,7 +1107,7 @@ proc guiFileList { w } {
 	pack $a.add $a.sep $a.select_label $a.select_all $a.select_inv $a.select_none $a.sep_sels $a.clear -side left -padx {0 2}
 	pack $tree_files $tree_scroll -side left -fill y
 	pack configure $a.sep $a.sep_sels $w.flist.tree $tree_files -expand 1 -fill both
-	pack configure $a.clear -padx 0
+	pack configure $a.clear -padx {0 15}
 
 	return $w
 }
@@ -1573,7 +1575,7 @@ proc addPresetBrowser { w } {
 
 	set ::widget_name(size_preset_list) [ttk::combobox $w.preset.sets -state readonly -values $presets]
 	bind $w.preset.sets <<ComboboxSelected>> [list sizeSetPreset %W $w.set_sizes.size]
-	$w.preset.sets set [lindex $presets 0]
+	$w.preset.sets set [lindex $presets end]
 
 	ttk::button $w.preset.add -text "+" -image [list $::plus_normal active $::plus_g focus $::plus_g] -padding {2 0} -style small.TButton -command {sizeTreeAddPreset [$::widget_name(size_preset_list) get]}
 	
@@ -1628,8 +1630,7 @@ proc sizeTreeList { w } {
 	
     $w.sizetree tag configure selected -image $::img_on
     $w.sizetree tag configure nonselected -image $::img_off
-    
-	sizeTreeAddPreset default
+
 	return $w
 }
 # Selects size for processing, setting tag as selected
@@ -2292,8 +2293,8 @@ proc frameOutput { w } {
 	grid configure $w.label_quality $w.label_format -sticky e
 	place $w.alpha_color -in $w.alfa_off -relx .92 -y 1 -anchor ne
 
-	grid columnconfigure $w {1} -weight 12 -pad 4 
-	grid columnconfigure $w {0} -weight 2 -pad 4
+	grid columnconfigure $w {2} -weight 12 -pad 4 
+	grid columnconfigure $w {3} -weight 2 -pad 4
 	grid rowconfigure $w "all" -pad {6}
 	grid configure $w.overwrite $w.alfa_off -pady {12 1}
 	return $w
@@ -2967,10 +2968,12 @@ proc artscriptSetWidgetValues { dictionary } {
 	dict for {type elements} $dictionary {
 		switch -- $type {
 			"sizes_selected" {
-				sizeTreeDelete [array names ::sdict]
+				if {[llength [dict get $elements values]] > 0} {
+					sizeTreeDelete [array names ::sdict]
+				}
 				dict for {name values} $elements {
 					foreach size $values {
-						if {([lsearch -exact $::sizes_set(default) $size] >= 0) && ($name eq "values")} { continue }
+						#if {([lsearch -exact $::sizes_set(default) $size] >= 0) && ($name eq "values")} { continue }
 						sizeTreeAdd $size nonselected off
 					}
 				}
