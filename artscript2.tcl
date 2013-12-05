@@ -2546,7 +2546,7 @@ proc watermark {} {
 # size = image size, dsize = destination size, filter = resize filter
 # unsharp = unsharp string options
 # return string
-proc getResize { size dsize filter unsharp} {
+proc getResize { size dsize filter unsharp } {
 
 	# Operator is force size (!)
 	set operator "\\!"
@@ -2565,13 +2565,13 @@ proc getResize { size dsize filter unsharp} {
 	set resize "-colorspace RGB"
 	#Check if enlarging or not.
 	if {$cur_area > $dest_area} {
-		# Create string Colospace, filter, resize x N, original Colorspace
+		# Create string Colorspace, filter, resize x N, original Colorspace
 		set resize [concat $resize $filter]
 		while { [expr {[format %.1f $cur_w] / $dest_w}] > 1.5 } {
 			set cur_w [expr {round($cur_w * 0.8)}]
 			set resize [concat $resize -resize 80% +repage $unsharp]
 		}
-		set resize [concat -resize ${finalscale}${operator}]
+		set resize [concat $resize -resize ${finalscale}${operator}]
 	} else {
 		  set contrast 1.0
 		  set resize [concat -colorspace RGB +sigmoidal-contrast $contrast -filter Lanczos ]
