@@ -2822,13 +2822,13 @@ proc doConvert { files {step 1} args } {
 					}
 					
 					if {$preview eq {}} {
-						set soname \"[file join $outpath [getOutputName $opath $::artscript_convert(out_extension) $::artscript_convert(out_prefix) $::artscript_convert(out_suffix) $dimension] ]\"
+						set soname \"[file join $outpath [getOutputName $path $::artscript_convert(out_extension) $::artscript_convert(out_prefix) $::artscript_convert(out_suffix) $dimension] ]\"
 					} else {
 						puts "Generating preview"
 						set soname "show:"
 					}
 					set convertCmd [concat convert -quiet \"$opath\" $trim $resize $::artscript_convert(wmark) $::artscript_convert(alfa_off) $::artscript_convert(quality) $soname]
-
+puts $convertCmd
 					runCommand $convertCmd [list doConvert $files 1 {*}$args]
 				}
 			}
