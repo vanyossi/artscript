@@ -3039,38 +3039,34 @@ proc artscriptSetWidgetValues { dictionary } {
 	}
 }
 proc artscriptSaveOnExit {} {
-	wm protocol . WM_DELETE_WINDOW {
+	catch {file delete {*}$::deleteFileList }
+	after idle [after 0 exit] ; #Ensure always exit even if misterious error
 
-		if {$::artscript(remember_state) == 1} {
-			set catalogue [artscriptWidgetCatalogue]
-			dict with catalogue {
-			    set save_settings [dict create]
+	if {$::artscript(remember_state) == 1} {
+		set catalogue [artscriptWidgetCatalogue]
+		dict with catalogue {
+		    set save_settings [dict create]
 
-			    dict set save_settings sizes_selected [dict create values [array names ::sdict] selected [getSizesSel] ]
-			    dict set save_settings img_src [dict create values $::watermark_image_list selection [$::widget_name(watermark_image) get]]
-				dict set save_settings entries collage_label [$::widget_name(collage_label) get]
+		    dict set save_settings sizes_selected [dict create values [array names ::sdict] selected [getSizesSel] ]
+		    dict set save_settings img_src [dict create values $::watermark_image_list selection [$::widget_name(watermark_image) get]]
+			dict set save_settings entries collage_label [$::widget_name(collage_label) get]
 
-			    foreach prop $get_values {
-						dict set save_settings get_values $prop [$::widget_name(${prop}) get]
-				}
-				foreach prop $col_styles {
-					lassign [split $prop {_}] parent
-					dict set save_settings col_styles $prop [lindex [$::widget_name(${parent}_canvas) itemconfigure $::canvas_element($prop) -fill] end]
-				}
-				foreach prop $variables {
-						dict set save_settings variables $prop [set ::artscript($prop)]
-				}
+		    foreach prop $get_values {
+					dict set save_settings get_values $prop [$::widget_name(${prop}) get]
 			}
-
-			puts [format {Writing temporary settings file in %s
-			If you experience any problem, delete it to force refresh} $::artscript_rc]
-			set file [open $::artscript_rc w]
-			puts $file $save_settings
-			close $file
+			foreach prop $col_styles {
+				lassign [split $prop {_}] parent
+				dict set save_settings col_styles $prop [lindex [$::widget_name(${parent}_canvas) itemconfigure $::canvas_element($prop) -fill] end]
+			}
+			foreach prop $variables {
+					dict set save_settings variables $prop [set ::artscript($prop)]
+			}
 		}
-
-		catch {file delete {*}$::deleteFileList }
-		exit
+		puts [format {Writing temporary settings file in %s
+		If you experience any problem, delete it to force refresh} $::artscript_rc]
+		set file [open $::artscript_rc w]
+		puts $file $save_settings
+		close $file
 	}
 }
 
@@ -3108,8 +3104,9 @@ set ::artscript(magick_pos) [list "NorthWest" "North" "NorthEast" "West" "Center
 
 # ---===  GUI Construct
 wm title . "Artscript $::version -- [getFilesTotal] Files selected"
+wm protocol . WM_DELETE_WINDOW { artscriptSaveOnExit }
 # Set close actions
-bind . <Destroy> {artscriptExit %W}
+bind . <Control-q> { artscriptSaveOnExit }
 
 # We test if icon exist before addin it to the wm
 set wmiconpath [file join [file dirname [info script]] "atk-logo.gif"]
@@ -3120,7 +3117,6 @@ if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 #-==== Get user presets from file
 set ::presets [getUserPresets]
 
-artscriptSaveOnExit
 artscriptStyles
 createImageVars
 
