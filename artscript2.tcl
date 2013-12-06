@@ -87,8 +87,8 @@ proc artscriptSettings {} {
 		collage_styles(darker) "bg_color grey5 border_color grey10 label_color grey45 img_color black" \
 		{collage_layouts(Photo sheet)} "ratio 3:2 wid 275 hei 183 col 6 row 5 range 30 border 1 padding 4 label {%f: (%G)} mode {}" \
 		{collage_layouts(Storyboard)} "ratio 16:9 wid 500 hei 281 col 3 row 3 range 9 border 1 padding 8 label {%f} mode {}" \
-		{collage_layouts(Image Strip v)} "ratio 4:3 wid 300 hei {} col 1 row {} range {} border 0 padding 0 label {} mode {Zero Geometry}" \
-		{collage_layouts(Image Strip h)} "ratio 4:3 wid {} hei 300 col {} row 1 range {} border 0 padding 0 label {} mode {Zero Geometry}" \
+		{collage_layouts(Image Strip v)} "ratio 4:3 wid 300 hei {} col 1 row {} range {} border 0 padding 0 label {} mode {Zero geometry}" \
+		{collage_layouts(Image Strip h)} "ratio 4:3 wid {} hei 300 col {} row 1 range {} border 0 padding 0 label {} mode {Zero geometry}" \
 		{collage_layouts(Square 3x3)} "ratio 1:1 wid 350 hei 350 col 3 row 3 range {} border 0 padding 2 label {} mode {}" \
 	]
 
@@ -181,6 +181,10 @@ proc getOutputName { iname out_extension { prefix {} } { suffix {} } { sizesufix
 		unset tmpname
 	}
 	return $outname
+}
+# Replace % escapes for date values
+proc replaceDateEscapes { name } {
+	return [string map [list %d $::day %m $::month %y $::year %D $::date] $name ]
 }
 
 # Parses the list $argv for (:key value) elements. breaks if string is file
@@ -1875,9 +1879,9 @@ proc colFilterLabel { id } {
 	foreach word $text {
 		switch -glob -- $word {
 			"*%%*" { }
-			"*%f*" { set word [string map -nocase "%f [list [dict get $::inputfiles $id name] ]" $word ] }
-			"*%e*" { set word [string map -nocase "%e [list [dict get $::inputfiles $id ext] ]" $word ] }
-			"*%G*" { set word [string map -nocase "%G [list [dict get $::inputfiles $id size] ]" $word ] }
+			"*%f*" { set word [string map "%f [list [dict get $::inputfiles $id name] ]" $word ] }
+			"*%e*" { set word [string map "%e [list [dict get $::inputfiles $id ext] ]" $word ] }
+			"*%G*" { set word [string map "%G [list [dict get $::inputfiles $id size] ]" $word ] }
 		}
 		lappend ftext $word
 	}
@@ -1894,14 +1898,13 @@ proc colLabel { w } {
 	ttk::label $w.subst -text "%f => file.ext, %e => ext, %G => WxH"
 
 	set col_ops [ttk::frame $w.options -padding {12 0 0 0} ]
-	ttk::label $col_ops.prev -width 14 -text "" -anchor e
 	ttk::button $col_ops.show_prev -text "Estimate size" -style small.TButton -width 12 -command [list colEstimateSize $col_ops.prev]
 	ttk::label $col_ops.label_mode -text "Mode:" -anchor e
 	set ::widget_name(collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values {{} Concatenation {Zero geometry} {Crop}} ]
 
-	grid $col_ops.prev $col_ops.show_prev -sticky e
+	grid $col_ops.show_prev - -sticky e
 	grid $col_ops.label_mode $col_ops.mode -sticky e
-	grid configure $col_ops.prev $col_ops.label_mode -padx {0 4}
+	grid configure $col_ops.label_mode -padx {0 4}
 	grid columnconfigure $col_ops {0} -weight 1
 	grid rowconfigure $col_ops "all" -pad 4 -weight 1
 
@@ -1980,6 +1983,30 @@ proc colLayoutsSelect { w } {
 
 	return $w
 }
+proc colNameOptions { w } {
+	ttk::frame $w
+
+	set ::artscript(collage_name) "Collage"
+	ttk::label $w.name_label -text "Collage file name:"
+	set ::widget_name(collage_name) [ ttk::entry $w.name -textvariable ::artscript(collage_name) -width 14 -validate key -validatecommand { string is graph %P } ]
+
+	pack $w.name $w.name_label -side right
+
+	return $w
+}
+proc getCollageName { name } {
+	# set name $::artscript(collage_name)
+	foreach word $name {
+		switch -glob -- $word {
+			"*%%*" { }
+			"*%d*" { set word [string map "%d $::day" $word ] }
+			"*%m*" { set word [string map "%m $::month" $word ] }
+			"*%y*" { set word [string map "%y $::year" $word ] }
+			"*%D*" { set word [string map "%D $::date" $word ] }
+		}
+		lappend ftext $word
+	}
+}
 proc tabCollage { w } {
 	ttk::frame $w -padding 6
 
@@ -2002,7 +2029,7 @@ proc tabCollage { w } {
 	ttk::label $size_frame.title -text "Tile size. ratio : w x h" 
 	pack $size_frame.title -before $size_frame.rat -side top -fill x
 
-	addFrameTop $col_title $w.lef.tilesize [colLabel $w.lef.label]
+	addFrameTop $col_title $w.lef.tilesize [colLabel $w.lef.label] [colNameOptions $w.lef.name ]
 
 	pack [colStyle $w.rgt.col_style ] -fill x
 
@@ -2058,21 +2085,23 @@ proc prepCollage { input_files } {
 
 	set ::artscript_convert(collage_vars) [dict create]
 
+	if { $::artscript(collage_name) eq {}} { set ::artscript(collage_name) "Collage" }
+	set file_name [replaceDateEscapes $::artscript(collage_name)]
+
 	# get Border padding range col row
 	foreach {value} {border padding col row range mode} {
 		set $value [$::widget_name(collage_${value}) get]
 	}
+
 	# Calculate space needed for padding and border
 	set pixel_space [expr {($border + $padding)*2} ]
 
 	#Add Conditional settings
 	lassign [list {} 0 {} 0] concatenate zero_geometry trim crop
-	if {$mode eq "Concatenation"} {
-		set concatenate {-mode Concatenate}
-	} elseif {$mode eq "Zero geometry"} {
-		set zero_geometry 1
-	} elseif {$mode eq "Crop"} {
-		set crop 1
+	switch -nocase -glob -- $mode {
+		{conc*}	{ set concatenate {-mode Concatenate} }
+		{zero*} { set zero_geometry 1 }
+		{crop}	{ set crop 1 }
 	}
 
 	# Set width height minus spacing from border padding.
@@ -2106,7 +2135,7 @@ proc prepCollage { input_files } {
 		dict set ::artscript_convert(collage_vars) $color [$::widget_name(collage_canvas) itemcget $::canvas_element(collage_$color) -fill]
 	}
 	# Add row col size label range border padding to dict
-	foreach {value} {width height col row range border padding pixel_space concatenate zero_geometry trim crop} {
+	foreach {value} {file_name width height col row range border padding pixel_space concatenate zero_geometry trim crop} {
 		dict set ::artscript_convert(collage_vars) $value [set $value]
 	}
 	puts $::artscript_convert(collage_vars)
@@ -2172,14 +2201,14 @@ proc doCollage { files {step 1} args } {
 			set fsize "[expr {$xcol * ($width + $pixel_space)}]x[expr {$xrow * ($height + $pixel_space)}]"
 
 			#Add filename to dict
-			set output_path [format {%s_%d.%s} "/tmp/collage-${::day}" $::artscript_convert(count) "png"]
+			set output_path [format {%s_%02d.%s} "/tmp/${file_name}" $::artscript_convert(count) "png"]
 			set geometry [expr { $zero_geometry ? "1x1+${padding}+${padding}\\<" : "${width}x${height}+${padding}+${padding}" }]
 
 			set Cmd [concat montage -quiet [expr { $crop ? "-crop [list $geometry]" : {} }] $collage_names \
 				-geometry [list $geometry] $concatenate -tile ${col}x${row} \
 				-border $border -background $bg_color -bordercolor $border_color -fill $label_color \
 				"PNG32:$output_path" ]
-			# puts $Cmd
+			puts $Cmd
 		}
 		runCommand $Cmd [list relaunchCollage $output_path $path $files]
 	}}
@@ -2945,7 +2974,7 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 proc artscriptWidgetCatalogue {} {
 	set catalogue [dict create]
 
-	dict set catalogue variables {select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state}
+	dict set catalogue variables {collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state}
 	dict set catalogue preset_variables {watermark_color_swatches}
 	dict set catalogue col_styles {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color}
 	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_position watermark_image_position watermark_image_style watermark_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position}

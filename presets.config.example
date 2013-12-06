@@ -78,6 +78,9 @@ autor=Autor
 
 
 #-==== Collage options
+# Set custom name for collage
+# collage_name=
+
 # Set aspect ratio for collage tile size
 # collage_ratio=
 
