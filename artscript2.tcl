@@ -739,10 +739,10 @@ proc scrollTabs { w i {dir 1} } {
 # Defines combobox editable events.
 proc comboBoxEditEvents { w {script {} }} {
 	bind $w <<ComboboxSelected>> $script
-	bind $w <Button-3> { %W configure -state normal }
-	bind $w <Control-Button-1> { %W configure -state normal }
-	bind $w <space> { %W configure -state normal }
 	bind $w <KeyRelease> $script
+	foreach event {Button-3 Control-Button-1 FocusIn} {
+		bind $w <$event> { %W configure -state normal } ; #space
+	}
 	bind $w <FocusOut> { %W configure -state readonly }
 }
 
