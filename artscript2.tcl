@@ -211,15 +211,24 @@ proc identifyFile { f } {
 		return [dict merge $valist]
 	}
 }
+# Read only the first n lines of a textFile and return the data
+proc readFileHead { file_name {n 10} } {
+	set file_path [file normalize $file_name]
+	set data [open $file_path r]
+	incr i
+	while {(-1 != [gets $data line]) && ($i <= $n )} {
+		append data_read $line\n
+		incr i
+	}
+    close $data
+    return $data_read
+}
 
 # Get SVG file to get Width and Height.
 # Works with plain and normal svg saved from inkscape. TODO: testing
 # returns string {widtxheight} or 0 if nothing found
 proc getWidthHeightSVG { f } {
-	set fl [open $f]
-	set data [read $fl]
-	close $fl
-	set lines [lrange [split $data \n] 1 30]
+	set lines [readFileHead $f 30]
 	foreach l $lines {
 		set l [lsearch -inline -regexp -all $l {^(width|height)} ]
 		if {[string length $l] > 0} {
