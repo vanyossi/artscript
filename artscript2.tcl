@@ -103,6 +103,7 @@ proc artscriptSettings {} {
 		artscript(select_watermark)        0          \
 		artscript(select_watermark_text)   0          \
 		artscript(select_watermark_image)  0          \
+		artscript(select_size)             0          \
 		artscript(select_collage)          0          \
 		artscript(select_suffix)           0          \
 		artscript(overwrite)               0          \
@@ -1069,6 +1070,15 @@ proc guiTabToggleCheck {args} {
 			set image $::tab_on
 		}
 		$::option_tab tab $::widget_name(tab_${-text}) -image $image
+		set bool [expr {$image eq {} ? 0 : 1}]
+		switch -exact -- ${-text} {
+			"Collage" {
+				set ::artscript(select_collage) $bool
+				eventCollage
+			}
+			"Resize"    { set ::artscript(select_size) $bool }
+			"Watermark" { eventWatermark parent              }
+		}
 	}
 }
 
@@ -1084,7 +1094,7 @@ proc guiOptionTabs { w } {
 	set ::widget_name(tab_Collage) [tabCollage $w.cl]
 	set ::wt $::widget_name(tab_Watermark) ; #TODO remove, bidsetACtion locks this variable name
 
-	# bind $w <Button> {guiTabCheckbox %W [%W select] [%W identify tab %x %y]}
+	bind $w <Button> {guiTabCheckbox %W [%W select] [%W identify tab %x %y]}
 	
 	$w add $::widget_name(tab_Watermark) -text "Watermark" -underline 0 -compound left
 	$w add $::widget_name(tab_Resize) -text "Resize" -underline 0 -sticky nsew -compound left
@@ -1104,8 +1114,10 @@ proc eventWatermark { { type {} } } {
 	set result [expr {$::artscript(select_watermark_text) + $::artscript(select_watermark_image)}]
 	if {$result >= 1} {
 		set ::artscript(select_watermark) 1
+		$::option_tab tab $::widget_name(tab_Watermark) -image $::tab_on
 	} else {
 		set ::artscript(select_watermark) 0
+		$::option_tab tab $::widget_name(tab_Watermark) -image {}
 	}
 }
 proc tabWatermark { wt } {
@@ -1138,8 +1150,12 @@ proc tabWatermark { wt } {
 	$wt.position set $::watermark_position
 	bind $wt.position <<ComboboxSelected>> { eventWatermark text }
 
+	set ::widget_name(watermark_text_opacity) [ttk::scale $wt.txop -from 10 -to 100 -variable ::watermark_text_opacity -value $::watermark_text_opacity -orient horizontal -command { progressBarSet watermark_text_opacity }]
+	bind $wt.txop <ButtonRelease> { eventWatermark text }
+	ttk::label $wt.tolab -width 3 -textvariable ::watermark_text_opacity
+
 	# Image watermark ops
-	ttk::checkbutton $wt.cbim -text "Image"  -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark_image) -command { eventWatermark }
+	ttk::checkbutton $wt.cbim -text "Image" -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark_image) -command { eventWatermark }
 
 	# Get only the name for image list.
 	set iwatermarksk [dict keys $::watermark_image_list]
@@ -1161,10 +1177,8 @@ proc tabWatermark { wt } {
 	bind $wt.iposition <<ComboboxSelected>> { eventWatermark image }
 
 	# Opacity scales
-	set ::widget_name(watermark_text_opacity) [ttk::scale $wt.txop -from 10 -to 100 -variable ::watermark_text_opacity -value $::watermark_text_opacity -orient horizontal -command { progressBarSet {eventWatermark text} watermark_text_opacity }]
-	ttk::label $wt.tolab -width 3 -textvariable ::watermark_text_opacity
-
-	set ::widget_name(watermark_image_opacity) [ttk::scale $wt.imop -from 10 -to 100 -variable ::watermark_image_opacity -value $::watermark_image_opacity -orient horizontal -command { progressBarSet {eventWatermark image} watermark_image_opacity }]
+	set ::widget_name(watermark_image_opacity) [ttk::scale $wt.imop -from 10 -to 100 -variable ::watermark_image_opacity -value $::watermark_image_opacity -orient horizontal -command { progressBarSet watermark_image_opacity }]
+	bind $wt.imop <ButtonRelease> { eventWatermark image }
 	ttk::label $wt.iolab -width 3 -textvariable ::watermark_image_opacity
 
 	# Style options
@@ -1689,8 +1703,10 @@ proc eventSize { } {
 
 	if { [llength $sizes] > 0 } {
 		$::option_tab tab $::widget_name(tab_Resize) -image $::tab_on
+		set ::artscript(select_size) 1
 	} else {
 		$::option_tab tab $::widget_name(tab_Resize) -image {}
+		set ::artscript(select_size) 0
 	}
 }
 
@@ -1906,7 +1922,7 @@ proc colStyle { w } {
 
 	return $w
 }
-proc colSelect {} {
+proc eventCollage {} {
 	switch -- $::artscript(select_collage) {
 		0 {set ops {{} ? "Convert" {prepConvert} end} }
 		1 {set ops {$::tab_on ! "Make Collage" {prepConvert "Collage"} end-2 } }
@@ -1926,7 +1942,7 @@ proc colSelect {} {
 proc colLayoutsSelect { w } {
 	ttk::frame $w -padding {0 0 0 6}
 	set ::artscript(select_collage) 0
-	set ::widget_name(col_select) [ttk::checkbutton $w.sel_collage -text "Make Collage?" -variable ::artscript(select_collage) -command colSelect \
+	set ::widget_name(col_select) [ttk::checkbutton $w.sel_collage -text "Make Collage?" -variable ::artscript(select_collage) -command eventCollage \
 		-style no_indicator.TCheckbutton -image [list $::img_off selected $::img_on]  -compound left]
 
 	ttk::label $w.label_layouts -text "Layouts:"
@@ -2218,7 +2234,7 @@ proc frameOutput { w } {
 	bind $w.format <<ComboboxSelected>> [list setFormatOptions $w ]
 
 	ttk::label $w.label_quality -text "Quality:"
-	set ::widget_name(quality) [ttk::scale $w.slider_qual -from 10 -to 100 -variable ::artscript(image_quality) -value $::artscript(image_quality) -orient horizontal -command { progressBarSet {} ::artscript(image_quality) }]
+	set ::widget_name(quality) [ttk::scale $w.slider_qual -from 10 -to 100 -variable ::artscript(image_quality) -value $::artscript(image_quality) -orient horizontal -command { progressBarSet artscript(image_quality) }]
 	ttk::label $w.slider_qual_val -width 4 -textvariable ::artscript(image_quality)
 
 	ttk::checkbutton $w.overwrite -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::artscript(overwrite) -command { treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output }
@@ -2301,16 +2317,12 @@ proc guiStatusBar { w } {
 	
 	ttk::frame $w.rev
 	ttk::frame $w.do
-	
-	set ::widget_name(check-wm) [ttk::checkbutton $w.rev.checkwm -text "Watermark" -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark) -command { eventWatermark parent }]
-	# set ::widget_name(check-sz) [ttk::checkbutton $w.rev.checksz -text "Resize" -onvalue 1 -offvalue 0 -variable ::select_size]
 
 	set ::widget_name(pbar-main) [ttk::progressbar $w.do.pbar -maximum [getFilesTotal] -variable ::cur -length "260"]
 	set ::widget_name(pbar-label) [ttk::label $w.do.plabel -textvariable pbtext -anchor e]
 	set ::widget_name(convert-but) [ttk::button $w.do.bconvert -text $::artscript(bconvert_string) -command {prepConvert}]
 	setFormatOptions $::widget_name(frame-output)
 
-	pack $w.rev.checkwm -side left
 	pack $w.rev -side left
 	pack $w.do -side right -expand 1 -fill x
 	pack $w.do.bconvert -side right -fill x -padx 2 -pady 8
@@ -2318,10 +2330,9 @@ proc guiStatusBar { w } {
 	return $w
 }
 # Ttk progress: Set a given float as integer.
-proc progressBarSet { script gvar value } {
+proc progressBarSet { gvar value } {
 	upvar #0 $gvar variable
 	set variable [format "%.0f" $value]
-	{*}$script
 }
 
 # Sets values for progress bar.
@@ -2847,15 +2858,13 @@ proc doConvert { files {step 1} args } {
 				foreach dimension $sizes {
 					incr i
 					set resize {}
-					if { $size != $osize } {
+					if { ($size != $osize) && $::artscript(select_size) } {
 						set resize [getResize $size $dimension]
 					}
 					puts "converting... $name"
 					pBarControl "Converting... ${name} to $dimension" update
 					
-					if {$i == 1} {
-						set dimension {}
-					}
+					if {$i == 1} { set dimension {}	}
 					
 					if {$preview eq {}} {
 						set soname \"[file join $outpath [getOutputName $path $::artscript_convert(out_extension) $::artscript_convert(out_prefix) $::artscript_convert(out_suffix) $dimension] ]\"
@@ -2972,8 +2981,6 @@ proc artscriptSetWidgetValues { dictionary } {
 				foreach {key value} $elements {
 					set ::artscript($key) $value
 				}
-				colSelect
-				puts $::artscript(watermark_color_swatches)
 				drawSwatch $::widget_name(watermark_canvas) [getswatches $::artscript(watermark_color_swatches)]
 			}
 			"lists" {
@@ -2991,6 +2998,8 @@ proc artscriptSetWidgetValues { dictionary } {
 			}
 		}
 	}
+	eventCollage
+	eventWatermark
 }
 proc artscriptSaveOnExit {} {
 	catch {file delete {*}$::deleteFileList }
