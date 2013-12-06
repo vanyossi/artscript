@@ -743,7 +743,17 @@ proc comboBoxEditEvents { w {script {} }} {
 	foreach event {Button-3 Control-Button-1 FocusIn} {
 		bind $w <$event> { %W configure -state normal } ; #space
 	}
-	bind $w <FocusOut> { %W configure -state readonly }
+	bind $w <FocusOut> { %W configure -state readonly; %W selection clear }
+}
+
+# Validates input for quality spinbox, has to be a positive number not bigger than.
+proc validateQualitySpinbox { value } {
+	if {[string is integer $value]} {
+		if { ( ($value <= $::artscript(quality_maximum)) && ($value > 0) ) || $value eq {} } {
+			return 1
+		}
+	}
+	return 0
 }
 
 # Convert RGB to HSV, to calculate contrast colors
@@ -918,6 +928,7 @@ proc getswatches { {colist 0} {sortby 1}} {
 proc artscriptStyles {} {
 	ttk::style configure menu.TButton -padding {6 2} -width 0
 	ttk::style configure small.TButton -padding {6 0} -width 0
+	# ttk::style configure TCombobox -padding {8 1 0} -width 0
 	ttk::style layout no_indicator.TCheckbutton { 
 		Checkbutton.padding -sticky nswe -children { 
 			Checkbutton.focus -side left -sticky w -children {
@@ -983,7 +994,7 @@ proc guiMiddle { w } {
 	
 	guiAddChildren $paned_botom $::option_tab $gui_out
 	$paned_botom pane $::option_tab -weight 6
-	$paned_botom pane $gui_out -weight 2
+	$paned_botom pane $gui_out -weight 5
 	
 	pack $file_pane.flist -side left -expand 1 -fill both
 	pack $file_pane.thumb -side left -expand 0 -fill both -pady {6 0}
@@ -1161,6 +1172,7 @@ proc tabWatermark { wt } {
 
 	set ::widget_name(watermark_text_opacity) [ttk::scale $wt.txop -from 10 -to 100 -variable ::watermark_text_opacity -value $::watermark_text_opacity -orient horizontal -command { progressBarSet watermark_text_opacity }]
 	bind $wt.txop <ButtonRelease> { eventWatermark text }
+
 	ttk::label $wt.tolab -width 3 -textvariable ::watermark_text_opacity
 
 	# Image watermark ops
@@ -2193,20 +2205,16 @@ proc relaunchCollage { file_generated destination files } {
 proc guiOutput { w } {
 
 	ttk::frame $w
-	set ::widget_name(cb-prefix) [ttk::checkbutton $w.cbpre -onvalue 1 -offvalue 0 -variable ::artscript(select_suffix) -text "Suffix and Prefix" -command {printOutname 0 } ]
-	ttk::labelframe $w.efix -text "Suffix and Prefix" -labelwidget $w.cbpre -padding 6
+	set ::widget_name(cb-prefix) [ttk::checkbutton $w.cbpre -onvalue 1 -offvalue 0 -variable ::artscript(select_suffix) -text "Prefix and Suffix" -command {printOutname 0 } ]
+	ttk::labelframe $w.efix -text "Prefix and Suffix" -labelwidget $w.cbpre -padding 6
 
 	frameSuffix $w.efix
-	# ttk::label $w.lpre -text "Prefix"
-	# ttk::label $w.lsuf -text "Suffix"
-	
-	ttk::separator $w.sep -orient horizontal
+
 	set ::widget_name(frame-output) [frameOutput $w.f]
 	
-	pack $w.efix $w.sep -side top -fill both -expand 1 -padx 2
-	pack $w.f -side top -fill both -expand 1 -padx 2
-	pack configure $w.sep -padx 24 -pady 6 -expand 0
-	pack configure $w.efix -fill x -expand 0
+	pack $w.efix $w.f -side top -fill both -expand 1 -padx 2
+	pack configure $w.efix -fill x -pady {0 8} -expand 0
+	pack configure $w.f -fill both -expand 1
 	
 	return $w
 }
@@ -2222,11 +2230,11 @@ proc frameSuffix { w } {
 	expr { $suflw > 16 ? [set suflw 16] : [set suflw] }
 
 	set ::widget_name(out_prefix) [ttk::combobox $w.pre -width $suflw -state readonly -textvariable ::out_prefix -values $::suffix_list]
-	$w.pre set [lindex $::suffix_list 0]
-	comboBoxEditEvents $w.pre {printOutname %W }
+	$w.pre set [lindex $::suffix_list 0] 
+	comboBoxEditEvents $w.pre { printOutname %W }
 	set ::widget_name(out_suffix) [ttk::combobox $w.suf -width $suflw -state readonly -textvariable ::out_suffix -values $::suffix_list]
 	$w.suf set [lindex $::suffix_list 0]
-	comboBoxEditEvents $w.suf {printOutname %W }
+	comboBoxEditEvents $w.suf { printOutname %W }
 
 	pack $w.pre $w.suf -padx 2 -side left -fill x -expand 1
 
@@ -2234,7 +2242,16 @@ proc frameSuffix { w } {
 }
 
 proc frameOutput { w } {
-	ttk::labelframe $w -text "Output & Quality" -padding {6 6 12}
+	ttk::labelframe $w -text "Output & Quality" -padding {6 6}
+
+	set ::artscript(quality_maximum) 100
+	ttk::label $w.label_quality -width 8.2 -anchor e -text "Quality:"
+	set ::widget_name(quality) [ttk::scale $w.slider_qual -from 10 -to 100 -variable ::artscript(image_quality) \
+		-value $::artscript(image_quality) -orient horizontal -command { progressBarSet artscript(image_quality) }]
+	set ::widget_name(quality_label) [ttk::spinbox $w.slider_qual_val -width 3 -from 10 -to $::artscript(quality_maximum) \
+		-textvariable ::artscript(image_quality) -validate key -validatecommand { validateQualitySpinbox %P } ]
+	bind $w.slider_qual_val <FocusIn> {%W selection range 0 end}
+	bind $w.slider_qual_val <FocusOut> {%W selection clear}
 
 	set ::artscript(formats) [list png jpg gif webp {webp lossy} ora {Rename}]
 	ttk::label $w.label_format -text "Format:"
@@ -2242,29 +2259,22 @@ proc frameOutput { w } {
 	$w.format set [lindex $::artscript(formats) 0]
 	bind $w.format <<ComboboxSelected>> [list setFormatOptions $w ]
 
-	ttk::label $w.label_quality -text "Quality:"
-	set ::widget_name(quality) [ttk::scale $w.slider_qual -from 10 -to 100 -variable ::artscript(image_quality) -value $::artscript(image_quality) -orient horizontal -command { progressBarSet artscript(image_quality) }]
-	ttk::label $w.slider_qual_val -width 4 -textvariable ::artscript(image_quality)
-
 	ttk::checkbutton $w.overwrite -text "Allow Overwrite" -onvalue 1 -offvalue 0 -variable ::artscript(overwrite) -command { treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output }
 	ttk::checkbutton $w.alfa_off -text "Remove Alfa" -onvalue "-background %s -alpha remove" -offvalue "" -variable ::artscript(alfaoff)
 	canvas $w.alpha_color -width 16 -height 16
 	set ::widget_name(alfa_color) [$w.alpha_color create rectangle 1 1 15 15 -fill $::artscript(alfa_color) -width 1 -outline "grey20" -tags {alfa}]
 	$w.alpha_color bind alfa <Button-1> { set ::artscript(alfa_color) [setColor %W $::widget_name(alfa_color) [%W itemconfigure $::widget_name(alfa_color) -fill]] }
-	
-	ttk::separator $w.sep -orient vertical
 
-	grid $w.label_quality $w.slider_qual_val $w.slider_qual - -row 1 -sticky we
-	grid configure $w.slider_qual_val -column 4 -sticky w
-	grid x x $w.label_format $w.format x -row 2 -sticky we
-	grid $w.overwrite - - $w.alfa_off - - -row 3 -sticky we
-	grid configure $w.label_quality $w.label_format -sticky e
-	place $w.alpha_color -in $w.alfa_off -relx .92 -y 1 -anchor ne
+	grid $w.label_quality $w.slider_qual - $w.slider_qual_val -row 1 -padx 2 -sticky we
+	grid $w.label_format $w.format - x -row 2 -sticky we
+	grid $w.overwrite - $w.alfa_off - -row 3 -sticky e -pady {12 1}
+	grid configure $w.label_quality $w.label_format -sticky e -padx 0
+	place $w.alpha_color -in $w.alfa_off -relx 1 -y 1 -anchor ne
 
-	grid columnconfigure $w {2} -weight 12 -pad 4 
-	grid columnconfigure $w {3} -weight 2 -pad 4
+	grid columnconfigure $w {1 2} -weight 12 -pad 4 
 	grid rowconfigure $w "all" -pad {6}
-	grid configure $w.overwrite $w.alfa_off -pady {12 1}
+	grid configure $w.alfa_off -ipadx 12
+
 	return $w
 }
 
@@ -2274,45 +2284,53 @@ proc setFormatOptions { w } {
 	treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output
 	$::widget_name(convert-but) configure -text $::artscript(bconvert_string) -command $::artscript(bconvert_cmd)
 	$::widget_name(thumb-prev) state !disabled
+	$::widget_name(quality_label) state !disabled
 	switch -glob -- $::out_extension {
 		jpg	{
-			set ::artscript(image_quality) 92 
+			lassign {92 100} ::artscript(image_quality) ::artscript(quality_maximum)
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 10 -to 100
+			$::widget_name(quality_label) configure -from 10 -to 100
 		}
 		png	{
-			set ::artscript(image_quality) 9
+			lassign {9 9} ::artscript(image_quality) ::artscript(quality_maximum)
 			$w.label_quality configure -text "Compress:"
 			$w.slider_qual configure -from 0 -to 9
+			$::widget_name(quality_label) configure -from 0 -to 9
 		}
 		gif	{
-			set ::artscript(image_quality) 256
+			lassign {256 256} ::artscript(image_quality) ::artscript(quality_maximum)
 			$w.label_quality configure -text "Colors:"
 			$w.slider_qual configure -from 1 -to 256
+			$::widget_name(quality_label) configure -from 1 -to 256
 		}
 		ora	{
-			set ::artscript(image_quality) 0
+			lassign {0 0} ::artscript(image_quality) ::artscript(quality_maximum)
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 0 -to 0
 			$::widget_name(convert-but) configure -text "Make ORA" -command {prepOra}
 			$::widget_name(thumb-prev) state disabled
+			$::widget_name(quality_label) state disabled
 		}
-		webp { 
-			set ::artscript(image_quality) 100 
+		webp {
+			lassign {100 100} ::artscript(image_quality) ::artscript(quality_maximum) 
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 10 -to 100
+			$::widget_name(quality_label) configure -from 10 -to 100
 		}
 		webp* { 
-			set ::artscript(image_quality) 60
+			lassign {60 100} ::artscript(image_quality) ::artscript(quality_maximum)
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 10 -to 100
+			$::widget_name(quality_label) configure -from 10 -to 100
 		}
 		Rename {
-			set ::artscript(image_quality) 0
+			lassign {0 0} ::artscript(image_quality) ::artscript(quality_maximum)
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 0 -to 0
 			$::widget_name(convert-but) configure -text "Rename" -command {renameFiles}
 			$::widget_name(thumb-prev) state disabled
+			$::widget_name(quality_label) state disabled
 		}
 	}
 }
