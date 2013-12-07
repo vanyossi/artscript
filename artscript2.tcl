@@ -1,7 +1,7 @@
 #! /usr/bin/env wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: 2.1.7
+#  Version: 2.1.8
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #  License: GPLv3 
@@ -16,7 +16,7 @@
 #
 # ---------------------::::::::::::::------------------------
 package require Tk
-set ::version "v2.1.7"
+set ::version "v2.1.8"
 
 # Do not show .dot files by default. !fails in OSX
 catch {tk_getOpenFile foo bar}
@@ -61,7 +61,7 @@ proc artscriptSettings {} {
 		watermark_text  {}            \
 		watermark_text_list           [list {Copyright (c) $::autor} {http://www.yourwebsite.com} {Artwork: $::autor} {$::date}] \
 		watermark_text_size                10                  \
-		watermark_color               "#000000"           \
+		artscript(watermark_color)              "#000000"           \
 		watermark_text_opacity        80                  \
 		watermark_text_position            "BottomRight"       \
 		watermark_image_list          [dict create ] \
@@ -825,7 +825,7 @@ proc setColorAndContrast { w args } {
 		return
 	}
 	$w itemconfigure $::canvas_element(watermark_main_color) -outline [getContrastColor $col]
-	set ::watermark_color $col
+	set ::artscript(watermark_color) $col
 }
 
 # Returns the most contrasting color, black or white, based on luma values
@@ -1209,8 +1209,10 @@ proc tabWatermarkPosition { wt type } {
 	set ::widget_name(watermark_${type}_position) [ttk::combobox $wt.position -state readonly -textvariable ::watermark_${type}_position -values $::wmpositions -width 10]
 	bind $wt.position <<ComboboxSelected>> [ list eventWatermark $type ]
 	ttk::label $wt.plus -image $::plus_normal
-	ttk::spinbox $wt.offset_a -width 3 -from 0 -to 20 -validate key -validatecommand { string is integer %P }
-	ttk::spinbox $wt.offset_b -width 3 -from 0 -to 20 -validate key -validatecommand { string is integer %P }
+	set ::widget_name(watermark_${type}_offset_x) [ttk::spinbox $wt.offset_x -width 3 -from 0 -to 20 \
+		-validate key -validatecommand { string is integer %P }]
+	set ::widget_name(watermark_${type}_offset_y) [ttk::spinbox $wt.offset_y -width 3 -from 0 -to 20 \
+		-validate key -validatecommand { string is integer %P }]
 }
 
 proc tabWatermarkGeneralOps { wt type } {
@@ -1226,7 +1228,7 @@ proc tabWatermarkGeneralOps { wt type } {
 	bind $wt.${type}_size <ButtonRelease> [list eventWatermark $type ]
 	bind $wt.${type}_size <KeyRelease> [list eventWatermark $type ]
  
-	ttk::combobox $wt.${type}_rotation -state readonly -width 5 -values {None 90 -90 180}
+	set ::widget_name(watermark_${type}_rotation) [ttk::combobox $wt.${type}_rotation -state readonly -width 5 -values {0 90 -90 180}]
 
 	set ::widget_name(watermark_${type}_opacity) [ttk::scale $wt.${type}_opacity -from 10 -to 100 -variable ::watermark_${type}_opacity \
 		 -orient horizontal -command [list progressBarSet watermark_${type}_opacity ]]
@@ -1235,7 +1237,7 @@ proc tabWatermarkGeneralOps { wt type } {
 }
 proc tabWatermarkStyleGrid { wt } {
 	grid $wt.style_label $wt.color - - -sticky n
-	grid $wt.lpos $wt.position $wt.offset_a $wt.offset_b -pady 4 -padx 2 -sticky we
+	grid $wt.lpos $wt.position $wt.offset_x $wt.offset_y -pady 4 -padx 2 -sticky we
 	grid configure $wt.color -sticky we
 	grid rowconfigure $wt {0} -weight 1 -min 12
 	grid columnconfigure $wt {1 2 3} -weight 1
@@ -1249,7 +1251,7 @@ proc tabWatermarkTextStyle { wt } {
 	
 	ttk::label $wt.style_label -text "Color"
 	set ::widget_name(watermark_canvas) [canvas $wt.color  -width 62 -height 26]
-	set ::canvas_element(watermark_main_color) [$wt.color create rectangle 2 2 26 26 -fill $::watermark_color -width 2 -outline [getContrastColor $::watermark_color] -tags {watermark main}]
+	set ::canvas_element(watermark_main_color) [$wt.color create rectangle 2 2 26 26 -fill $::artscript(watermark_color) -width 2 -outline [getContrastColor $::artscript(watermark_color)] -tags {watermark main}]
 	$wt.color bind main <Button-1> { setColorAndContrast %W $::canvas_element(watermark_main_color) [%W itemconfigure $::canvas_element(watermark_main_color) -fill] }
 
 	set wmswatch [getswatches $::artscript(watermark_color_swatches)]
@@ -2554,31 +2556,46 @@ proc getOutputSizesForTree { size {formated 0}} {
 	}
 	return $fsizes
 }
+# Return offset x y in format +n+n
+#TODO make apply function to return 0 if empty
+proc watermarkGetOffset { type } {
+	foreach var {x y} {
+		set value [$::widget_name(watermark_${type}_offset_${var}) get]
+		set $var [expr { $value eq {} ? 0 : $value }]
+	}
+	return [format {+%d+%d} $x $y]
+}
 #Preproces functions
 # Renders watermark images based on parameters to tmp folder
 # returns string
 proc watermark {} {
 	global deleteFileList
 	set wmcmd {}
+
 	set wm_im_sel [$::widget_name(watermark_image) get]
-	set text_size [$::widget_name(watermark_text_size) get]
-	set watermark_text [$::widget_name(watermark_text) get]
-	
-	# Positions list correspond to $::watemarkpos, but names as imagemagick needs
-	set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(watermark_text_position) current] ]
-	set wmimpossel [lindex $::artscript(magick_pos) [$::widget_name(watermark_image_position) current] ]
 
 	if { $::artscript(select_watermark_text) } {
+		set text_size [$::widget_name(watermark_text_size) get]
+		set watermark_text [$::widget_name(watermark_text) get]
+		set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(watermark_text_position) current] ]
+		set rotation [$::widget_name(watermark_text_rotation) get]
+		if {($rotation != 0) && ($rotation ne {} )} {
+				set rotate "+distort ScaleRotateTranslate $rotation +repage"
+		} else {
+			set rotate {}
+		}
 		set wmtmptx [file join "/tmp" "artk-tmp-wtmk.png" ]
 		set width [expr {[string length $watermark_text] * 3 * ceil($text_size/4.0)}]
 		set height [expr {[llength [split $watermark_text {\n}]] * 30 * ceil($text_size/8.0)}]
-		set watermark_color_inverse [getContrastColor $::watermark_color ]
+		set watermark_color_inverse [getContrastColor $::artscript(watermark_color) ]
 		
-		set wmtcmd [list convert -quiet -size ${width}x${height} xc:transparent -pointsize $text_size -gravity Center -fill $::watermark_color -annotate 0 "$watermark_text" -trim \( +clone -background $watermark_color_inverse  -shadow 80x2+0+0 -channel A -level 0,60% +channel \) +swap +repage -gravity center -composite $wmtmptx]
+		set wmtcmd [list convert -quiet -size ${width}x${height} xc:transparent -pointsize $text_size -gravity Center -fill $::artscript(watermark_color) -annotate 0 "$watermark_text" -trim \( +clone -background $watermark_color_inverse  -shadow 80x2+0+0 -channel A -level 0,60% +channel \) +swap +repage -gravity center -composite {*}$rotate $wmtmptx]
 		catch { exec {*}$wmtcmd }
 		
 		lappend deleteFileList $wmtmptx
-		append wmcmd [list -gravity $wmpossel $wmtmptx -compose dissolve -define compose:args=$::watermark_text_opacity -geometry +5+5 -composite ]
+		
+		set offset [watermarkGetOffset text]
+		append wmcmd [list -gravity $wmpossel $wmtmptx -compose dissolve -define compose:args=$::watermark_text_opacity -geometry $offset -composite ]
 	}
 	if {$wm_im_sel eq {}} { return $wmcmd }
 
@@ -2588,15 +2605,24 @@ proc watermark {} {
 		if { [catch {set finfo [exec {*}$identify $wmimsrc ] } msg ] } {
 			puts $msg	
 		} else {
+			set wmimpossel [lindex $::artscript(magick_pos) [$::widget_name(watermark_image_position) current] ]
+			set rotation [$::widget_name(watermark_image_rotation) get]
+			if {($rotation != 0) && ($rotation ne {} )} {
+				set rotate "+distort ScaleRotateTranslate $rotation +repage"
+			}	else {
+				set rotate {}
+			}
 			set imfl [split $finfo { }]
 			set iminfo [lindex [split $imfl ":"] 0]
 			set size [lindex $iminfo 0]
 			set wmtmpim [file join "/tmp" "artk-tmp-wtmkim.png" ]
-			set wmicmd [ list convert -quiet -size $size xc:transparent -gravity Center $wmimsrc -compose dissolve -define compose:args=$::watermark_image_opacity -composite $wmtmpim]
+			set wmicmd [ list convert -quiet -size $size xc:transparent -gravity Center $wmimsrc -compose dissolve -define compose:args=$::watermark_image_opacity -composite {*}$rotate $wmtmpim]
 			catch { exec {*}$wmicmd }
 
 			lappend deleteFileList $wmtmpim ; # add wmtmp to delete list
-			append wmcmd " " [list -gravity $wmimpossel $wmtmpim -compose $::watermark_image_style -define compose:args=$::watermark_image_opacity -geometry +10+10 -composite ]
+
+			set offset [watermarkGetOffset image]
+			append wmcmd " " [list -gravity $wmimpossel $wmtmpim -compose $::watermark_image_style -define compose:args=$::watermark_image_opacity -geometry $offset -composite ]
 		}
 	}
 	return $wmcmd
@@ -3015,10 +3041,10 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 proc artscriptWidgetCatalogue {} {
 	set catalogue [dict create]
 
-	dict set catalogue variables {collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state}
+	dict set catalogue variables {watermark_color collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state}
 	dict set catalogue preset_variables {watermark_color_swatches}
 	dict set catalogue col_styles {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color}
-	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_text_position watermark_image_position watermark_image_style watermark_text_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position}
+	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_text_position watermark_text_offset_x watermark_text_offset_y watermark_image_offset_x watermark_image_offset_y watermark_text_rotation watermark_image_rotation watermark_image_position watermark_image_style watermark_text_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position}
 	dict set catalogue lists {watermark_text_list suffix_list}
 	return $catalogue
 }
