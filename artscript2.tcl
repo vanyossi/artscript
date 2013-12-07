@@ -60,10 +60,10 @@ proc artscriptSettings {} {
 	set wat_settings [dict create     \
 		watermark_text  {}            \
 		watermark_text_list           [list {Copyright (c) $::autor} {http://www.yourwebsite.com} {Artwork: $::autor} {$::date}] \
-		watermark_size                10                  \
+		watermark_text_size                10                  \
 		watermark_color               "#000000"           \
 		watermark_text_opacity        80                  \
-		watermark_position            "BottomRight"       \
+		watermark_text_position            "BottomRight"       \
 		watermark_image_list          [dict create ] \
 		watermark_image_position      "Center"            \
 		watermark_image_size          "0"                 \
@@ -1144,96 +1144,136 @@ proc eventWatermark { { type {} } } {
 		$::option_tab tab $::widget_name(tab_Watermark) -image {}
 	}
 }
+
 proc tabWatermark { wt } {
 
 	ttk::frame $wt -padding 6
 
-	ttk::label $wt.lsel -text "Selection*"
+	set ::wmpositions	[list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"]
+	set water_ops [tabWatermarkOptions $wt.ops]
+
+	ttk::frame $wt.style
+	grid [tabWatermarkTextStyle $wt.style.text] [tabWatermarkImageStyle $wt.style.image] -sticky wens -padx 4 -pady 2
+	grid columnconfigure $wt.style all -weight 2
+
+	addFrameTop $water_ops $wt.style
+	pack configure $water_ops -pady {0 8}
+
+	return $wt
+}
+proc tabWatermarkOptions { wt } {
+
+	ttk::frame $wt
+
 	ttk::label $wt.lsize -text "Size" -width 4
-	ttk::label $wt.lpos -text "Position" -width 10
-	ttk::label $wt.lop -text "Opacity" -width 10
+	ttk::label $wt.lrot -text "Rotation"
+	ttk::label $wt.lop -text "Opacity"
 
-	# Text watermark ops
-	ttk::checkbutton $wt.cbtx -text "Text" -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark_text) -command { eventWatermark }
-	set ::widget_name(watermark_text) [ttk::combobox $wt.watermarks -state readonly -textvariable ::watermark_text -values $::watermark_text_list -width 28]
-	$wt.watermarks set [lindex $::watermark_text_list 0]
-	
-	comboBoxEditEvents $wt.watermarks { eventWatermark text }
+	tabWatermarkText $wt
+	tabWatermarkImage $wt
 
-	# font size spinbox
+	ttk::button $wt.img_select -image $::folder_on -text "New" -style small.TButton \
+			-command [list loadImageWatermark $wt.iwatermarks]
+
+	grid x x x $wt.lsize $wt.lrot $wt.lop -sticky we
+	grid $wt.text_checkbox $wt.text_watermark_list - $wt.text_size $wt.text_rotation \
+		$wt.text_opacity $wt.text_opacity_label -sticky we -padx 2
+	grid $wt.image_checkbox $wt.image_watermark_list $wt.img_select $wt.image_size $wt.image_rotation \
+		$wt.image_opacity $wt.image_opacity_label -sticky we -padx 2
+	grid rowconfigure $wt {all} -pad 2
+	grid columnconfigure $wt {5} -weight 1
+
+	return $wt
+}
+proc tabWatermarkText { wt } {
+
+	tabWatermarkGeneralOps $wt text
+
 	set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
-	set ::widget_name(watermark_size) [ttk::spinbox $wt.fontsize -width 4 -values $fontsizes -validate key \
-			-validatecommand { string is integer %P }]
-	$wt.fontsize set $::watermark_size
-	bind $wt.fontsize <ButtonRelease> { eventWatermark text }
-	bind $wt.fontsize <KeyRelease> { eventWatermark text }
+	$::widget_name(watermark_text) configure -state readonly -values $::watermark_text_list
+	$::widget_name(watermark_text) current 1
+	$::widget_name(watermark_text_size) configure -width 4 -values $fontsizes
+	$::widget_name(watermark_text_size) set $::watermark_text_size
+}
+proc tabWatermarkImage { wt } {
 
-	# Text position box 
-	set wmpositions	[list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"]
-	set ::widget_name(watermark_position) [ttk::combobox $wt.position -state readonly -textvariable ::watermark_position -values $wmpositions -width 10]
-	$wt.position set $::watermark_position
-	bind $wt.position <<ComboboxSelected>> { eventWatermark text }
+	tabWatermarkGeneralOps $wt image
 
-	set ::widget_name(watermark_text_opacity) [ttk::scale $wt.txop -from 10 -to 100 -variable ::watermark_text_opacity -value $::watermark_text_opacity -orient horizontal -command { progressBarSet watermark_text_opacity }]
-	bind $wt.txop <ButtonRelease> { eventWatermark text }
-
-	ttk::label $wt.tolab -width 3 -textvariable ::watermark_text_opacity
-
-	# Image watermark ops
-	ttk::checkbutton $wt.cbim -text "Image" -onvalue 1 -offvalue 0 -variable ::artscript(select_watermark_image) -command { eventWatermark }
-
-	# Get only the name for image list.
 	set iwatermarksk [dict keys $::watermark_image_list]
-	set ::widget_name(watermark_image) [ttk::combobox $wt.iwatermarks -state readonly -values $iwatermarksk]
-	$wt.iwatermarks set [lindex $iwatermarksk 0]
-	bind $wt.iwatermarks <<ComboboxSelected>> { eventWatermark image }
-	ttk::button $wt.img_select -image $::folder_on -text "New" -style small.TButton -command [list loadImageWatermark $wt.iwatermarks]
+	$::widget_name(watermark_image) configure -state readonly -values $iwatermarksk
+	$::widget_name(watermark_image_size) configure -width 4 -from 0 -to 100 -increment 10
+	$::widget_name(watermark_image_size) set $::watermark_image_size
+}
+proc tabWatermarkPosition { wt type } {
+	ttk::label $wt.lpos -text "Position"
+	set ::widget_name(watermark_${type}_position) [ttk::combobox $wt.position -state readonly -textvariable ::watermark_${type}_position -values $::wmpositions -width 10]
+	bind $wt.position <<ComboboxSelected>> [ list eventWatermark $type ]
+	ttk::label $wt.plus -image $::plus_normal
+	ttk::spinbox $wt.offset_a -width 3 -from 0 -to 20 -validate key -validatecommand { string is integer %P }
+	ttk::spinbox $wt.offset_b -width 3 -from 0 -to 20 -validate key -validatecommand { string is integer %P }
+}
 
-	# Image size box \%
-	set ::widget_name(watermark_image_size) [ttk::spinbox $wt.imgsize -width 4 -from 0 -to 100 -increment 10 -validate key \
+proc tabWatermarkGeneralOps { wt type } {
+
+	ttk::checkbutton $wt.${type}_checkbox -text [string totitle $type] -onvalue 1 -offvalue 0 \
+		-variable ::artscript(select_watermark_${type}) -command { eventWatermark }
+
+	set ::widget_name(watermark_${type}) [ttk::combobox $wt.${type}_watermark_list -state readonly -width 28]
+	comboBoxEditEvents $wt.${type}_watermark_list [list eventWatermark $type ]
+
+	set ::widget_name(watermark_${type}_size) [ttk::spinbox $wt.${type}_size -validate key \
 			-validatecommand { string is integer %P }]
-	$wt.imgsize set $::watermark_image_size
-	bind $wt.imgsize <ButtonRelease> { eventWatermark image }
-	bind $wt.imgsize <KeyRelease> { eventWatermark image }
+	bind $wt.${type}_size <ButtonRelease> [list eventWatermark $type ]
+	bind $wt.${type}_size <KeyRelease> [list eventWatermark $type ]
+ 
+	ttk::combobox $wt.${type}_rotation -state readonly -width 5 -values {None 90 -90 180}
 
-	# Image position
-	set ::widget_name(watermark_image_position) [ttk::combobox $wt.iposition -state readonly -textvariable ::watermark_image_position -values $wmpositions -width 10]
-	$wt.iposition set $::watermark_image_position
-	bind $wt.iposition <<ComboboxSelected>> { eventWatermark image }
+	set ::widget_name(watermark_${type}_opacity) [ttk::scale $wt.${type}_opacity -from 10 -to 100 -variable ::watermark_${type}_opacity \
+		 -orient horizontal -command [list progressBarSet watermark_${type}_opacity ]]
+	bind $wt.${type}_opacity <ButtonRelease> [list eventWatermark $type ]
+	ttk::label $wt.${type}_opacity_label -width 3 -textvariable ::watermark_${type}_opacity
+}
+proc tabWatermarkStyleGrid { wt } {
+	grid $wt.style_label $wt.color - - -sticky n
+	grid $wt.lpos $wt.position $wt.offset_a $wt.offset_b -pady 4 -padx 2 -sticky we
+	grid configure $wt.color -sticky we
+	grid rowconfigure $wt {0} -weight 1 -min 12
+	grid columnconfigure $wt {1 2 3} -weight 1
+}
+proc tabWatermarkTextStyle { wt } {
 
-	# Opacity scales
-	set ::widget_name(watermark_image_opacity) [ttk::scale $wt.imop -from 10 -to 100 -variable ::watermark_image_opacity -value $::watermark_image_opacity -orient horizontal -command { progressBarSet watermark_image_opacity }]
-	bind $wt.imop <ButtonRelease> { eventWatermark image }
-	ttk::label $wt.iolab -width 3 -textvariable ::watermark_image_opacity
+	ttk::labelframe $wt -text "Text Style" -padding {2}
 
-	# Style options
-	ttk::frame $wt.st
-	ttk::label $wt.st.txcol -text "Text Color"
-	ttk::label $wt.st.imstyle -text "Image Blending"
-	ttk::separator $wt.st.sep -orient vertical
-
-	set ::widget_name(watermark_canvas) [canvas $wt.st.chos  -width 62 -height 26]
+	tabWatermarkPosition $wt text
+	$::widget_name(watermark_text_position) set $::watermark_text_position
 	
-	set ::canvas_element(watermark_main_color) [$wt.st.chos create rectangle 2 2 26 26 -fill $::watermark_color -width 2 -outline [getContrastColor $::watermark_color] -tags {watermark main}]
-	$wt.st.chos bind main <Button-1> { setColorAndContrast %W $::canvas_element(watermark_main_color) [%W itemconfigure $::canvas_element(watermark_main_color) -fill] }
+	ttk::label $wt.style_label -text "Color"
+	set ::widget_name(watermark_canvas) [canvas $wt.color  -width 62 -height 26]
+	set ::canvas_element(watermark_main_color) [$wt.color create rectangle 2 2 26 26 -fill $::watermark_color -width 2 -outline [getContrastColor $::watermark_color] -tags {watermark main}]
+	$wt.color bind main <Button-1> { setColorAndContrast %W $::canvas_element(watermark_main_color) [%W itemconfigure $::canvas_element(watermark_main_color) -fill] }
 
 	set wmswatch [getswatches $::artscript(watermark_color_swatches)]
-	drawSwatch $wt.st.chos $wmswatch
+	drawSwatch $wt.color $wmswatch
 
+	tabWatermarkStyleGrid $wt
+
+	return $wt
+}
+proc tabWatermarkImageStyle { wt } {
+
+	ttk::labelframe $wt -text "Image Style" -padding {2}
+
+	tabWatermarkPosition $wt image
+	$::widget_name(watermark_image_position) set $::watermark_image_position
+
+	ttk::label $wt.style_label -text "Mode"
 	set iblendmodes [list Bumpmap ColorBurn ColorDodge Darken Exclusion HardLight Hue Lighten LinearBurn LinearDodge LinearLight Multiply Overlay Over Plus Saturate Screen SoftLight VividLight]
-	set ::widget_name(watermark_image_style) [ttk::combobox $wt.st.iblend -state readonly -textvariable ::watermark_image_style -values $iblendmodes -width 12]
-	$wt.st.iblend set $::watermark_image_style
-	bind $wt.st.iblend <<ComboboxSelected>> { eventWatermark image }
+	set ::widget_name(watermark_image_style) [ttk::combobox $wt.color -state readonly -textvariable ::watermark_image_style -values $iblendmodes ]
+	$wt.color set $::watermark_image_style
+	bind $wt.color <<ComboboxSelected>> { eventWatermark image }
 
-	set wtpadding 2
-	grid x x x $wt.lsize $wt.lpos $wt.lop -row 1 -sticky ws
-	grid $wt.cbtx $wt.watermarks - $wt.fontsize $wt.position $wt.txop $wt.tolab -row 2 -sticky we -padx $wtpadding -pady $wtpadding
-	grid $wt.cbim $wt.iwatermarks $wt.img_select $wt.imgsize $wt.iposition $wt.imop $wt.iolab -row 3 -sticky we -padx $wtpadding -pady $wtpadding
-	grid $wt.st -row 4 -column 1 -columnspan 5 -sticky we -pady 4
-	grid columnconfigure $wt {1} -weight 2
-	pack $wt.st.txcol $wt.st.chos $wt.st.sep $wt.st.imstyle $wt.st.iblend -expand 1 -side left -fill x
-	pack configure $wt.st.txcol $wt.st.chos $wt.st.imstyle -expand 0
-	
+	tabWatermarkStyleGrid $wt
+
 	return $wt
 }
 
@@ -2521,19 +2561,20 @@ proc watermark {} {
 	global deleteFileList
 	set wmcmd {}
 	set wm_im_sel [$::widget_name(watermark_image) get]
-	set text_size [$::widget_name(watermark_size) get]
+	set text_size [$::widget_name(watermark_text_size) get]
+	set watermark_text [$::widget_name(watermark_text) get]
 	
 	# Positions list correspond to $::watemarkpos, but names as imagemagick needs
-	set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(watermark_position) current] ]
+	set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(watermark_text_position) current] ]
 	set wmimpossel [lindex $::artscript(magick_pos) [$::widget_name(watermark_image_position) current] ]
 
 	if { $::artscript(select_watermark_text) } {
 		set wmtmptx [file join "/tmp" "artk-tmp-wtmk.png" ]
-		set width [expr {[string length $::watermark_text] * 3 * ceil($text_size/4.0)}]
-		set height [expr {[llength [split $::watermark_text {\n}]] * 30 * ceil($text_size/8.0)}]
+		set width [expr {[string length $watermark_text] * 3 * ceil($text_size/4.0)}]
+		set height [expr {[llength [split $watermark_text {\n}]] * 30 * ceil($text_size/8.0)}]
 		set watermark_color_inverse [getContrastColor $::watermark_color ]
 		
-		set wmtcmd [list convert -quiet -size ${width}x${height} xc:transparent -pointsize $text_size -gravity Center -fill $::watermark_color -annotate 0 "$::watermark_text" -trim \( +clone -background $watermark_color_inverse  -shadow 80x2+0+0 -channel A -level 0,60% +channel \) +swap +repage -gravity center -composite $wmtmptx]
+		set wmtcmd [list convert -quiet -size ${width}x${height} xc:transparent -pointsize $text_size -gravity Center -fill $::watermark_color -annotate 0 "$watermark_text" -trim \( +clone -background $watermark_color_inverse  -shadow 80x2+0+0 -channel A -level 0,60% +channel \) +swap +repage -gravity center -composite $wmtmptx]
 		catch { exec {*}$wmtcmd }
 		
 		lappend deleteFileList $wmtmptx
@@ -2977,7 +3018,7 @@ proc artscriptWidgetCatalogue {} {
 	dict set catalogue variables {collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state}
 	dict set catalogue preset_variables {watermark_color_swatches}
 	dict set catalogue col_styles {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color}
-	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_position watermark_image_position watermark_image_style watermark_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position}
+	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_text_position watermark_image_position watermark_image_style watermark_text_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position}
 	dict set catalogue lists {watermark_text_list suffix_list}
 	return $catalogue
 }
