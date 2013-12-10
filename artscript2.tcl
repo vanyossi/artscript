@@ -27,8 +27,9 @@ set ::tk::dialog::file::showHiddenBtn 1
 catch {ttk::style theme use clam}
 namespace eval img { }
 
-set ::artscript(lib) [file dirname [file normalize [info script]]]
-lappend auto_path [file join $::artscript(lib) lib]
+set ::artscript(dir) [file dirname [file normalize [info script]]]
+set ::artscript(lib) [file join $::artscript(dir) lib]
+lappend auto_path $::artscript(lib)
 # TkDND module lookup
 proc tkdndLoad {} {
 	if {[catch {package require tkdnd}]} {
@@ -374,43 +375,40 @@ proc getUserPresets {} {
 	global ops
 	set presets [dict create]
 	
-	set configfile "presets.config"
-	set configfile [file join [file dirname [info script]] $configfile]
+	set configfile [file join $::artscript(dir) "presets.config"]
 
 	if { [file exists $configfile] } {
 		puts "config file found in: $configfile"
+		puts "Presets config name keys changed drastically from v2.0 to 2.1\n \
+	If your presets does not load please review presets.config.example file to check the new names."
 
-		set File [open $configfile]
+		set File [open $configfile r]
 		#read each line of File and store "key=value"
-		foreach {i} [split [read $File] \n] {
-				set firstc [string index $i 0]
-				if { $firstc != "#" && ![string is space $firstc] } {
-					lappend lista [split $i "="]
-					#lappend ListofResult [lindex [split $i ,] 1]
-				}
+		while {-1 != [gets $File line]} {
+			set line_init [string index $line 0]
+			if {$line_init ne {#} && ![string is space $line_init] } {
+				set values [split $line "="]
+				if {[llength $values] < 2} { continue } ; #Do not append if list is malformed
+				lappend lista $values
 			}
-			close $File
-		if {![info exists lista]} {
-			return 0
 		}
+		close $File
+		if {![info exists lista]} { return 0 }
+
 		#declare default dictionary to add defaut config values
-		 set preset "default"
-		 if {[dict exists $ops ":preset"]} {
+		if {[dict exists $ops ":preset"]} {
 			lappend preset [dict get $ops ":preset"]
-		 }
+		}
 		#iterate list and populate dictionary with values
-		set default true
+		set preset_dict "default"
 		foreach i $lista {
-			if { [lindex $i 0] == "preset" } {
-				set condict [lindex $i 1]
-				dict set presets $condict [dict create]
-				set datos false
+			lassign $i key value
+			if { $key == "preset" } {
+				set preset_dict $value
+				dict set presets $preset_dict [dict create]
 				continue
 			}
-			if {![info exists condict]} {
-				set condict "default"
-			}
-			dict set presets $condict [lindex $i 0] [lindex $i 1]
+			dict set presets $preset_dict $key $value
 		}
 	}
 	return $presets
@@ -447,8 +445,6 @@ proc setUserPresets { select } {
 			catch {dict set settings lists $prop $preset(${prop})}
 		}
 	}
-	puts "Presets config name keys changed drastically from v2.0 to 2.1\n \
-	If your presets does not load please review presets.config.example file to check the new names."
 	artscriptSetWidgetValues $settings
 	sizeTreeAddPreset default
 
