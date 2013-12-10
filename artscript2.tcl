@@ -44,6 +44,7 @@ proc tkdndLoad {} {
 	}
 	return -code ok
 }
+package require md5
 
 # Declare default values for setting vars
 proc artscriptSettings {} {
@@ -650,7 +651,7 @@ proc showPreview {} {
 # It uses md5 string to store the file name in thumbs dir
 proc makeThumb { path filext tsize } {
 	set cmd [dict create]
-	set i 0
+	set i 1
 
 	dict set cmd .ora {Thumbnails/thumbnail.png}
 	dict set cmd .kra {preview.png}
@@ -665,7 +666,7 @@ proc makeThumb { path filext tsize } {
 		lappend Cmd convert -quiet $path		
 	}
 	dict for {size dest} $tsize {
-		while { $i < [dict size $tsize] } {
+		if { $i < [dict size $tsize] } {
 			lappend Cmd ( +clone -thumbnail [append size x $size] -flatten -write PNG32:$dest +delete )
 			incr i
 			continue
@@ -718,8 +719,8 @@ proc showThumb { w f {tryprev 1}} {
 	
 	set path [dict get $inputfiles $::artscript(preview_id) path]
 	set filext [string tolower [file extension $path] ]
-	# Get png md5sum name. TODO use tcllib md5
-	set thumbname [lindex [exec md5sum << "file://$path"] 0]
+	# Get png md5sum name.
+	set thumbname [string tolower [::md5::md5 -hex "file://$path"]]
 	set thumbdir "$env(HOME)/.thumbnails"
 	set lthumb "${thumbdir}/large/$thumbname.png"
 	set nthumb "${thumbdir}/normal/$thumbname.png"

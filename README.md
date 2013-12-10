@@ -19,7 +19,7 @@ There is a special output format mode to transform any image supported by Krita 
 
 #### Goal
 - Aid in the deploy of digital artwork for media with the best possible quality
-- Core Dependencies: imagemagick, tk 8.5, zip, md5
+- Core Dependencies: imagemagick, tk 8.5, zip
 - Optional dependencies: calligraconverter, inkscape, gimp
 - Tested in: Xfce 4.10, thunar 1.4.0, dolphin and nautilus
 
