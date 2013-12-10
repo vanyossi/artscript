@@ -7,7 +7,7 @@
 #  License: GPLv3 
 # -----------------------------------------------------------
 #  Goal : Aid in the deploy of digital artwork for media with the best possible quality
-#   Dependencies: >=imagemagick-6.7.5, tk 8.5 zip md5
+#   Dependencies: >=imagemagick-6.7.5, tk 8.5 zip
 #   Optional deps: calligraconverter, inkscape, gimp
 #
 #  Customize:__
@@ -1964,7 +1964,7 @@ proc colLabel { w } {
 	set col_ops [ttk::frame $w.options -padding {12 0 0 0} ]
 	ttk::button $col_ops.show_prev -text "Estimate size" -style small.TButton -width 12 -command [list colEstimateSize $col_ops.prev]
 	ttk::label $col_ops.label_mode -text "Mode:" -anchor e
-	set ::widget_name(collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values {{} Concatenation {Zero geometry} {Crop}} ]
+	set ::widget_name(collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values {{} Concatenation {Zero geometry} {Crop} Wrap} ]
 
 	grid $col_ops.show_prev - -sticky e
 	grid $col_ops.label_mode $col_ops.mode -sticky e
@@ -2161,18 +2161,19 @@ proc prepCollage { input_files } {
 	set pixel_space [expr {($border + $padding)*2} ]
 
 	#Add Conditional settings
-	lassign [list {} 0 {} 0] concatenate zero_geometry trim crop
+	lassign [list 0 0 {} 0 0] concatenate zero_geometry trim crop wrap
 	switch -nocase -glob -- $mode {
-		{conc*}	{ set concatenate {-mode Concatenate} }
+		{conc*}	{ set concatenate 1 }
 		{zero*} { set zero_geometry 1 }
 		{crop}	{ set crop 1 }
+		{wrap}	{ set wrap 1 }
 	}
 
 	# Set width height minus spacing from border padding.
 	foreach var {width height} value [colGetTileSize] {
 		set $var [expr {$value - $pixel_space}]
 	}
-	if {($zero_geometry == 0) && ($concatenate eq {})} {
+	if {($zero_geometry == 0) && ($concatenate == 0)} {
 		set width [expr {$width == (0 - $pixel_space) ? $height : $width}]
 		set height [expr {$height == (0 - $pixel_space) ? $width : $height}]
 	} else {
@@ -2185,11 +2186,19 @@ proc prepCollage { input_files } {
 	if { $auto_range != 0 && $range ne {} } {
 		set range [expr {min($range,$auto_range)}]
 	}
-	if { $range eq {} || $range == 0 } {
-		set range_lists [list $input_files]
-		set range 1
+	if {$wrap} {
+		set len [llength $input_files]
+		set range [expr {[string is false $range] ? $len : $range }]
+		foreach id $input_files {
+			lappend range_lists [lrepeat $range $id]
+		}
 	} else {
-		set range_lists [colRange $input_files $range]
+		if { $range eq {} || $range == 0 } {
+			set range_lists [list $input_files]
+			set range 1
+		} else {
+			set range_lists [colRange $input_files $range]
+		}		
 	}
 
 	pBarUpdate $::widget_name(pbar-main) cur max [expr { ceil([llength $input_files] / [format %.2f $range]) * 2 + $::artscript_convert(total_renders) * [llength [getFinalSizelist]] }] current [expr {$::cur -2}]
@@ -2199,7 +2208,7 @@ proc prepCollage { input_files } {
 		dict set ::artscript_convert(collage_vars) $color [$::widget_name(collage_canvas) itemcget $::canvas_element(collage_$color) -fill]
 	}
 	# Add row col size label range border padding to dict
-	foreach {value} {file_name width height col row range border padding pixel_space concatenate zero_geometry trim crop} {
+	foreach {value} {file_name width height col row range border padding pixel_space concatenate zero_geometry trim crop wrap} {
 		dict set ::artscript_convert(collage_vars) $value [set $value]
 	}
 	puts $::artscript_convert(collage_vars)
@@ -2249,7 +2258,7 @@ proc doCollage { files {step 1} args } {
 					lappend collage_names -gravity $position +repage
 				}
 				# Make concatenate mode remove read in size
-				if {$concatenate eq {}} {
+				if {$concatenate == 0} {
 					set format {%s[%s]}
 				} else {
 					set format {%s}
@@ -2266,10 +2275,10 @@ proc doCollage { files {step 1} args } {
 
 			#Add filename to dict
 			set output_path [format {%s_%02d.%s} "/tmp/${file_name}" $::artscript_convert(count) "png"]
-			set geometry [expr { $zero_geometry ? "1x1+${padding}+${padding}\\<" : "${width}x${height}+${padding}+${padding}" }]
+			set geometry [expr { $zero_geometry || $wrap ? "1x1+${padding}+${padding}\\<" : "${width}x${height}+${padding}+${padding}" }]
 
 			set Cmd [concat montage -quiet [expr { $crop ? "-crop [list $geometry]" : {} }] $collage_names \
-				-geometry [list $geometry] $concatenate -tile ${col}x${row} \
+				-geometry [list $geometry] [expr { $concatenate ? "-mode Concatenate" : {}}] -tile ${col}x${row} \
 				-border $border -background $bg_color -bordercolor $border_color -fill $label_color \
 				"PNG32:$output_path" ]
 			puts $Cmd
