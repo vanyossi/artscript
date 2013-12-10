@@ -165,7 +165,7 @@ proc getOutputName { iname out_extension { prefix {} } { suffix {} } { sizesufix
 			set $val [expr {[set $val] eq "%mtime" ? [clock format [file mtime $iname] -format %Y-%m-%d] : [set $val]}]
 		}
 	}
-	if {$out_extension eq "Rename" } {
+	if {[string is upper [string index $out_extension 0]]} {
 		set out_extension [string trim [file extension $iname] {.}]
 	}
 	
@@ -2352,7 +2352,7 @@ proc frameOutput { w } {
 	bind $w.slider_qual_val <FocusIn> {%W selection range 0 end}
 	bind $w.slider_qual_val <FocusOut> {%W selection clear}
 
-	set ::artscript(formats) [list png jpg gif webp {webp lossy} ora {Rename}]
+	set ::artscript(formats) [list png jpg gif webp {webp lossy} ora {Rename} {Keep format}]
 	ttk::label $w.label_format -text "Format:"
 	set ::widget_name(format) [ttk::combobox $w.format -state readonly -width 9 -textvariable ::out_extension -values $::artscript(formats)]
 	$w.format set [lindex $::artscript(formats) 0]
@@ -2384,7 +2384,7 @@ proc setFormatOptions { w } {
 	$::widget_name(convert-but) configure -text $::artscript(bconvert_string) -command $::artscript(bconvert_cmd)
 	$::widget_name(thumb-prev) state !disabled
 	$::widget_name(quality_label) state !disabled
-	switch -glob -- $::out_extension {
+	switch -glob -nocase -- $::out_extension {
 		jpg	{
 			lassign {92 100} ::artscript(image_quality) ::artscript(quality_maximum)
 			$w.label_quality configure -text "Quality:"
@@ -2423,11 +2423,13 @@ proc setFormatOptions { w } {
 			$w.slider_qual configure -from 10 -to 100
 			$::widget_name(quality_label) configure -from 10 -to 100
 		}
+		Keep* -
 		Rename {
+			set action [string tolower [lindex $::out_extension 0]]
 			lassign {0 0} ::artscript(image_quality) ::artscript(quality_maximum)
 			$w.label_quality configure -text "Quality:"
 			$w.slider_qual configure -from 0 -to 0
-			$::widget_name(convert-but) configure -text "Rename" -command {renameFiles}
+			$::widget_name(convert-but) configure -text $::out_extension -command [list ${action}Files]
 			$::widget_name(thumb-prev) state disabled
 			$::widget_name(quality_label) state disabled
 		}
@@ -2707,11 +2709,12 @@ proc getResize { size dsize } {
 # returns string
 proc getQuality { ext } {
 	switch -glob -- $ext {
-		jpg	{ set quality "-sampling-factor 1x1,1x,1x1 -quality $::artscript(image_quality)" }
+		jp*g	{ set quality "-sampling-factor 1x1,1x,1x1 -quality $::artscript(image_quality)" }
 		png	{ set quality "-type TrueColorMatte -define png:format=png32 -define png:compression-level=$::artscript(image_quality) -define png:compresion-filter=4" }
 		gif	{ set quality "-channel RGBA -separate \( +clone -dither FloydSteinberg -remap pattern:gray50 \) +swap +delete -combine -channel RGB -dither FloydSteinberg -colors $::artscript(image_quality)" }
 		webp { set quality "-quality $::artscript(image_quality) -define webp:auto-filter=true -define webp:lossless=true -define webp:method=5" }
 		webp* { set quality "-quality $::artscript(image_quality) -define webp:auto-filter=true -define webp:lossless=false -define webp:alpha-quality=100"}
+		default { set quality {} }
 	}
 	return $quality
 }
@@ -2744,6 +2747,17 @@ proc renameFiles { {index 0} {step 0} } {
 			renameFiles $index 1
 		}
 	}
+}
+proc keepFiles { } {
+	set images_id [processIds]
+	set forbid_ids [putsHandlers g i k]
+
+	set ids {}
+	foreach id $images_id {
+		if { [lsearch $forbid_ids $id] >= 0 } { continue }
+		lappend ids $id
+	}
+	prepConvert Convert $ids
 }
 	
 # Adds command to fileevent handler
@@ -3014,6 +3028,9 @@ proc doConvert { files {step 1} args } {
 					pBarControl "Converting... ${name} to $dimension" update
 					
 					if {$i == 1} { set dimension {}	}
+					if {$::out_extension eq {Keep format}} {
+						set ::artscript_convert(quality) [getQuality $ext]
+					}
 					
 					if {$preview eq {}} {
 						set soname \"[file join $outpath [getOutputName $path $::artscript_convert(out_extension) $::artscript_convert(out_prefix) $::artscript_convert(out_suffix) $dimension] ]\"
@@ -3148,6 +3165,7 @@ proc artscriptSetWidgetValues { dictionary } {
 	}
 	eventCollage
 	eventWatermark
+	setFormatOptions $::widget_name(frame-output)
 }
 proc artscriptSaveOnExit {} {
 	catch {file delete {*}$::deleteFileList }
