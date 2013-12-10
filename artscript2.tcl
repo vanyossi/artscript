@@ -1962,11 +1962,12 @@ proc colLabel { w } {
 	ttk::label $w.subst -text "%f => file.ext, %e => ext, %G => WxH"
 
 	set col_ops [ttk::frame $w.options -padding {12 0 0 0} ]
+	ttk::label $col_ops.prev -text "" -anchor e
 	ttk::button $col_ops.show_prev -text "Estimate size" -style small.TButton -width 12 -command [list colEstimateSize $col_ops.prev]
 	ttk::label $col_ops.label_mode -text "Mode:" -anchor e
 	set ::widget_name(collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values {{} Concatenation {Zero geometry} {Crop} Wrap} ]
 
-	grid $col_ops.show_prev - -sticky e
+	grid $col_ops.prev $col_ops.show_prev -sticky e
 	grid $col_ops.label_mode $col_ops.mode -sticky e
 	grid configure $col_ops.label_mode -padx {0 4}
 	grid columnconfigure $col_ops {0} -weight 1
