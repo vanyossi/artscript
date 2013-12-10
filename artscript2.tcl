@@ -228,16 +228,14 @@ proc readFileHead { file_name {n 10} } {
     return $data_read
 }
 
-# Get SVG file to get Width and Height.
+# Get SVG and AI Width and Height.
 # Works with plain and normal svg saved from inkscape. TODO: testing
 # returns string {widtxheight} or 0 if nothing found
-proc getWidthHeightSVG { f } {
-	set lines [readFileHead $f 30]
-	foreach l $lines {
-		set l [lsearch -inline -regexp -all $l {^(width|height)} ]
-		if {[string length $l] > 0} {
-			set start [string last "=" $l]
-			lappend size [expr {round([string range [subst $l] $start+2 end-1]) }]
+proc getWidthHeightSVG { lines } {
+	foreach l [split $lines] {
+		set value [string trim [lsearch -inline -regexp -all [list $l] {^(.)*(width|height)} ] {<xapGImg/\"\\=:whidte>}]
+		if {[string is integer -strict $value]} {
+			lappend size $value
 		}
 	}
 	if {[info exists size]} {
@@ -301,6 +299,7 @@ proc listValidate { ltoval } {
 	# global fc
 
 	foreach i $ltoval {
+		set i [encoding convertfrom $i]
 		# Call itself with directory contents if arg is dir
 		if {[file isdirectory $i]} {
 			listValidate [glob -nocomplain -directory $i -type f *]
@@ -312,30 +311,32 @@ proc listValidate { ltoval } {
 
 		if { [regexp {^(.xcf|.psd)$} $filext ] && $::hasgimp } {
 
-			runCommand [list identify -format "%wx%h " $i] [list set ::validate_wait 1] ::artscript(tmp_size)
-			vwait ::validate_wait
-			set size [lindex $::artscript(tmp_size) 0]
-
+			if {$filext eq {.xcf}}  {
+				binary scan [readFileHead $i 2] A14II f w h
+			} else {
+				binary scan [readFileHead $i 2] a4S1A6S1II f s t fo h w
+				if {$s != 1} { continue }
+			}
+			set size [format {%dx%d} $w $h]
 			setDictEntries $::fc $i $size $filext "g"
 			incr ::fc
 			continue
 
 		} elseif { [regexp {^(.svg|.ai)$} $filext ] && $::hasinkscape } {
-			
-			if { $filext == ".svg" } {
-				set size [getWidthHeightSVG $i]
-				if { $size == 0 } {
+
+			if {$filext eq {.ai}} {
+				binary scan [readFileHead $i 34] a10h18a145h14a2000 f s t fo lines
+				if {![string match %PDF* $f]} {
+					puts "$f file not supported in v2"
 					continue
 				}
 			} else {
-				 # TODO get rid of head cmd
-				if { [catch { set svgcon [exec inkscape -S $i | head -n 1] } msg] } {
-					puts $msg
-					continue
-				}
-				set svgvals [lrange [split $svgcon {,}] end-1 end]
-				set size [expr {round([lindex $svgvals 0])}]
-				append size "x" [expr {round([lindex $svgvals 1])}]
+				set lines [readFileHead $i 34]
+			}
+				
+			set size [getWidthHeightSVG $lines]
+			if { $size == 0 } {
+				continue
 			}
 			setDictEntries $::fc $i $size $filext "i"
 			incr ::fc
@@ -347,7 +348,6 @@ proc listValidate { ltoval } {
 				puts $msg
 				continue
 			}
-
 			setDictEntries $::fc $i $size $filext "k"
 			incr ::fc
 			continue
