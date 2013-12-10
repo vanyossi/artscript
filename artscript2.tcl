@@ -27,13 +27,14 @@ set ::tk::dialog::file::showHiddenBtn 1
 catch {ttk::style theme use clam}
 namespace eval img { }
 
+set ::artscript(lib) [file dirname [file normalize [info script]]]
+lappend auto_path [file join $::artscript(lib) lib]
 # TkDND module lookup
 proc tkdndLoad {} {
 	if {[catch {package require tkdnd}]} {
-		set DIR [file dirname [file normalize [info script]]]
-		source $DIR/tkdnd/tkdnd.tcl
-		foreach dll [glob -type f $DIR/tkdnd/*tkdnd*[info sharedlibextension]] {
-			catch {tkdnd::initialise $DIR/tkdnd [file tail $dll] tkdnd}
+		source $::artscript(lib)/tkdnd/tkdnd.tcl
+		foreach dll [glob -type f $::artscript(lib)/tkdnd/*tkdnd*[info sharedlibextension]] {
+			catch {tkdnd::initialise $::artscript(lib)/tkdnd [file tail $dll] tkdnd}
 		}
 	}
 	puts "Tk drag and drop enabled"
