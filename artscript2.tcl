@@ -1,7 +1,7 @@
 #! /usr/bin/env wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: 2.1.8
+#  Version: 2.1.9
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #  License: GPLv3 
@@ -16,7 +16,7 @@
 #
 # ---------------------::::::::::::::------------------------
 package require Tk
-set ::version "v2.1.8"
+set ::version "v2.1.9"
 
 # Do not show .dot files by default. !fails in OSX
 catch {tk_getOpenFile foo bar}
@@ -644,46 +644,64 @@ proc showPreview {} {
 	}
 	return
 }
-
+# TODO: Break appart preview function to allow loading thumbs from tmp folder
 # Creates a thumbnail and places it in user thumbnail folders
 # It uses md5 string to store the file name in thumbs dir
 proc makeThumb { path filext tsize } {
 	set cmd [dict create]
+	set i 0
+
 	dict set cmd .ora {Thumbnails/thumbnail.png}
 	dict set cmd .kra {preview.png}
 
 	if { [regexp {.ora|.kra} $filext ] } {
 		set container [dict get $cmd $filext]
-		#unzip to location tmp$container
-		catch { exec unzip $path $container -d /tmp/ }
-		set tmpfile "/tmp/$container"
-		set path $tmpfile
-
+		set Cmd [list unzip -p $path $container | convert PNG:- ]
 	} elseif {[regexp {.xcf|.psd} $filext ]} {
-		# TODO: Break appart preview function to allow loading thumbs from tmp folder
 		$::widget_name(thumb-im) configure -compound text -text "No Thumbnail"
 		return 0
+	} else {
+		lappend Cmd convert -quiet $path		
 	}
-	foreach {size dest} $tsize {
-		catch { exec convert -quiet $path -thumbnail [append size x $size] -flatten PNG32:$dest } msg
+	dict for {size dest} $tsize {
+		while { $i < [dict size $tsize] } {
+			lappend Cmd ( +clone -thumbnail [append size x $size] -flatten -write PNG32:$dest +delete )
+			incr i
+			continue
+		}
+		lappend Cmd -thumbnail [append size x $size] -flatten PNG32:$dest
 	}
-	catch {file delete $tmpfile}
+	puts $Cmd
+	catch { exec {*}$Cmd } msg
+	puts $msg
 }
 
+proc readBinaryFile { f var } {
+	set ::artscript(data) [append ::artscript(data) [read $f]]
+	if { [eof $f] } {
+		fconfigure $f -blocking true
+    	close $f
+    	after idle set $var 1
+	}
+}
+proc getBinaryData { script var} {
+	catch {close $::artscript(thumb_chan)}
+	set ::artscript(data) {}
+	set ::artscript(thumb_chan) [open "| $script 2>@1" rb]
+	fconfigure $::artscript(thumb_chan) -blocking false
+		fileevent $::artscript(thumb_chan) readable [list readBinaryFile $::artscript(thumb_chan) $var]
+}
 proc setThumbGif { path } {
-	global img oldimg thumb_proc
 
-	set prevgif {/tmp/atkpreview.gif}
-	
-	catch {close $thumb_proc}
-	set thumb_proc [runCommand [concat convert -quiet $path GIF:$prevgif] [list set ::thumb_wait 1]]
-	vwait ::thumb_wait
-	catch {set oldimg $img}
-	catch {puts $img}
-	set img [image create photo -file $prevgif ]
+	getBinaryData [list convert $path -strip GIF:-] ::thumb
+	vwait ::thumb
+	set ::artscript(thumb) $::artscript(data)
 
-	$::widget_name(thumb-im) configure -compound image -image $img
-	catch {image delete $oldimg}
+	set ::img_thumb [image create photo]
+		$::img_thumb put $::artscript(thumb)
+
+	$::widget_name(thumb-im) configure -compound image -image $::img_thumb
+	unset ::artscript(thumb)
 }
 
 # Attempts to load a thumbnail from thumbnails folder if exists.
@@ -699,9 +717,8 @@ proc showThumb { w f {tryprev 1}} {
 	
 	set path [dict get $inputfiles $::artscript(preview_id) path]
 	set filext [string tolower [file extension $path] ]
-	# Creates md5 checksum from text string: TODO avoid using echo
-	# exec md5sum << "string" and string trim $hash {- }
-	set thumbname [lindex [exec echo -n "file://$path" \| md5sum] 0]
+	# Get png md5sum name. TODO use tcllib md5
+	set thumbname [lindex [exec md5sum << "file://$path"] 0]
 	set thumbdir "$env(HOME)/.thumbnails"
 	set lthumb "${thumbdir}/large/$thumbname.png"
 	set nthumb "${thumbdir}/normal/$thumbname.png"
@@ -717,10 +734,10 @@ proc showThumb { w f {tryprev 1}} {
 			setThumbGif $nthumb
 			return
 		}
-		makeThumb $path $filext [list 256 $lthumb]
+		makeThumb $path $filext [dict create 256 $lthumb]
 	} else {
 		puts "$path has no thumb"
-		makeThumb $path $filext [list 128 $nthumb 256 $lthumb]
+		makeThumb $path $filext [dict create 128 $nthumb 256 $lthumb]
 	}
 
 	if {$tryprev} {
@@ -2723,11 +2740,10 @@ proc renameFiles { {index 0} {step 0} } {
 	
 # Adds command to fileevent handler
 # cmd exec command, script last cmd executed
-proc runCommand {cmd script {var ""}} {
+proc runCommand {cmd script {var ""} } {
     set f [open "| $cmd 2>@1" r]
     fconfigure $f -blocking false
-    fileevent $f readable  [list handleFileEvent $f $script $var]
-
+    fileevent $f readable [list handleFileEvent $f $script $var]
     return $f
 }
 
@@ -2746,24 +2762,23 @@ proc closePipe {f script} {
 # Do something depending on what the fileevent returns
 # f fileevent, script, pass to closePipe
 proc handleFileEvent {f script {var ""}} {
-    set status [catch { gets $f line } result]
-    if { $status != 0 } {
-        # unexpected error
-        # puts "error $result"
-        closePipe $f $script
+	set status [catch { gets $f line } result]
+	if { $status != 0 } {
+		# unexpected error
+		puts "error $result"
+		closePipe $f $script
 
-    } elseif { $result >= 0 } {
-    	catch {set $var $line}
-        # we got some output
+	} elseif { $result >= 0 } {
+		# we got some output
+		catch {set $var $line}
 		puts "$line"
 
-    } elseif { [eof $f] } {
-        # End of file
-        closePipe $f $script
-
-    } elseif { [fblocked $f] } {
-        # Read blocked, so do nothing
-    }
+	} elseif { [eof $f] } {
+		# End of file
+		closePipe $f $script
+	} elseif { [fblocked $f] } {
+		# Read blocked, so do nothing
+	}
 }
 
 # Gets all inputfiles, filter files on extension, sends resulting list to makeORA
