@@ -452,7 +452,10 @@ proc setUserPresets { select } {
 
 	return
 }
-	
+proc loadUserPresets { preset } {
+	sizeTreeDelete [array names ::sdict]
+	setUserPresets $preset
+}
 # Returns total of files in dict except for flagged as deleted.
 # get_del bool, true = get all files loaded
 # returns integer
@@ -961,7 +964,7 @@ proc guiTopBar { w } {
 		ttk::label $w.preset_label -text "Load preset:"
 		ttk::combobox $w.preset -state readonly -values [dict keys $::presets]
 		$w.preset set [lindex $::presets 0]
-		bind $w.preset <<ComboboxSelected>> { setUserPresets [%W get] }
+		bind $w.preset <<ComboboxSelected>> { loadUserPresets [%W get] }
 		pack $w.preset_label $w.preset -before $w.sep -side left -ipady {2}
 	}
 	return $w
@@ -3048,7 +3051,6 @@ proc artscriptWidgetCatalogue {} {
 	dict set catalogue lists {watermark_text_list suffix_list}
 	return $catalogue
 }
-
 proc artscriptSetWidgetValues { dictionary } {
 	dict for {type elements} $dictionary {
 		switch -- $type {
