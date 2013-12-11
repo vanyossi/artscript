@@ -969,18 +969,17 @@ proc addFrameTop { args } {
 }
 # Horizontal panel for placing operations that affect Artscript behaviour
 proc guiTopBar { w } {
-	pack [ttk::frame $w] -side top -expand 0 -fill x -padx 4
-	# ttk::label $w.title -text "Artscript 2.0.0"
-	ttk::separator $w.sep -orient vertical
-	pack $w.sep -side left -fill x
-	pack configure $w.sep -expand 1
+	pack [ttk::frame $w] -side top -expand 0 -fill x -pady 4 -padx 4
+	# ttk::label $w.version -text "Artscript $::version"
+	ttk::separator $w.sep -orient horizontal
 
 	if {[llength [dict keys $::presets]] > 1} {
 		ttk::label $w.preset_label -text "Load preset:"
 		ttk::combobox $w.preset -state readonly -values [dict keys $::presets]
 		$w.preset set [lindex $::presets 0]
 		bind $w.preset <<ComboboxSelected>> { loadUserPresets [%W get] }
-		pack $w.preset_label $w.preset -before $w.sep -side left -ipady {2}
+		pack $w.sep $w.preset_label $w.preset -side left -ipady {4}
+		pack configure $w.sep -expand 1 -fill x -padx {18}
 	}
 	return $w
 }
