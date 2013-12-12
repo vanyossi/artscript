@@ -1,0 +1,251 @@
+
+
+V2.1.11
+=======
+18e4225 Update Readme files
+ef97b0d FIX: Dropdown presets loader styles small enhance
+
+
+V2.1.10
+=======
+a8ea0a9 FIX #46 : Added new icon set
+ab9a6bc FIX Missing Keep format option
+069f677 Enhance presets.config parsing
+ee7ef53 FIX: regression. No widget for preview size
+3564213 FIX #34 : Added watermark wrap mode for easy image array creations
+33500b1 FIX: Do not depend on md5 to calculate thumbnail location
+4801b51 Created lib directory and moved tkdnd to lib/tkdnd
+f2956b4 FIX: Do not use a tmp file to generate and display Thumbnails
+8c1beeb FIX: xcf psd and ai load inmediatly. header info to get size data
+50a4de3 FIX: Delete preset file list before adding sets from the combobox
+458b83a FIX #27 Add watermark offset and rotation FIX: Text color ignored if loaded from presets
+fef58ca CODE: Massive change of watermark gui constructors. Added: gui rotation and position offset
+7195019 ADD: Collage custom name string. FIX: Minor fix on string match for label, prepCollage Minor GUI margin arrangement
+b1a8909 GUI: Change slider label to entry to allow quick set of quality GUI: Small UX improvements
+a949e88 GUI: Testing new behavior on editing text elements. Now when they have focus they are editable by default.
+52ccc3a FIX: Read only the first lines of svg for parsing.
+fc39cfa FIX: Removed orphan checkbox at the bottom.
+86ee303 FIX: Image watermark not working when loaded from any setting file
+3ca21c0 FIX #23: Calculate best sharpeness.
+284b302 FIX: Add tkDND licence (FreeBSD)
+ba8ea5a ADD: Artscript 2 icon
+6f6f123 FIX: By default image watermark field is empty. Do not trow an error if field is empty FIX: Watermark choose value from updated text list.
+ea3996e Add Ctrl + q to exit application
+47d7ce1 FIX Major regression. Resize didn't apply unnsharp method
+b342251 FIX: Loading of default sizes now works properly
+20876ff FIX #45 : Organize and give more appeal to GUI
+09e452c FIX: Overwrite check ignored for all files with tmp destination
+9f816f4 FIX: Resize operator major flaw. Im surprised it worked at all
+c5981e9 ADD selection buttons for file list
+7ea6a6b Minor style improvement
+dfb0e75 CODE: Minor code modification, removed all obsolete comments
+668d853 FIX: Always initialize artscriptrc variable
+11066bc FIX #36 Load presets from gui
+5fa19a7 Renamed all presets key names.
+800ca8b CODE: remove tab_ prefix from collage and resize widget array keys
+d957921 Renamed all globals to match widget names Move init functions Modularize set and get variables to catalogue
+fbd614a FIX: Size and watermark loading from artscriptrc do some checks to avoid errors
+7f8f1ce Added info on documentation for tkDND
+b518710 FIX: tkDND adjustments to work better with files and text strings
+e3e4d1a FIX: Sizes not loading properly when remember settings on CODE: changed loading order for tkdnd
+42985f5 DELETED: binary windows tkdnd files. They are not necessary, the script is not functional on windows yet
+50b4a69 FIX #44 : First draft of saving presets between runs.
+8777155 ADD experimental drag and drop support
+e27c494 FIX: Do not get img src on every call. Now it only gets consulted before rendering watermark images.
+09171f7 FIX: If preset empty do not add to combobox
+4e69fa1 FIX: error if size 0 or empty in any collage mode
+7ccb3aa FIX: changed default wxh value for collage to 0. As the new function causes to always return bigger sizes.
+0eb7de5 Small GUI tweaks
+495cfe7 FIX: small typo caused error on wmsize
+6ee3aef CODE clean up in the openFiles functions
+a29ae04 ADD: Image watermark selection on GUI
+5fec689 Small code fixes
+f07e096 FIX #38: Keep GUI alive in long running calculations.
+0c4722a FIX: Do not show collage unsupported output options if mode on
+771a329 FIX: Add position to Resize Zoom mode.
+30ce66d Version Bump to reflect add of resize operators
+d65a87b FIX #17 : Add resize operators and the hability to grow
+72e71af FIX: Concatenate mode does not use image size.
+d26fec2 ADD Collage Crop mode.
+ace7305 FIX #37: Simple rename, using preffix suffix.
+d71d5dc ADD: Simple rename capabilities
+8af784f ADD collage settings to artscirpt settings and modified default preset
+38fa784 FIX: Alfa replace color selection broken
+40881a8 FIX: Trim collage if zero_geometry or concatenate mode used Added png32 to output format in montage FIX: range wont update if keyboard used to set col and row     this cause the progress bar to report wrong calculations
+22d3f2c FIX: Error message if value padding or border was erased
+6aa99bf FIX: sometimes zero geometry produces white space. We add trim at the end of montage when using any special mode.
+c6ab21b Quick FIX: If no concatenation or zero_geometry conform to square
+d8d3225 FIX: Allow zero geometry and concatenation to set size limit only on one dimension wid or height
+5bc17ee FIX: Zero_geometry broken: + FIX: Label truncated if spaces present
+3a431e6 FIX #30 : Collage mode activated
+3f1c435 FIX: many bugs introduced by collage mode Added: concatenation mode to collage and Zero geometry
+9f3efc2 Added Collage UI FIX: sizeToggleWidgetWxH allowed values in boxes to have a % symbol FIX: Sizes preview not displayin in list Code clean up for collage Change Convert text to Collage if make collage is selected Added collage first preprocess functions
+56b7534 FIX merge inputfiles
+671f248 ADD: Checkbox no indicator style
+4ff1788 CODE: update setDictEntries
+3d8f945 CODE: Implement better check for KRA and ORA file size. no more grep or head. And lookup separated into a function.
+538b268 FIX: Use env path to find executable file to avoid usage of which
+d602086 FIX: Removed unsharp from convert to avoid sharping with no resize. This was fixed before but on a merge I reenabled it
+7f49788 FIX: Preview not working with png,jpg,webm
+bf6c17c Merge branch 'master' into dev
+044b275 FIX #35 : Now its possible to select the color to be used instead of the alpha channel.
+1c281f1 FIX: Broken preview. check if id is imagemagick file, this only happens when providing an id to convert in preview.
+0055128 FIX: Keep GUI alive while generating thumbnails
+68b3b37 FIX: setColor error handling and settings. minor fix on return error codes
+4881c28 Use update idletasks instead of vwait hack
+7e12b25 FIX: Make Thumbnail preview responsive. No more stops while thumbnail is generated.
+30bfa1e FIX: Use wmcol instead of txtcol, this probably means watermark text color hasn't been operational. Also setColor uses an argument less
+3572bd0 FIX: normalize setColor to allow collage to use
+093c2c5 FIX: normalize addSizeBox to allow reuse in collage tile size
+4183961 Merge branch 'master' into dev
+46d9abf FIX: Allow toggle size order in tag sorting with antitag
+143af20 FIX: Apply unsharp only when resizing
+b675378 update documentation
+578f938 Code minor cleanup and commenting
+dadf82b Renamed sizes array to sizes_set to allow coexistance of v1 and v2
+fecec5b Version bump v2.1.0pre because of massive GUI change in resize
+b83ac71 Fixes #33 Fixes #18 Now its posible to set sizes in many different forms Change sizes to sizes(default) in your preset file to load sizes by default Add sizes(<string>) . string corresponds to the preset name.
+ba02f0b ADD: treeSortByTagPair, to sort based on tags with antitag
+d0499d5 Minor style improvements and UX tweaks
+4da6b11 FIX: Keep GUI alive when pressing convert. Fixes convert triggering before all extract files with vwait
+953a3dc GUI fix: Keep GUI alive when converting files in imagemagick
+9e99bb8 FIX: counter starts must start in -1
+44377d7 FIX: Sometimes tmp files are not deleted.
+4ca1955 FIX: Convert trows error. continue used outside loop.
+7bc939b CODE: add processHandlerFiles to event loop + Add: counter progessbar calculations fix Add. Control print cmd
+d40f139 CODE: clean up old todo comments
+1795f4a CODE: add makeOra to event loop
+3929b1e DOC: Added funcionts comments, version bump 2.0.1
+bc34d07 Enhance; Migrating to less dependant update code.
+c5a6736 FIX: Set ouput size when adding to tree one element at a time
+7b6dbc7 FIX: if wep lossy collision detected, extension uncorrectly set causing wrong format to output
+9e0c709 Dirty fix to remove update from loops
+a2b6a0a FIX: typo on file instructions
+3994f4c FIX: height cannot be set
+691f5c1 FIX: Resize can't set more than 9 resize sizes. Changed tiff to tif in extensions lists
+58dcfb5 FIX: Warning msg fails convert
+
+
+
+V2.0.0
+=======
+f7d20f5 - 2013-10-22 : Small fixes for V2.0.0 release
+8572084 - 2013-10-21 : FIX: Preview trows error if ora is selected as output format.
+5abe180 - 2013-10-21 : FIX: Label size selected, shows 1 size as selected when starting up
+ed12dee - 2013-10-18 : FIX #15 : Horizontal GUI: Version bump to 2.0.0
+4232f74 - 2013-10-18 : FIX #19 : Add Label fro sizes selected
+4695769 - 2013-10-18 : FIX #31 : Refresh output size on file load
+e1fd550 - 2013-10-18 : UPDATE: webp lossless options updated
+fe8dc3b - 2013-10-17 : FIX: uncommented exec line for ORA output ADD: webp extension to read extensions
+c8e3c2f - 2013-10-17 : FIX #26 : Add preview button to finetune output before the final run
+10172d7 - 2013-10-17 : FIX: Make height same as width if there is no equivalent size in list
+586c294 - 2013-10-17 : FIX #24 : Make ORA and Webp output available
+c559650 - 2013-10-17 : ADD: ORA support New pBarControl, manages creation, update, text and forget operation of progress bar
+562780e - 2013-10-16 : FIX #25 : Make slider values change depending on format
+21aea82 - 2013-10-16 : FIX: error if no resize selected ADD: function to control quality depending on extension
+8a96e38 - 2013-10-16 : FIX: convert uses same function to get sizes as the tree list, user will view exactly waht the convert function will use
+b78f024 - 2013-10-16 : FIX: final dimensions miss by a pixel FIX: Final size will NEVER be bigger than the width or height given by the user. Width and height are the limit.
+9b95835 - 2013-10-15 : Alters #28 TreeAlterValue reorganized to read a value a write to another key in dict and treeview. FIX: getOutputName now returns a string
+fcd3069 - 2013-10-15 : FIX: #28 Add visual cue for overwrite files
+02720f0 - 2013-10-15 : FIX #22 #15 Resize if selected folder tested. GUI horizontal Ok Fix: Total files not updating after adding files.
+f777d49 - 2013-10-15 : FIX #21 Use global array to keep widget names
+c6ea8e9 - 2013-10-14 : FIX: Always return size list in the order the user expects
+bef8601 - 2013-10-14 : FIX: Return sizes list with simple format.
+f0b95b7 - 2013-10-14 : FIX: Artscript does not ignore user supplied width and height
+62e3c1d - 2013-10-14 : FIX: Add output size column. It is not complete honest at the time as it shows enlargments (not yet supported)
+d071b2c - 2013-10-11 : FIX: Correct display of swatches declared
+caf0d09 - 2013-10-11 : FIX: Ora width and height reversed. Id column resized
+97dc4a5 - 2013-10-11 : FIX: Force range if tiles map is less than total of files
+f406e1b - 2013-10-10 : UX: improvements GUI appears as earlier as possible CODE: moved around some functions so improve speed
+aa584fe - 2013-10-10 : Recoded getFilesTotal and set fc counter as a global counter
+bfbaddf - 2013-10-10 : FIX: Filelist scrollbar trows error FIX: File filter would allow extensions ending in any character after the expected extension CODE cleanups
+048e888 - 2013-10-10 : CODE: Move variables to a proc in preparation to using an array
+a790220 - 2013-10-10 : Small code cleanup.
+b43cd21 - 2013-10-10 : FINISH: moving gui constructs inside procs
+a23853d - 2013-10-10 : FIX: Status pane declared as proc
+b7698fe - 2013-10-10 : FIX: Output panel, suffix an prefix called as procs
+ed35a9c - 2013-10-10 : FIX: middle panel and tabs called as procs
+8263e9e - 2013-10-10 : FIX: gui make watermark gui a function
+00082a4 - 2013-10-10 : FIX: Set theme to clam only if supported
+be872b0 - 2013-10-10 : FIX: top panel to function
+35568d1 - 2013-10-10 : FIX: Code clean up. write imagemagick functions only once
+ba0ebe5 - 2013-10-10 : FIX: TODO make identify a function
+4976834 - 2013-10-10 : USe namespace prefix instead of global declaration for hasgimp*
+97df074 - 2013-10-10 : Rename: namespace atku to artscript
+438aa58 - 2013-10-10 : CODE FIX: Remake parse option code to be easier to understand Moved to a separate function also
+4751ecc - 2013-10-09 : FIX: User presets are always called in global namespace FIX: Load another preset. # TODO Back to defaults
+ec50bbf - 2013-10-09 : FIX: Hide dot files in linux
+00d8819 - 2013-10-09 : Tweak unsharp methods on artscript 1 (softer)
+9fc2ba4 - 2013-10-09 : FIX: Artscript1 Crash if presets file present but empty  or fully commented out
+3919ac6 - 2013-10-09 : Fixes #16 : Check if list of presets its empty, return if it is
+3bc0ae8 - 2013-10-09 : FIX: suffixes moved to the top to allow user settings FIX: Default suffix position is empty on the top, not the bottom as is unnatural FIX: SVGparser checks the firs 30 lines for the wxh values.
+7022eb6 - 2013-10-08 : FIX: Correct output for files nested in folders FIX: parsing of files with spaces
+977d791 - 2013-10-08 : FIX: Do not fail if file has svg ext but it is not one.
+734d9c2 - 2013-10-08 : ADD: SVG parse instead of Inkscape call as it is unreliable to get the true sizes and really slow
+622faf1 - 2013-10-08 : FIX: size counter does not reset after 1st image
+03f250f - 2013-10-08 : added comment with future high quaility downscaling resize op It produces supreme quality at the cost of speed
+ccf6c0f - 2013-10-08 : Improved filter and unsharp methods.
+9d27d27 - 2013-10-08 : FIX: Counter reset is -1 not 0. Now progress bar grows from none to fill
+95d1e88 - 2013-10-08 : FIX: Output size now returned correctly
+f1643b9 - 2013-10-08 : FIX: Set suffix and prefix empt by default ADD: Control + Click to edit comboboxes. Also Right click works
+86fcd80 - 2013-10-08 : FIX: Do not delete from tree, but detach. This fixed an error if one deleted a file and then altered the tree values. Also allows for later reinsertion of deleted files
+791c74e - 2013-10-08 : FIX: Removed xcf thumbnail generation. its super SLOW
+10c3dd0 - 2013-10-08 : FIX: Progress bar now counts properly tmp files
+caf77be - 2013-10-08 : ADD: unsharp and colorspace changes to Artscript 1
+57f5e05 - 2013-10-08 : FIX: no size suffix for single resize FIX: Progress bar calculations
+fda9b2c - 2013-10-07 : FIX: Get final size ourselves instead of trusting imagemgick. this of course makes imposible to get dissorted images.
+b84ae8f - 2013-10-07 : FIXED small error that prevented convert to run. A typo
+39e4ffe - 2013-10-07 : Added legacy preset file loader
+e23785d - 2013-10-07 : Updated Watermark generation command. Dropdown blur looks better now
+4d603c0 - 2013-10-07 : Code organization a cleanup
+bfaa18a - 2013-10-07 : ADD: Convert functionality
+b424732 - 2013-10-07 : Added convert caligra inkscape and gimp function Moved parent/child checkboxes functions upper in the stack
+c194a69 - 2013-10-07 : Add. Get sizes for output function small check in getsizes from widget.
+5178a0d - 2013-10-07 : Add: watermark function working Fixed blur values Fixed dimensions of tmp images Added margin fro image and text. Fixed image opacity and blending modes.
+b87a63c - 2013-10-06 : Remove "safe" variable
+9750e6e - 2013-10-06 : FIX: outputname and suffix checkbox behaviour. Now output name column updates if suffix, prefix, format or allow rewrite are changed.
+506bb2d - 2013-10-05 : FIXED borked push
+a3c2919 - 2013-10-05 : Merge branch 'dev' of https://github.com/vanyossi/artscriptk into dev
+1a60f1e - 2013-10-05 : UPDATED: Readme files
+1542bde - 2013-10-05 : UPDATED: Readme files
+fbd1b76 - 2013-10-05 : ADD: adapt width and height columns depending on type of size selection. If percentage remove height value
+975ffbe - 2013-10-05 : FIX: validation to resize comboboxes
+3b978d7 - 2013-10-05 : ADD: Allow overwrite option. Artscript by default tries to avoid overwritting adding a numbered suffix. FIX: Changing format extension now updates the output name column
+113d1f9 - 2013-10-05 : FIX: Fixed function of add a suffix in case of collition
+80b3795 - 2013-10-05 : FIXED Bugs in resize checkbox behavior Added GUI for quality settings Other code fixes for dealing with progressbars
+4f7a08c - 2013-10-04 : ENHANCED/ FIX resize interface and value sets
+095c924 - 2013-10-04 : ADD: Resize widget interface with behaivour for multiple sizes
+752004c - 2013-10-04 : FIX: for checkbox proc to function, checkbox variable must be declared first
+f1f3131 - 2013-10-04 : FIX: Now itspossible to define a swatches list for wm
+a29f576 - 2013-10-04 : FIX: All watermark checkboxes in sync
+509a178 - 2013-10-03 : ADD: Suffix and prefix select options FIX: Output function simplified.
+da782a5 - 2013-10-03 : FIX: Color selector uses one canvas, swatches function set and backdrop color gets calculated based on luma contrast
+9b9a897 - 2013-10-03 : Added coments and TODO items
+cce4b9e - 2013-10-03 : Watermark paste from artscript 1
+145ebd6 - 2013-10-02 : FIX: Watermark GUI usability improved.
+7b84f48 - 2013-10-01 : FIX: watermark text scale steps ADD: window icon loader, place artscript icon in the same dir as the execution script to view the icon
+042f864 - 2013-10-01 : FIX: Error when file generates a thumbnail. for jpg png original item value deleted.
+3af9b3f - 2013-10-01 : GUI: added scale widgets for opacity
+5a27081 - 2013-10-01 : ADD: WAtermark text combobox can be edited using right click
+4beb26c - 2013-10-01 : Rename extension header to "ext" Add TODO items
+d9f0090 - 2013-10-01 : Added code comments
+4a117f6 - 2013-10-01 : Now the user can edit the input file list. Add: use the button at the top Delete: select the entries you wish to remove.
+00dcbd2 - 2013-10-01 : ADD: scroll trough tabs in notebook FIX: Canvas should react only to left button
+a6994b7 - 2013-10-01 : GUI: Watermark Style elements added
+398a2d7 - 2013-10-01 : BUGFIX: Protect files with white space when inserting to main tree
+f1a1dcf - 2013-10-01 : BUGFIX: Image watermark list only create a pair {name} {path} list instead of creating 2 lists
+622f59b - 2013-10-01 : Minor code reorganization
+57d923e - 2013-10-01 : Validate function now accepts arguments to add files to main dict This allows to call it for example to add files from events
+8f3d0ed - 2013-09-30 : GUI adjustments and organization
+2ba163d - 2013-09-30 : GUI reorganization and cleanup
+81c30fa - 2013-09-30 : BUGFIX: Don't call $program --version as it is very slow to load look for files in path using wich.
+867d3a8 - 2013-09-30 : BUGFIX: Get canvas size by selecting the first layer on multilayer xcf
+631c1ee - 2013-09-30 : FIX: Possible permanent loop if convert unable to make thumbnail FIX: Gimp caused infinite loop, path creation flawed was causing it FIX: Added complete gimp conversion to get preview. It's slow
+dd89a9b - 2013-09-30 : MINOR FIX: increase size of image frame to compensate margins
+71a6348 - 2013-09-30 : ADDED. artscript2 test file
+5cfea89 - 2013-09-30 : MINOR fix: checkbox ordering
+da2f031 - 2013-09-24 : BUGFIX: Image WM checkbox only available if image path is set
+
+
+
+

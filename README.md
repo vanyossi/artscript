@@ -1,165 +1,85 @@
 artscriptk
 ==========
 
-Artscript is a small app to easy convert from production file images(KRA,XCF,PSD,ORA,SVG) to universal formats(JPG, PNG, GIF or WEBM). If installed tt uses gimp, inkscape and calligra in console mode to render PNG files in batch. Finally ImageMagick to arrange and finetune the final images. Artscript is made for digital painters, as such it aims for high quality results, not speed.
+Artscript is, in essence, a small app (or big script) to easy convert production file images (KRA, XCF, PSD, ORA, SVG, PNG) to universal formats (JPG, PNG, GIF or WEBM).
 
+In between the production file and the final image you can decide many aspects of the final image. The final image can be of any size, or multiple, have a watermark placed, image or text, or a collection or images can be ensemble together to form a tiled image file (For more details read "How to use it" section below).
 
-#About
-*Script originally inspired by David Revoy (www.davidrevoy.com , info@davidrevoy.com )*
+Made with digital designers and painters in mind, the final images aim for high quality results, not speed. However the script remembers the last used settings to fasten deployment of several images made for a project at different moments in the preproduction stage.
 
-Imagemagick tools are used to scale, watermark and build image contact sheets(Collage Mode). It can accept all file formats supported by Imagemagick but for speed purposes I setted a filter for suggested input files.
+When working on several projects a presets.config is available to set more than one preset, so you can have a "personal" preset, with sizes tailored for your blog and a "Client work" with your personal information as a watermark label a proper size, or sizes, for the client needs.
 
-*Input file formats:* .ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tif .xcf .xpm .webp
+![Loaded artscritp GUI](http://colorathis.files.wordpress.com/2013/12/2013-12-11_1386804177.png)
 
-Output formats are configured for quality, for that reason not all formats are supported yet.
-*Output formats:* .jpg .png .gif .webm .webm(lossy)
+### How it works
+Artscript uses Imagemagick to output the final images. this creates a problem as  imagemagick does not support XCF, PSD, SVG or AI fully or KRA, ORA at all. So, if available on the system, artscritp will use Gimp and Inkscape to render the first formats and Calligraconverter for the last ones to PNG.
 
-There is a special output format mode to transform any image supported by Krita to ORA
-*Make ora suggested:* .psd .kra .png
+The resulting PNGs are then feed to Imagemagick to get the desired output. This has the great benefit of rendering the files exactly as you worked them.
 
-#### Goal
+Other input images supported are: BMP, DNG EXR GIF JPG TGA TIF XPM WEBP
+
+### Goal
 - Aid in the deploy of digital artwork for media with the best possible quality
-- Core Dependencies: imagemagick, tk 8.5, zip
-- Optional dependencies: calligraconverter, inkscape, gimp
-- Tested in: Xfce 4.10, thunar 1.4.0, dolphin and nautilus
 
-###License
+### License
 GPL 3.0
+
 ### Disclamer
+I'm a developer in training wheels. I have tested as much as possible but there might be some rough edges and bugs. I encourage you to report on the github project page.
 
-I'm not a developer, what you have is the product of learning programming on my spare time.
-There might be some rough edges and bugs and I encourage you to report them using github.
+Ok so… what do I need?
+----------------------
 
-I tested artscript2 as much as I could to avoid corrupted files and unwanted overwrites, but bad things could happen. You use it at your own risk.
+At the moment it only runs perfectly on Linux, as long as the dependencies are met. Future versions are planned for Windows and OSX.
 
 ### Dependencies
-
 - **Tcl/Tk:** 
 - **ImageMagick (6.7.5 and up):** Library for manipulating image formats.
 - **zip:** Get info from ORA and KRA files (width height and the likes)
-- **md5:** Read and generate thumbnails
 - **calligraconverter (optional):** Handles the extraction from ORA and KRA files to PNG. (Also does PSD if gimp is not present)
 - **inkscape (optional):** Handles mostly SVG and AI converts. If not found Imagemagick will perform SVG transforms
 - **gimp (optional):** Handles XCF and PSD extraction to PNG. If not found Imagemagick will perform XCF transforms
 
-
-### What it does
-In short, convert a bunch of images from format A to format B.
-
-The advantage over other applications is the integration of gimp, inkscape and calligraconvert to the batch actions.
-
-It's best used combined with a file manager (ex. thunar) or image manager (ex.geeqie) to quickly populate the file list from a selection. But it can be used standalone.
-
-It's perfect for batch preparing images before publishing (web for ex), create thumbnails or collage of images in the directory, for example
-
-# How to run it
-
-- Place script somewhere in your hard drive ( I choose /home/User/.scripts )
-- Make script executable if it isn't
-```  $sh: chmod u+x artscripttk.tcl ```
-- Run the script feeing files as arguments  
-```	$sh: /path/to/script/artscripttk.tcl file1.jpg file2.png file3.ora```
-- You can add a bash alias in ~/.bashrc file  
-```      alias artscript='~/path/to/script/artscript'```
-- And you can feed arguments using "xargs" feed pipe like  
-```	find . -name '*.png' -print0 | xargs -0 ~/path/to/script/artscript.tcl```
-- Or if you use an alias  
-```	find . -name '*.png' -print0 | xargs -0 bash -cil 'artscript "$@"' arg0```
-	
-## Use in Context Menus
-
-### XFCE
-
-1. Open thunar>Edit>Configure Custom Actions...  
-2. Add New action (+)  
-3. Select a Name, Description and Icon.  
-4. Add the next line to Command  
-     --> ```wish path/to/script/artscript.tcl %N```  
-5 In Apperance Conditions Tab, set '*' as file pattern and select  
-     Image files and Other files
-6. Other files is needed to make the dialog appear with .ora and .kra files  
-*The script filters input file by mimetype so its safe to set the Appearance Conditions to all kind of files.*
-7. A new submenu appears on right-click of Image Files
-8. Select files, right-click , select the item on the menu, use GUI.
+Detailed info: * [Installing Dependencies](https://github.com/vanyossi/artscriptk/wiki/Dependencies)
 
 
-### Gnome / Nautilus
+How to use it
+-------------
+The original idea, developed by by **David Revoy** (www.davidrevoy.com , info@davidrevoy.com), was about a small script to run from the file manager (dolphin, thunar nautilus) to quickly deploy the desired images. It can still be used like that, and some other ways are possible now.
 
-You will need "nautilus-actions" package installed.
-```sudo apt-get install nautilus-actions```
-```emerge nautilus-actions```
-etc...
+It can be used in the following ways
+* From the right click menu of your file manager (recommended)
+* From terminal. while it doesn't accept input from pipes you can feed the script using "xargs"
+* Standalone: the script can be launched as an application on it's own. adding files using the buttons or dragging and dropping files into the app window.
 
-Tested on liveCD Mint 13
+### How to run it
+* [In a context menu](https://github.com/vanyossi/artscriptk/wiki/Setting-a-context-menu)
+* [From the terminal](https://github.com/vanyossi/artscriptk/wiki/Using-from-command-line)
+* [As a standalone app](https://github.com/vanyossi/artscriptk/wiki/Using-as-Stand-alone-application)
 
-1. Open nautilus-actions (terminal 'nautilus-actions-config-tool')
-2. Click on the plus (+) symbol to add a new action. (or go to "file > add new action")
-3. On the action Tab set "Context Label" with "Artscript TCL"
-4. In the Command tab set "Path:" as "/path/to/script.tcl" (absolute path)
-5. In the same tab set "Parameters" as "%B"
-6. On mimetype set Mimetype filter as "*/*" and "must match one of "selected"
-7. Hit save.
-8. Restart nautilus (On the liveCD I had to)
-8. A new submenu appears "Nautilus-actions actions", click it, your action should be there.
-9. Select files, right-click , select the item on the menu, use GUI.
-10. To get "Artscriopt TCL" on root context menu, open "nautilus-actions-config-tool", in preferences "runtime preferences" uncheck "Create a root 'Nautilus actions' menu"
-
-(references
-http://techthrob.com/2009/03/02/howto-add-items-to-the-right-click-menu-in-nautilus/
-http://www.howtogeek.com/116807/how-to-easily-add-custom-right-click-options-to-ubuntus-file-manager/
-)
+Artscript usage
+---------------
+Below you will find the detailed instructions on how to use the script to add your watermarks, do multi-resize operations, making collages as well as the configuration options available.
 
 
-### KDE
-Inside the KDE folder there is a file "arscript.desktop" tailored to use in Dolphin
-
-1. Verify that ServiceMenus folder exists in ~/.kde/share/kde4/services/ServiceMenus (it can also be inside ~/.kde4/ or some variants) 
-2. If ServiceMenus does not exist, create it.  
-3. Copy "artscript.desktop" and "artscript.tcl" into ~/.kde/share/kde4/services/ServiceMenus. 
-4. Open "artscript.desktop" with a text editor and check that the line "Exec=" points to the correct folder. (on my computer there is no .kde/ folder, it is called .kde4/ )
-5. Go to Dolphin and right click an image. "Artscript TCL" menu should be available.
-6. If it hasn't appear, check that file paths are correct and that "artscript.tcl" is executable
-7. If you have the menu you are ready to use
-8. Select files, right-click , select the item on the menu, use GUI.
-
-As an alternative place for installation, you could place the "arscript.desktop" file inside "~/.local/share/applications" and place the script anywhere in your file system. Edit desktoip file to point to actual place in filesystem. I recommend using the ServiceMenus directory to keep everything organized.
+* [Managing images](https://github.com/vanyossi/artscriptk/wiki/Managing-images)
+* [Add watermarks](https	://github.com/vanyossi/artscriptk/wiki/Add-a-Watermark)
+* [Resizing](https://github.com/vanyossi/artscriptk/wiki/Resizing)
+* [Assembling a Collage](https://github.com/vanyossi/artscriptk/wiki/Assembling-a-Collage)
+* [Preparing the output](https://github.com/vanyossi/artscriptk/wiki/Preparing-the-output)
+* [Convert](https://github.com/vanyossi/artscriptk/wiki/Convert)
 
 
-# Usage GUI
+Personalizing the script
+------------------------
+The file called **presets.config.example** in the root folder has all the information you need to configure the default values.
 
-All comboboxes can be edited pressing "Right CLick" to enter edit mode
-
-### Watermark
-- Select any preset, (you can edit text field)
-- Set size, position and opacity of the waterarks options selected
-- At the bottom the styles options are located. Color is for text color and Image blend mode defines how to combine the image pixels in the picture, I recomend Over, Multiply and Overlay
-
-### Size
-*By default resize is off:*
-- Press + to add a new size.
-- Size is organized as width x height.
-- Selecting a Width value automatically selects the same value in the height box.
-- Always set the widht first.
-- Artscript can do multiple resize in the same operation. Add more sizes at will.
-
-### Prefix and Suffix
-- Left box corresponds to prefix, Box at the right is suffix
-- Select Any value to activate it.
-- Right click to edit the text in the box selected. (The edit will be lost if you select another list value)
-- The string will join with an underscore with the original name
-
-### Output format 
-- Select an output extension
-- Only rename will ignore the extension setting since no convert will be done.
-
-Press Convert to Run options
-
-### Collage 
-- To make a Collage go to Collage tab and set the Make collage checkbox to Active mode, color green.
-- Collage will generate a Tiled image containing all selected images. It will add a watermark if you selected one.
+Rename **presets.config.example** to **presets.config** to allow the script to find it. The file must be next to the script to be found.
 
 
-# Customize:  
-- Do not modify "artscript.tcl" file. Set your values using the presets file.
-
-
+Artscript remembers
+-------------------
+Artscript has an option to remember the choices you made the previuous run. It is off buy default. Activation is done in **presets.config** file. Search for the key remember_state and change the value to 1
+```
+remember_state=1
+```
