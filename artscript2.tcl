@@ -1620,7 +1620,7 @@ proc addPresetBrowser { w } {
 
 	ttk::button $w.preset.add -text "+" -image [list $::plus_normal active $::plus_g focus $::plus_g] -padding {2 0} -style small.TButton -command {sizeTreeAddPreset [$::widget_name(size_preset_list) get]}
 	
-	ttk::combobox $w.set_sizes.size -state readonly
+	set ::widget_name(size_preset_list_items) [ttk::combobox $w.set_sizes.size -state readonly]
 	bind $w.set_sizes.size <<ComboboxSelected>> [list sizeEdit %W]
 	ttk::button $w.set_sizes.add -text "+" -image [list $::plus_normal active $::plus_g focus $::plus_g] -padding {2 0} -style small.TButton -command [list sizeTreeAddPresetChild $w.set_sizes.size]
 	
@@ -1820,6 +1820,7 @@ proc tabResize { st } {
 	pack [sizeTreeOps $st.rgt.size_ops ] -fill x
 	pack [sizeTreeList $st.rgt.size_tree] -expand 1 -fill both
 
+	sizeSetPreset $::widget_name(size_preset_list) $::widget_name(size_preset_list_items)
 	return $st
 }
 
