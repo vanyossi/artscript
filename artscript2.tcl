@@ -2843,10 +2843,10 @@ proc makeOra { index ilist } {
 			pBarControl "Oraizing... $name" update
 
 			set outname [file join [file dirname $path] $output]
-			catch { exec calligraconverter --batch -- $path $outname } msg
+			set Cmd [list calligraconverter --batch -- $path $outname]
+			runCommand $Cmd [list makeOra $index $ilist]
 		}
 	}
-	after idle [list after 0 [list makeOra $index $ilist]]
 	return
 }
 
