@@ -2733,6 +2733,7 @@ proc renameFiles { {index 0} {step 0} } {
 			if {$id eq {}} {
 				pBarControl "Rename Images Done!" forget 600
 				puts "Rename done."
+				afterConvert "Renaming" $index
 				return
 			}
 
@@ -2832,6 +2833,7 @@ proc makeOra { index ilist } {
 	
 	if { $idnumber eq {} } {
 		pBarControl "ORA Image Files Ready!" forget 600
+		afterConvert "Make Ora" $index
 		return
 	}
 	
@@ -3001,7 +3003,8 @@ proc doConvert { files {step 1} args } {
 					dict unset ::inputfiles $i
 				}
 				set ::artscript_convert(collage_ids) {}
-			}	
+			}
+			afterConvert "Convert" $::artscript_convert(count)
 			return
 		}
 		
@@ -3079,6 +3082,14 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 	pBarUpdate $::widget_name(pbar-main) cur max [expr {([llength $::artscript_convert(files)] + $::artscript_convert(total_renders)) * [llength [getFinalSizelist]]}] current -1
 	
 	do$type $::artscript_convert(files) 0 preview $preview
+}
+
+proc afterConvert { type n } {
+	incr n -1
+	set message [format {Artscript %1$s finished %2$s images processed} $type "\n$n" ]
+	if {[catch {exec notify-send -i [file join $::artscript(dir) icons "artscript.gif"] -t 4000 $message}]} {
+		tk_messageBox -type ok -icon info -title "Operations Done" -message $message
+	}
 }
 
 proc artscriptWidgetCatalogue {} {
@@ -3238,7 +3249,7 @@ wm protocol . WM_DELETE_WINDOW { artscriptSaveOnExit }
 bind . <Control-q> { artscriptSaveOnExit }
 
 # We test if icon exist before addin it to the wm
-set wmiconpath [file join [file dirname [info script]] icons "artscript.gif"]
+set wmiconpath [file join $::artscript(dir) icons "artscript.gif"]
 if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 	wm iconphoto . -default $wmicon
 }
