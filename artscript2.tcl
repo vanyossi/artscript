@@ -1610,7 +1610,7 @@ proc addPresetBrowser { w } {
 	ttk::frame $w.preset
 	ttk::frame $w.set_sizes
 	
-	ttk::label $w.preset.browser -text "Browse presets"
+	ttk::label $w.preset.browser -text "Browse collections" -padding {0 0 8}
 
 	set presets [lsort [getArrayNamesIfValue ::sizes_set]]
 
