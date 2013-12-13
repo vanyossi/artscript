@@ -1559,7 +1559,7 @@ proc sizeTreeAdd { size {sel "selected"} {state "on"} } {
 proc addSizeBox { w name } {
 	ttk::frame $w
 	
-	set ratiovals {1:1 1.4142 2:1 3:2 4:3 5:4 5:7 8:5 1.618 16:9 16:10 14:11 12:6 2.35 2.40}
+	set ratiovals {{} 1:1 1.4142 2:1 3:2 4:3 5:4 5:7 8:5 1.618 16:9 16:10 14:11 12:6 2.35 2.40}
 	set ::widget_name(${name}_ratio) [ttk::combobox $w.rat -width 6 -state readonly -values $ratiovals -validate key -validatecommand { regexp {^(()|[0-9])+(()|(\.)|(:))?(([0-9])+|())$} %P } ]
 	comboBoxEditEvents $w.rat [list sizeAlter $w wid $name]
 	
