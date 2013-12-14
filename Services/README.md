@@ -2,9 +2,11 @@ artscript Services
 ==========
 
 ## Files
+```
 Artscript                    Nautilus >=3.10 context menu
 artscript.desktop            Dolphin KDE desktop action service
 artscript.nemo_action        Nemo context menu
+```
 
 ## How to install
 Thanks to David Revoy for making and testing the files for Nemo and Nautilus
