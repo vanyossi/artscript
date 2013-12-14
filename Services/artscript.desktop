@@ -10,4 +10,4 @@ TryExec=convert
 [Desktop Action artscript]
 Name=Artscript Tcl
 Icon=view-catalog
-Exec=~/.kde/share/kde4/services/ServiceMenus/artscript.tcl %F
+Exec=/path/to/artscriptk/artscript2.tcl/ %F

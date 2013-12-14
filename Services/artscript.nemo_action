@@ -1,0 +1,7 @@
+[Nemo Action]
+Active=true
+Name=Artscript
+Comment=send file to artscript
+Exec=/path/to/artscriptk/artscript2.tcl %F
+Selection=any
+Extensions=ora;kra;png;jpg;jpeg;bmp;psd;tiff;xbm;xpm;bmp;pdf;svg;

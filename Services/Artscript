@@ -1,0 +1,11 @@
+#!/bin/bash
+# Artscript right click context menu for Nautilus 3.10
+# version Nov2013
+
+# Check if we have selected any files...
+if [ -z "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" ]; then
+        $ZENITY --error --text="No files selected"
+        exit 0;
+fi
+
+/path/to/artscriptk/artscript2.tcl/ $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS

@@ -1,20 +1,43 @@
-artscriptk
+artscript Services
 ==========
 
+## Files
+Artscript                    Nautilus >=3.10 context menu
+artscript.desktop            Dolphin KDE desktop action service
+artscript.nemo_action        Nemo context menu
+
 ## How to install
+Thanks to David Revoy for making and testing the files for Nemo and Nautilus
+Up to date information: [Adding artscript as a context menu](https://github.com/vanyossi/artscriptk/wiki/Setting-a-context-menu)
 
-* KDE
-Inside the KD folder there is a file "arscript.desktop" tailored to use in Dolphin
+### Nemo
+1. Copy the file ```Artscript.nemo_action``` to ```~/.local/share/nemo/actions/```
+2. Open file and edit the line containing
+```
+Exec=/path/to/artscriptk/artscript2.tcl %F
+```
+3. Change ```/path/to/artscript/``` to the actual path where you installed artscript2.tcl
+4. From Cinnamon file explorer: right-click to view the new entry.
 
-1. Verify that ServiceMenus folder exists in ~/.kde/share/kde4/services/ServiceMenus (it can also be inside ~/.kde4/ or some variants) 
-2. If ServiceMenus does not exist, create it.  
-3. Copy "artscript.desktop" and "artscript.tcl" into ~/.kde/share/kde4/services/ServiceMenus. 
-4. Open "artscript.desktop" with a text editor and check that the line "Exec=" points to the correct folder. (on my computer there is no .kde/ folder, it is called .kde4/ )
-5. Go to Dolphin and right click an image. "Artscript TCL" menu should be available.
-6. If it hasn't appear, check that file paths are correct and that "artscript.tcl" is executable
-7. If you have the menu you are ready to use
-8. Select files, right-click , select the item on the menu, use GUI.
+### Nautilus 3.10
+1. Copy the file ```Artscript``` to ```~/.local/share/nautilus/scripts/```
+2. Open file and edit the last line
+```
+/path/to/artscriptk/artscript2.tcl/ $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS
+```
+3. Change ```/path/to/artscript/``` to the actual path where you installed artscript2.tcl
+4. After doing that in Nautilus: right click ( Script > Artscript )
 
-As an alternative place for installation, you could place the "arscript.desktop" file inside "~/.local/share/applications" and place the script anywhere in your file system. Edit desktoip file to point to actual place in filesystem. I recommend using the ServiceMenus directory to keep everything organized.
+### Dolphin KDE
+1. Copy the file ```artscript.desktop``` to ```~/.kde/share/kde4/services/ServiceMenus```
+2. Open file and edit the line containing
+```
+Exec=/path/to/artscriptk/artscript2.tcl %F
+```
+3. Change ```/path/to/artscript/``` to the actual path where you installed artscript2.tcl
+4. From Dolphin file explorer: right-click > Artscript.
+
+### Thunar
+[Wiki page Xfce menu](https://github.com/vanyossi/artscriptk/wiki/Setting-a-context-menu#xfce)
 
 
