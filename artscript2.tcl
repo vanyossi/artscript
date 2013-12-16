@@ -147,6 +147,7 @@ proc validate {program} {
 	foreach place [split $::env(PATH) {:}] {
 		expr { [file exists [file join $place $program]] == 1 ? [return 1] : [continue] }
 	}
+	puts "$program not found"
 	return 0
 }
 
@@ -310,63 +311,55 @@ proc listValidate { ltoval } {
 			continue
 		}
 		set filext [string tolower [file extension $i] ]
-		set iname [file tail $i]
+		set msg {artscript_ok}
 
-		if { [regexp {^(.xcf|.psd)$} $filext ] && $::hasgimp } {
-
-			if {$filext eq {.xcf}}  {
-				binary scan [readFileHead $i 2] A14II f w h
-			} else {
-				binary scan [readFileHead $i 2] a4S1A6S1II f s t fo h w
-				if {$s != 1} { continue }
+		# Get initial data to validate filetype
+		switch -- $filext {
+			.xcf     { binary scan [readFileHead $i 2] A14II f w h }
+			.psd     { binary scan [readFileHead $i 2] a4S1A6S1II f s t fo h w
+				if {$s != 1} { set msg "$i not a valid PSD file" }
+			} 
+			.ora     -
+			.kra     { if { ![catch {set size [getOraKraSize $i $filext]} msg]} { set msg {artscript_ok} } }
+			.svg     { set lines [readFileHead $i 34] }
+			.ai      { binary scan [readFileHead $i 34] a10h18a145h14a2000 f s t fo lines 
+				if {![string match %PDF* $f]} { continue }
 			}
-			set size [format {%dx%d} $w $h]
-			setDictEntries $::fc $i $size $filext "g"
-			incr ::fc
-			continue
-
-		} elseif { [regexp {^(.svg|.ai)$} $filext ] && $::hasinkscape } {
-
-			if {$filext eq {.ai}} {
-				binary scan [readFileHead $i 34] a10h18a145h14a2000 f s t fo lines
-				if {![string match %PDF* $f]} {
-					puts "$f file not supported in v2"
-					continue
-				}
-			} else {
-				set lines [readFileHead $i 34]
-			}
-				
-			set size [getWidthHeightSVG $lines]
-			if { $size == 0 } {
-				continue
-			}
-			setDictEntries $::fc $i $size $filext "i"
-			incr ::fc
-			continue
-
-		} elseif { [regexp {^(.kra|.ora|.xcf|.psd)$} $filext ] && $::hascalligra } {
-
-			if { [catch {set size [getOraKraSize $i $filext]} msg ] } {
-				puts $msg
-				continue
-			}
-			setDictEntries $::fc $i $size $filext "k"
-			incr ::fc
-			continue
-
-		# Catch magick errors. Some files have the extension but are not valid types
-		# And check for files with no extension with IM identify
-		} elseif { [lsearch $::ext $filext ] >= 0 || [string equal $filext {}] } {
-			if { [catch {set finfo [identifyFile $i ] } msg ] } {
-				puts $msg
-				continue
-			}
-			set size [dict get $finfo size]
-			set ext [dict get $finfo ext]
-			setDictEntries $::fc $i $size $ext "m"
-			incr ::fc
+			default  { if { ![catch {set finfo [identifyFile $i ] } msg]} { set msg {artscript_ok} } }
 		}
+		# If msg carries error, print and skip next phase
+		if { $msg != "artscript_ok" } { 
+			puts $msg 
+			continue
+		}
+		# Parse data into size and converter program
+		switch -- $filext {
+			.xcf     -
+			.psd     {
+				set handler [expr {$::hasgimp ? "g" : "k"}]
+				set size [format {%dx%d} $w $h]
+			} 
+			.ora     { set handler [expr {$::hasgimp ? "g" : "k"}] }
+			.kra     { set handler [expr {$::hascalligra ? "k" : ""}]}
+			.svg     -
+			.ai      { 
+				set size [getWidthHeightSVG $lines]
+				set handler [expr {$::hasinkscape ? "i" : ""}]
+			}
+			default  {
+				set size [dict get $finfo size]
+				set ext [dict get $finfo ext]
+				set handler "m"
+			}
+		}
+		# Confirm calligra is available if not, do not add to list
+		if { $handler eq "k" && !$::hascalligra } {
+			set handler {}
+		}
+		if { $size == 0 || $handler eq {} } { continue }
+
+		setDictEntries $::fc $i $size $filext $handler
+		incr ::fc
 	}
 }
 
