@@ -2907,9 +2907,15 @@ proc processHandlerFiles { index ilist {step 1}} {
 			if { $handler($imgv) == {g} } {
 				puts "Rendering Gimps"
 				set i $id(path)
-				set cmd "(let* ( (image (car (gimp-file-load 1 \"$i\" \"$i\"))) (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE))) ) (gimp-file-save 1 image drawable \"$outname\" \"$outname\") )(gimp-quit 0)"
+				set cmd [format {(let* (
+					(image (car (gimp-file-load 1 "%1$s" "%1$s")))
+					(gimp-image-convert-rgb image)
+					(drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE)))
+					)
+					(file-png-save-defaults 1 image drawable "%2$s" "%2$s"))(gimp-quit 0)} $i $outname]
 				#run gimp command, it depends on file extension to do transforms.
-				set extractCmd [list gimp -i -b $cmd]
+				# puts $cmd
+				set extractCmd [list gimp -i -b "$cmd"]
 			}
 			if { $handler($imgv) == {i} } {
 				puts "Rendering Ink Scapes"
