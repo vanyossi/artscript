@@ -2703,7 +2703,7 @@ proc getResize { size dsize } {
 proc getQuality { ext } {
 	switch -glob -- $ext {
 		jp*g	{ set quality "-sampling-factor 1x1,1x,1x1 -quality $::artscript(image_quality)" }
-		png	{ set quality "-type TrueColorMatte -define png:format=png32 -define png:compression-level=$::artscript(image_quality) -define png:compresion-filter=4" }
+		png	{ set quality "-type TrueColorMatte -define png:format=png32 -define png:compression-level=$::artscript(image_quality) -define png:compression-filter=8" }
 		gif	{ set quality "-channel RGBA -separate \( +clone -dither FloydSteinberg -remap pattern:gray50 \) +swap +delete -combine -channel RGB -dither FloydSteinberg -colors $::artscript(image_quality)" }
 		webp { set quality "-quality $::artscript(image_quality) -define webp:auto-filter=true -define webp:lossless=true -define webp:method=5" }
 		webp* { set quality "-quality $::artscript(image_quality) -define webp:auto-filter=true -define webp:lossless=false -define webp:alpha-quality=100"}
