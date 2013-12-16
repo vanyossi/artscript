@@ -2917,8 +2917,8 @@ proc processHandlerFiles { index ilist {step 1}} {
 				set extractCmd [list inkscape $id(path) -z -C -d 90 -e $outname]
 			}
 			if { $handler($imgv) == {k} } {
-				puts "Rendering Kriters: Calligraconvert always return errors!"
-				set extractCmd [list calligraconverter --batch -- $id(path) $outname]
+				puts "Rendering Kriters"
+				set extractCmd [list calligraconverter --mimetype "image/png" --batch -- $id(path) $outname]
 			}
 			runCommand $extractCmd [list relauchHandler $index $ilist]
 		} else {
