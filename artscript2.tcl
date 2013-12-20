@@ -1635,19 +1635,18 @@ proc sizeTreeList { w } {
 	set size_tree_colname {size}
 	set ::widget_name(resize_tree) [ttk::treeview $w.sizetree -columns $size_tree_colname -height 5 -yscrollcommand "$w.sscrl set"]
 	foreach tag {selected nonselected} {
-		$w.sizetree tag bind $tag <Button-1> { sizeTreeToggle %W [%W selection] %x %y }
+		$w.sizetree tag bind $tag <Button-1> { sizeTreeToggleClick %W [%W selection] %x %y }
 	}
-	foreach key {<KP_Add> <plus> <a>} {
-		bind $w.sizetree $key { sizeTreeSetTag %W [%W selection] selected }
+	foreach add_key {<KP_Add> <plus> <a>} del_key {<KP_Subtract> <minus> <d>} {
+		bind $w.sizetree $add_key { sizeTreeSetTag %W [%W selection] selected }
+		bind $w.sizetree $del_key { sizeTreeSetTag %W [%W selection] nonselected }
 	}
-	foreach key {<KP_Subtract> <minus> <d>} {
-		bind $w.sizetree $key { sizeTreeSetTag %W [%W selection] nonselected }
-	}
+
 	bind $w.sizetree <Control-a> { %W selection add [%W children {}] }
 	bind $w.sizetree <Control-d> { %W selection remove [%W children {}] }
 	bind $w.sizetree <Control-i> { %W selection toggle [%W children {}] }
 	bind $w.sizetree <Key-Delete> { sizeTreeDelete [%W selection] }
-	bind $w.sizetree <KeyRelease> { eventSize }
+	bind $w.sizetree <x> { sizeTreeDelete [%W selection] }
 
 	ttk::scrollbar $w.sscrl -orient vertical -command [list $w.sizetree yview ]
 	
@@ -1661,7 +1660,6 @@ proc sizeTreeList { w } {
 		set name [string totitle $col]
 		$w.sizetree heading $col -text $name -command [list treeSort $w.sizetree $col 0 ]
 	}
-	
     $w.sizetree tag configure selected -image $::img_on
     $w.sizetree tag configure nonselected -image $::img_off
 
@@ -1669,29 +1667,17 @@ proc sizeTreeList { w } {
 }
 # Selects size for processing, setting tag as selected
 # w = widget name, sel = item ids, x = pointer x coordinate, y = yposition
-proc sizeTreeToggle { w sel {x 0} {y 0} } {
-	if {$x == 0} {
-		set id $sel
-	} else {
-		set element [$w identify element $x $y]
-		#Only change image if we press over it (check box)
-		if { $element ne "image" } {
-			return
-		}
+proc sizeTreeToggleClick { w sel {x 0} {y 0} } {
+	#Only change image if we press over it (check box)
+	if { [$w identify element $x $y] eq "image" } {
 		set id [$w identify item $x $y]
+		set val [$w set $id size]
+		set state [expr {$::sdict($val) eq "on"}]
+		set tag [expr {$state ? "nonselected" : "selected"}]
+		set ::sdict($val) [expr {$state ? "off" : "on"}]
+		sizeTreeSetTag $w $id $tag
 	}
-	foreach el $id {
-		set val [$w set $el size]
-		if { $::sdict($val) eq "on" } {
-			set ::sdict($val) {off}
-			set tag nonselected
-		} else {
-			set ::sdict($val) {on}
-			set tag selected
-		}
-		$w item [set ::sdict_$val] -tag $tag
-	}
-	eventSize
+	return
 }
 # Sets selected tag to given treeview ids
 # w = target widget, id = list of ids, tag = tag to place
@@ -1701,6 +1687,7 @@ proc sizeTreeSetTag { w id tag } {
 		set val [$w set $el size]
 		$w item [set ::sdict_$val] -tag $tag
 	}
+	eventSize
 }
 # Deletes sizes from sizeTree and unsets from array
 proc sizeTreeDelete { sizes } {
