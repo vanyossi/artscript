@@ -1403,7 +1403,7 @@ proc sizeToggleWidgetWxH { size {name "resize"} } {
 		pack $w.hei -side left -after $w.xmu
 		$w.hei state !disabled
 		$w.xmu configure -text "x" -anchor center
-		bind $w.xmu <Button> [list sizeAlterRatio $name]
+		bind $w.xmu <Button> [list toggleRatio $name]
 		set size [list wid $width hei $height]
 
 	} elseif { $sep eq "%"} {
@@ -1437,25 +1437,39 @@ proc sizeRatioToFloat { w } {
 	}
 	return $ratio
 }
-# Flips width and heigth field values and sets a new ratio if it's set
-proc sizeAlterRatio { name } {
-	set wid [$::widget_name(${name}_wid) get]
-	set hei [$::widget_name(${name}_hei) get]
-	
-	if { ($wid eq {}) || ($hei eq {}) } {
-		return 0
-	}
-	$::widget_name(${name}_wid) set $hei
-	$::widget_name(${name}_hei) set $wid
-	
-	# Get current ratio, calculate new ratio, else format 2:3, reverse
+# Calculate current ratio for the given values. if ratio format 1:2, flips values 2:1
+proc sizeAlterRatio { name args } {
+	foreach {key value} $args { set $key $value }
 	set rawratio [$::widget_name(${name}_ratio) get]
-	if { ($rawratio ne {}) && ([string is double $rawratio]) } {
+	
+	if { [info exist setratio] || (($rawratio ne {}) && ([string is double $rawratio])) } {
 		set ratio [expr {[format "%.1f" $hei] / $wid}]
 		$::widget_name(${name}_ratio) set $ratio
 	} else {
 		$::widget_name(${name}_ratio) set [join [lreverse [split $rawratio {:}]] {:}]
 	}
+}
+# Flips width and heigth field values and sets a new ratio if it's set
+proc toggleRatio { name } {
+	if { ![catch {lassign [getWidthAndHeight $name] wid hei}] } {
+		$::widget_name(${name}_wid) set $hei
+		$::widget_name(${name}_hei) set $wid
+		sizeAlterRatio $name wid $wid hei $hei
+	}
+}
+# set calculated ratio value
+proc setRatio { name } {
+	if { ![catch {lassign [getWidthAndHeight $name] wid hei}] } {
+		sizeAlterRatio $name wid $hei hei $wid setratio 1
+	}
+}
+# get current wid and hei value from "name" widgets
+proc getWidthAndHeight { name } {
+	lassign [list [$::widget_name(${name}_wid) get] [$::widget_name(${name}_hei) get]] wid hei
+	if { ($wid eq {}) || ($hei eq {}) } {
+		return -code error "Width or Height: empty"
+	}
+	return [list $wid $hei]
 }
 
 # Changes dimension, width or height in respect to Aspect ratio
@@ -1556,7 +1570,7 @@ proc addSizeBox { w name } {
 	set ::widget_name(${name}_ratio) [ttk::combobox $w.rat -width 6 -state readonly -values $ratiovals -validate key -validatecommand { regexp {^(()|[0-9])+(()|(\.)|(:))?(([0-9])+|())$} %P } ]
 	comboBoxEditEvents $w.rat [list sizeAlter $w wid $name]
 	
-	ttk::label $w.lwxh -text ":" -font "-size 18" -anchor center
+	ttk::label $w.lwxh -text " : " -font "-size 18" -anchor center -cursor hand1
 	set ::widget_name(${name}_wid) [ ttk::spinbox $w.wid -width 5 -increment 10 -from 1 -to 5000 \
 	  -validate key -validatecommand { regexp {^(()|[0-9])+(()|%%)$} %P } ]
 	bind $::widget_name(${name}_wid) <ButtonRelease> [list sizeAlter $w wid $name]
@@ -1572,9 +1586,10 @@ proc addSizeBox { w name } {
 		bind $::widget_name(${name}_hei) $bind_key [list $w.hei configure -increment $inc]
 	}
 
-	ttk::label $w.xmu -text "x" -font "-size 18" -anchor center
+	ttk::label $w.xmu -text "x" -font "-size 18" -anchor center -cursor hand1
 	ttk::label $w.empty
-	bind $w.xmu <Button> [list sizeAlterRatio $name]
+	bind $w.xmu <Button> [list toggleRatio $name]
+	bind $w.lwxh <Button> [list setRatio $name]
 
 	pack $w.rat $w.lwxh $w.wid $w.xmu $w.hei $w.empty -side left -fill x
 	pack configure $w.empty -expand 1
