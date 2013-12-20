@@ -1567,6 +1567,11 @@ proc addSizeBox { w name } {
 	bind $::widget_name(${name}_hei) <ButtonRelease> [list sizeAlter $w hei $name]
 	bind $::widget_name(${name}_hei) <KeyRelease> [list sizeAlter $w hei $name]
 	
+	foreach bind_key {<ButtonPress> <Shift-ButtonPress> <Shift-Alt-ButtonPress>} inc {10 1 100} {
+		bind $::widget_name(${name}_wid) $bind_key [list $w.wid configure -increment $inc]
+		bind $::widget_name(${name}_hei) $bind_key [list $w.hei configure -increment $inc]
+	}
+
 	ttk::label $w.xmu -text "x" -font "-size 18" -anchor center
 	ttk::label $w.empty
 	bind $w.xmu <Button> [list sizeAlterRatio $name]
