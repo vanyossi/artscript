@@ -47,7 +47,10 @@ proc tkdndLoad {} {
 	}
 	return -code ok
 }
-package require md5
+catch {package require md5}
+
+::msgcat::mclocale $::env(LANG)
+::msgcat::mcload [file join $::artscript(dir) msg]
 
 # Declare default values for setting vars
 proc artscriptSettings {} {
@@ -78,11 +81,11 @@ proc artscriptSettings {} {
 		]
 	#Sizes
 	set siz_settings [dict create \
-		sizes_set(wallpaper) [list "2560x1440" "1920x1080" "1680x1050" "1366x768" "1280x1024" "1280x720" "1024x768"] \
-		sizes_set(percentage) "90% 80% 50% 25%" \
-		sizes_set(icon) "128x128 96x96 48x48 36x36" \
-		sizes_set(texture) "256x256 512x512" \
-		sizes_set(default) "" \
+		sizes_set([mc "wallpaper"]) [list "2560x1440" "1920x1080" "1680x1050" "1366x768" "1280x1024" "1280x720" "1024x768"] \
+		sizes_set([mc "percentage"]) "90% 80% 50% 25%" \
+		sizes_set([mc "icon"]) "128x128 96x96 48x48 36x36" \
+		sizes_set([mc "texture"]) "256x256 512x512" \
+		sizes_set([mc "default"]) "" \
 	]
 	#Collage
 	set col_settings [dict create \
@@ -375,8 +378,8 @@ proc getUserPresets {} {
 
 	if { [file exists $configfile] } {
 		puts [mc "Configuration file found in %s" $configfile]
-		puts [mc "Presets config name keys changed drastically from v2.0 to 2.1\n \
-	If your presets does not load please review presets.config.example file to check the new names."]
+		puts [mc "Presets config name keys changed drastically from v2.0 to 2.1 \
+		If your presets does not load please review presets.config.example file to check the new names."]
 
 		set File [open $configfile r]
 		#read each line of File and store "key=value"
@@ -469,7 +472,7 @@ proc getFilesTotal { { get_del 0} } {
 }
 
 proc updateWinTitle { } {
-	wm title . [mc { Artscript %1$s -- %2$s Files selected } $::version [getFilesTotal]]
+	wm title . [mc {Artscript %1$s -- %2$s Files selected} $::version [getFilesTotal]]
 }
 
 # Returns a list of ids of all elements that have args string in value
@@ -1054,11 +1057,11 @@ proc guiFileList { w } {
 
 	lassign [list $w.flist.tree.files $w.flist.tree.sscrl] tree_files tree_scroll
 
-	array set header_strings [list id [mc "ID"] ext [mc "ext."] input [mc "Input"] size [mc "Size"] output [mc "Output"] osize [mc "Size out"]]
-	set fileheaders { id ext input size output osize }
+	set header_strings [dict create id [mc "ID"] ext [mc "ext."] input [mc "Input"] size [mc "Size"] output [mc "Output"] osize [mc "Size out"] ]
+	set fileheaders [dict keys $header_strings]
 	set ::widget_name(flist) [ttk::treeview $tree_files -columns $fileheaders -show headings -yscrollcommand "$tree_scroll set"]
 	foreach col $fileheaders {
-		$tree_files heading $col -text $header_strings($col) -command [list treeSort $tree_files $col 0 ]
+		$tree_files heading $col -text [dict get $header_strings $col] -command [list treeSort $tree_files $col 0 ]
 	}
 	$tree_files column id -width 32 -stretch 0
 	$tree_files column ext -width 48 -stretch 0
@@ -1100,21 +1103,23 @@ proc guiTabCheckbox {w previous selected} {
 }
 proc guiTabToggleCheck {args} {
 	set vals {*}$args
+	set tabnames [dict create $::atk_msg(tab_watermark) Watermark $::atk_msg(tab_resize) Resize  $::atk_msg(tab_collage) Collage ]
 	dict with vals {
 		if {$::tab_on == ${-image}} {
 			set image {}
 		} else {
 			set image $::tab_on
 		}
-		$::option_tab tab $::widget_name(tab_${-text}) -image $image
+		set tab_name [dict get $tabnames ${-text}]
+		$::option_tab tab $::widget_name(tab_${tab_name}) -image $image
 		set bool [expr {$image eq {} ? 0 : 1}]
-		switch -exact -- ${-text} {
-			{mc "Collage"} {
+		switch -exact -- $tab_name {
+			"Collage" {
 				set ::artscript(select_collage) $bool
 				eventCollage
 			}
-			{mc "Resize"}   { set ::artscript(select_size) $bool }
-			{mc "Watermark"} { eventWatermark parent              }
+			"Resize"   { set ::artscript(select_size) $bool }
+			"Watermark" { eventWatermark parent              }
 		}
 	}
 }
@@ -1125,6 +1130,10 @@ proc guiOptionTabs { w } {
 	
 	bind $w <ButtonPress-4> { scrollTabs %W [%W index current] 1 }
 	bind $w <ButtonPress-5> { scrollTabs %W [%W index current] 0 }
+
+	set ::atk_msg(tab_watermark) [mc "Watermark"]
+	set ::atk_msg(tab_resize) [mc "Resize"]
+	set ::atk_msg(tab_collage) [mc "Collage"]
 	
 	set ::widget_name(tab_Watermark) [tabWatermark $w.wm]
 	set ::widget_name(tab_Resize) [tabResize $w.sz]
@@ -1133,9 +1142,9 @@ proc guiOptionTabs { w } {
 
 	bind $w <Button> {guiTabCheckbox %W [%W select] [%W identify tab %x %y]}
 	
-	$w add $::widget_name(tab_Watermark) -text [mc "Watermark"] -underline 0 -compound left
-	$w add $::widget_name(tab_Resize) -text [mc "Resize"] -underline 0 -sticky nsew -compound left
-	$w add $::widget_name(tab_Collage) -text [mc "Collage"] -underline 0 -sticky nsew -compound left
+	$w add $::widget_name(tab_Watermark) -text $::atk_msg(tab_watermark) -underline 0 -compound left
+	$w add $::widget_name(tab_Resize) -text $::atk_msg(tab_resize) -underline 0 -sticky nsew -compound left
+	$w add $::widget_name(tab_Collage) -text $::atk_msg(tab_collage) -underline 0 -sticky nsew -compound left
 
 	return $w
 }
@@ -1161,8 +1170,6 @@ proc eventWatermark { { type {} } } {
 proc tabWatermark { wt } {
 
 	ttk::frame $wt -padding 6
-
-	set ::wmpositions	[list "TopLeft" "Top" "TopRight" "Left" "Center" "Right" "BottomLeft" "Bottom"  "BottomRight"]
 	set water_ops [tabWatermarkOptions $wt.ops]
 
 	ttk::frame $wt.style
@@ -1200,17 +1207,18 @@ proc tabWatermarkOptions { wt } {
 }
 proc tabWatermarkText { wt } {
 
-	tabWatermarkGeneralOps $wt [mc "text"]
+	tabWatermarkGeneralOps $wt "text"
 
 	set fontsizes [list 8 10 11 12 13 14 16 18 20 22 24 28 32 36 40 48 56 64 72 144]
 	$::widget_name(watermark_text) configure -state readonly -values $::watermark_text_list
+
 	$::widget_name(watermark_text) current 1
 	$::widget_name(watermark_text_size) configure -width 4 -values $fontsizes
 	$::widget_name(watermark_text_size) set $::watermark_text_size
 }
 proc tabWatermarkImage { wt } {
 
-	tabWatermarkGeneralOps $wt [mc "image"]
+	tabWatermarkGeneralOps $wt "image"
 
 	set iwatermarksk [dict keys $::watermark_image_list]
 	$::widget_name(watermark_image) configure -state readonly -values $iwatermarksk
@@ -1219,7 +1227,7 @@ proc tabWatermarkImage { wt } {
 }
 proc tabWatermarkPosition { wt type } {
 	ttk::label $wt.lpos -text [mc "Position"]
-	set ::widget_name(watermark_${type}_position) [ttk::combobox $wt.position -state readonly -textvariable ::watermark_${type}_position -values $::wmpositions -width 10]
+	set ::widget_name(watermark_${type}_position) [ttk::combobox $wt.position -state readonly -textvariable ::watermark_${type}_position -values $::artscript(human_pos) -width 10]
 	bind $wt.position <<ComboboxSelected>> [ list eventWatermark $type ]
 	ttk::label $wt.plus -image $::plus_normal
 	set ::widget_name(watermark_${type}_offset_x) [ttk::spinbox $wt.offset_x -width 3 -from 0 -to 20 \
@@ -1229,8 +1237,7 @@ proc tabWatermarkPosition { wt type } {
 }
 
 proc tabWatermarkGeneralOps { wt type } {
-
-	ttk::checkbutton $wt.${type}_checkbox -text [string totitle $type] -onvalue 1 -offvalue 0 \
+	ttk::checkbutton $wt.${type}_checkbox -text [string totitle [mc $type]] -onvalue 1 -offvalue 0 \
 		-variable ::artscript(select_watermark_${type}) -command { eventWatermark }
 
 	set ::widget_name(watermark_${type}) [ttk::combobox $wt.${type}_watermark_list -state readonly -width 28]
@@ -1626,7 +1633,7 @@ proc addPresetBrowser { w } {
 	ttk::frame $w.preset
 	ttk::frame $w.set_sizes
 	
-	ttk::label $w.preset.browser -text [mc "Browse collections"] -padding {0 0 8}
+	ttk::label $w.preset.browser -text [mc "Collections"] -padding {0 0 8}
 
 	set presets [lsort [getArrayNamesIfValue ::sizes_set]]
 
@@ -1655,7 +1662,7 @@ proc addPresetBrowser { w } {
 # returns frame name
 proc sizeTreeList { w } {
 	ttk::frame $w
-	set size_tree_colname [list [mc "size"]]
+	set size_tree_colname [list size]
 	set ::widget_name(resize_tree) [ttk::treeview $w.sizetree -columns $size_tree_colname -height 5 -yscrollcommand "$w.sscrl set"]
 	foreach tag {selected nonselected} {
 		$w.sizetree tag bind $tag <Button-1> { sizeTreeToggleClick %W [%W selection] %x %y }
@@ -1681,7 +1688,7 @@ proc sizeTreeList { w } {
 	$w.sizetree column size -width 50 -stretch 1
 	foreach col $size_tree_colname {
 		set name [string totitle $col]
-		$w.sizetree heading $col -text $name -command [list treeSort $w.sizetree $col 0 ]
+		$w.sizetree heading $col -text [string totitle [mc $name]] -command [list treeSort $w.sizetree $col 0 ]
 	}
     $w.sizetree tag configure selected -image $::img_on
     $w.sizetree tag configure nonselected -image $::img_off
@@ -1751,13 +1758,13 @@ proc sizeOptions { w } {
 
 	ttk::label $w.label_operator -text [mc "Mode:"]
 
-	set size_operators [list Scale Stretch OnlyGrow OnlyShrink Zoom]
-	set ::widget_name(resize_operators) [ttk::combobox $w.operator -width 12 -state readonly -values $size_operators ]
-	$w.operator set "OnlyShrink"
+	set ::artscript(size_operators) [dict create [mc "Scale"] Scale [mc "Stretch"] Stretch [mc "OnlyGrow"] OnlyGrow [mc "OnlyShrink"] OnlyShrink [mc "Zoom"] Zoom]
+	set ::widget_name(resize_operators) [ttk::combobox $w.operator -width 12 -state readonly -values [dict keys $::artscript(size_operators)] ]
+	$w.operator set [mc "OnlyShrink"]
 	bind $w.operator <<ComboboxSelected>> { showOperatorOptions $::widget_name(resize_size_options) [%W get] }
 
-	set ::widget_name(resize_zoom_position) [ttk::combobox $w.zoom_position -width 12 -state readonly -values $::artscript(magick_pos)]
-	$w.zoom_position set [lindex $::artscript(magick_pos) 0]
+	set ::widget_name(resize_zoom_position) [ttk::combobox $w.zoom_position -width 12 -state readonly -values $::artscript(human_pos)]
+	$w.zoom_position set [lindex $::artscript(human_pos) 0]
 
 	pack $w.label_operator $w.operator -side left
 
@@ -1773,7 +1780,7 @@ proc getSizesSel { {sizes {} } } {
 }
 
 proc showOperatorOptions { w mode } {
-	if {$mode eq "Zoom"} {
+	if {[dict get $::artscript(size_operators) $mode] eq "Zoom"} {
 		pack $w.zoom_position -after $w.operator -side left
 	} else {
 		catch {pack forget $w.zoom_position }
@@ -1964,7 +1971,9 @@ proc colLabel { w } {
 	ttk::label $col_ops.prev -text "" -anchor e
 	ttk::button $col_ops.show_prev -text [mc "Estimate size"] -style small.TButton -width 12 -command [list colEstimateSize $col_ops.prev]
 	ttk::label $col_ops.label_mode -text [mc "Mode:"] -anchor e
-	set ::widget_name(collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values {{} Concatenation {Zero geometry} {Crop} Wrap} ]
+	set ::artscript(collage_modes) [dict create {} {} [mc "Concatenation"] Concatenation [mc "Zero geometry"] {Zero geometry} \
+		[mc "Crop"] {Crop} [mc "Wrap"] {Wrap}]
+	set ::widget_name(collage_mode) [ttk::combobox $col_ops.mode -width 12 -state readonly -values [dict keys $::artscript(collage_modes)]]
 
 	grid $col_ops.prev $col_ops.show_prev -sticky e
 	grid $col_ops.label_mode $col_ops.mode -sticky e
@@ -2023,7 +2032,7 @@ proc eventCollage {} {
 	set ::artscript(bconvert_cmd) $convert_cmd
 	$::widget_name(convert-but) configure -text $convert_string -command $convert_cmd
 	# Disable unsupported formats for collage
-	$::widget_name(format) configure -values [lrange $::artscript(formats) 0 $format_range]
+	$::widget_name(format) configure -values [lrange [dict keys $::artscript(formats)] 0 $format_range]
 	if { [$::widget_name(format) current] == -1 } { $::widget_name(format) current 0 }
 }
 
@@ -2162,7 +2171,7 @@ proc prepCollage { input_files } {
 
 	#Add Conditional settings
 	lassign [list 0 0 {} 0 0] concatenate zero_geometry trim crop wrap
-	switch -nocase -glob -- $mode {
+	switch -nocase -glob -- [dict get $artscript(collage_modes) $mode] {
 		{conc*}	{ set concatenate 1 }
 		{zero*} { set zero_geometry 1 }
 		{crop}	{ set crop 1 }
@@ -2356,10 +2365,10 @@ proc frameOutput { w } {
 	bind $w.slider_qual_val <FocusIn> {%W selection range 0 end}
 	bind $w.slider_qual_val <FocusOut> {%W selection clear}
 
-	set ::artscript(formats) [list png jpg gif webp {webp lossy} ora {Rename} {Keep format}]
+	set ::artscript(formats) [dict create png png jpg jpg gif gif webp webp [mc "webp lossy"] {webp lossy} ora ora [mc "Rename"] {Rename} [mc "Keep format"] {Keep format}]
 	ttk::label $w.label_format -text [mc "Format:"]
-	set ::widget_name(format) [ttk::combobox $w.format -state readonly -width 9 -textvariable ::out_extension -values $::artscript(formats)]
-	$w.format set [lindex $::artscript(formats) 0]
+	set ::widget_name(format) [ttk::combobox $w.format -state readonly -width 9 -values [dict keys $::artscript(formats)]]
+	$w.format set png
 	bind $w.format <<ComboboxSelected>> [list setFormatOptions $w ]
 
 	ttk::checkbutton $w.overwrite -text [mc "Allow Overwrite"] -onvalue 1 -offvalue 0 -variable ::artscript(overwrite) -command { treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output }
@@ -2384,6 +2393,7 @@ proc frameOutput { w } {
 # Alters ouput widgets to show format output options
 # w = widget name
 proc setFormatOptions { w } {
+	set ::out_extension [dict get $::artscript(formats) [$::widget_name(format) get]]
 	treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output
 	$::widget_name(convert-but) configure -text $::artscript(bconvert_string) -command $::artscript(bconvert_cmd)
 	$::widget_name(thumb-prev) state !disabled
@@ -2579,7 +2589,7 @@ proc getOutputSizesForTree { size {formated 0}} {
 			set dest_h [lindex [split $dimension {x} ] 1]
 		}
 		# get final size
-		set mode [$::widget_name(resize_operators) get]
+		set mode [dict get $::artscript(size_operators) [$::widget_name(resize_operators) get]]
 		set finalscale [getSizeScale $cur_w $cur_h $dest_w $dest_h $mode]
 		#TODO Add resize filter (better quality)
 		lappend fsizes $finalscale
@@ -2612,7 +2622,7 @@ proc watermark {} {
 	if { $::artscript(select_watermark_text) } {
 		set text_size [$::widget_name(watermark_text_size) get]
 		set watermark_text [$::widget_name(watermark_text) get]
-		set wmpossel   [lindex $::artscript(magick_pos) [$::widget_name(watermark_text_position) current] ]
+		set wmpossel [lindex $::artscript(magick_pos) [$::widget_name(watermark_text_position) current] ]
 		set rotation [$::widget_name(watermark_text_rotation) get]
 		if {($rotation != 0) && ($rotation ne {} )} {
 				set rotate "+distort ScaleRotateTranslate $rotation +repage"
@@ -2673,9 +2683,9 @@ proc getResize { size dsize } {
 	lassign [concat [split $size {x}] [split $dsize {x}] ] cur_w cur_h dest_w dest_h
 	lassign [list [expr {$cur_w * $cur_h}] [expr {$dest_w * $dest_h}] ] cur_area dest_area
 
-	if {[$::widget_name(resize_operators) get] eq "Zoom"} {
+	if {[dict get $::artscript(size_operators) [$::widget_name(resize_operators) get]] eq "Zoom"} {
 		set finalscale [getSizeZoom $cur_w $cur_h $dest_w $dest_h ]
-		set position [$::widget_name(resize_zoom_position) get]
+		set position [lindex $::artscript(magick_pos) [$::widget_name(resize_zoom_position) current] ]
 		set crop [format {-gravity %s -crop %sx%s+0+0} $position $dest_w $dest_h]
 	} else {
 		set finalscale $dsize
@@ -2958,7 +2968,7 @@ proc relauchHandler {index ilist} {
 	if { ![file exists $outname ]} {
 		set errc $::errorCode;
 		set erri $::errorInfo
-		puts [mc "error: %s \n\n" $errc]
+		puts [mc "error: %s" "$errc\n"]
 		if {$errc != "NONE"} {
 			# puts $msg
 		}
@@ -3111,7 +3121,7 @@ proc artscriptWidgetCatalogue {} {
 	dict set catalogue variables {watermark_color collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state}
 	dict set catalogue preset_variables {watermark_color_swatches}
 	dict set catalogue col_styles {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color}
-	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_text_position watermark_text_offset_x watermark_text_offset_y watermark_image_offset_x watermark_image_offset_y watermark_text_rotation watermark_image_rotation watermark_image_position watermark_image_style watermark_text_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position}
+	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_text_position watermark_text_offset_x watermark_text_offset_y watermark_image_offset_x watermark_image_offset_y watermark_text_rotation watermark_image_rotation watermark_image_position watermark_image_style watermark_text_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position format}
 	dict set catalogue lists {watermark_text_list suffix_list}
 	return $catalogue
 }
@@ -3215,7 +3225,7 @@ proc artscriptSaveOnExit {} {
 					dict set save_settings variables $prop [set ::artscript($prop)]
 			}
 		}
-		puts [format {Writing temporary settings file in %s
+		puts [mc {Writing temporary settings file in %s
 		If you experience any problem, delete it to force refresh} $::artscript_rc]
 		set file [open $::artscript_rc w]
 		puts $file $save_settings
@@ -3245,13 +3255,14 @@ set ::artscript_rc [file join [file dirname [info script]] ".artscriptrc"]
 #-==== Global dictionaries, files values, files who process
 set ::inputfiles [dict create]
 set ::handlers [dict create]
-set ::ops [getUserOps $argv]
+set ::ops [getUserOps $::argv]
 #-==== Find Optional dependencies (as global to search file only once)
 set ::hasgimp [validate "gimp"]
 set ::hasinkscape [validate "inkscape"]
 set ::hascalligra [validate "calligraconverter"]
 #-====# Global file counter TODO: separate delete to a list
 set ::fc 1
+set ::artscript(human_pos) [list [mc "TopLeft"] [mc "Top"] [mc "TopRight"] [mc "Left"] [mc "Center"] [mc "Right"] [mc "BottomLeft"] [mc "Bottom"]  [mc "BottomRight"]]
 set ::artscript(magick_pos) [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
 
 
@@ -3287,5 +3298,5 @@ setUserPresets [lindex [dict key $::presets] 0]
 # ---=== Validate input filetypes
 catch {artscriptOpenState}
 
-set argvnops [lrange $argv [llength $::ops] end]
+set argvnops [lrange $::argv [llength $::ops] end]
 listValidate $argvnops
