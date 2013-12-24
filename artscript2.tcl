@@ -16,10 +16,17 @@
 #
 # ---------------------::::::::::::::------------------------
 set ::version "v2.2-alpha"
+set ::artscript(dir) [file dirname [file normalize [info script]]]
+set ::artscript(lib) [file join $::artscript(dir) lib]
+lappend auto_path $::artscript(lib)
+
 package require Tk
 package require msgcat
 namespace import ::msgcat::mc
+::msgcat::mclocale $::env(LANG)
+::msgcat::mcload [file join $::artscript(dir) msg]
 
+catch {package require md5}
 # Do not show .dot files by default. !fails in OSX
 catch {tk_getOpenFile foo bar}
 set ::tk::dialog::file::showHiddenVar 0
@@ -29,9 +36,6 @@ set ::tk::dialog::file::showHiddenBtn 1
 catch {ttk::style theme use clam}
 namespace eval img { }
 
-set ::artscript(dir) [file dirname [file normalize [info script]]]
-set ::artscript(lib) [file join $::artscript(dir) lib]
-lappend auto_path $::artscript(lib)
 # TkDND module lookup
 proc tkdndLoad {} {
 	if {[catch {package require tkdnd}]} {
@@ -47,11 +51,6 @@ proc tkdndLoad {} {
 	}
 	return -code ok
 }
-catch {package require md5}
-
-::msgcat::mclocale $::env(LANG)
-::msgcat::mcload [file join $::artscript(dir) msg]
-
 # Declare default values for setting vars
 proc artscriptSettings {} {
 	# Date values
