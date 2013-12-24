@@ -15,7 +15,7 @@
 #   File must be in the same directory as the script.
 #
 # ---------------------::::::::::::::------------------------
-set ::version "v2.1.11"
+set ::version "v2.2-alpha"
 package require Tk
 package require msgcat
 namespace import ::msgcat::mc
