@@ -299,7 +299,6 @@ proc getOraKraSize { image_file filext } {
 # ltoval list
 proc listValidate { ltoval } {
 	# global fc
-
 	foreach i $ltoval {
 		set i [encoding convertfrom $i]
 		# Call itself with directory contents if arg is dir
@@ -421,19 +420,12 @@ proc setUserPresets { select } {
 	    catch { dict lappend settings sets {*}[dict filter $preset_values key collage_sty*] }
 	    catch { dict lappend settings sets {*}[dict filter $preset_values key collage_lay*] }
 	    catch { dict set settings img_src [dict create values $preset(watermark_image_list) selection {}] }
-		catch { dict set settings entries collage_label $preset(collage_label) }
 
-	    foreach prop $get_values {
-			catch {dict set settings get_values $prop $preset(${prop})}
-		}
-		foreach prop $col_styles {
-			catch {dict set settings col_styles $prop $preset(${prop})}
-		}
-		foreach prop [concat $variables $preset_variables] {
-			catch {dict set settings variables $prop $preset(${prop})}
-		}
-		foreach prop $lists {
-			catch {dict set settings lists $prop $preset(${prop})}
+		foreach prop_lists [list $get_values $col_styles [concat $variables $preset_variables] $lists collage_label]\
+			prop_names {get_values col_styles variables lists entries} {
+			foreach prop $prop_lists {
+				catch {dict set settings $prop_names $prop $preset(${prop})}
+			}
 		}
 	}
 	artscriptSetWidgetValues $settings
