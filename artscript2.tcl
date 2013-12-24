@@ -194,7 +194,7 @@ proc getOutputName { iname out_extension { prefix {} } { suffix {} } { sizesufix
 }
 # Replace % escapes for date values
 proc replaceDateEscapes { name } {
-	return [string map [list %d $::day %m $::month %y $::year %D $::date] $name ]
+	return [string map [list %% % %d $::day %m $::month %y $::year %D $::date] $name ]
 }
 
 # Parses the list $argv for (:key value) elements. breaks if string is file
@@ -1940,23 +1940,16 @@ proc colLayout { w } {
 	return $w
 
 }
-
+# Return string escape sequences substituted.
 proc colFilterLabel { id } {
 	set input [$::widget_name(collage_label) get]
-	set text [split $input]
-	set ftext {}
 
-	foreach word $text {
-		switch -glob -- $word {
-			"*%%*" { }
-			"*%f*" { set word [string map "%f [list [dict get $::inputfiles $id name] ]" $word ] }
-			"*%e*" { set word [string map "%e [list [dict get $::inputfiles $id ext] ]" $word ] }
-			"*%G*" { set word [string map "%G [list [dict get $::inputfiles $id size] ]" $word ] }
-		}
-		lappend ftext $word
-	}
-	set string [join $ftext]
-	return $string
+	return [string map [list \
+		%% % \
+		%f [list [dict get $::inputfiles $id name] ] \
+		%e [list [dict get $::inputfiles $id ext] ] \
+		%G [list [dict get $::inputfiles $id size]] \
+	] $input]
 }
 
 proc colLabel { w } {
@@ -2067,19 +2060,7 @@ proc colNameOptions { w } {
 
 	return $w
 }
-proc getCollageName { name } {
-	# set name $::artscript(collage_name)
-	foreach word $name {
-		switch -glob -- $word {
-			"*%%*" { }
-			"*%d*" { set word [string map "%d $::day" $word ] }
-			"*%m*" { set word [string map "%m $::month" $word ] }
-			"*%y*" { set word [string map "%y $::year" $word ] }
-			"*%D*" { set word [string map "%D $::date" $word ] }
-		}
-		lappend ftext $word
-	}
-}
+
 proc tabCollage { w } {
 	ttk::frame $w -padding 6
 
