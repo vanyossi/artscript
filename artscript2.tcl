@@ -132,7 +132,8 @@ proc artscriptSettings {} {
 			png [list {PNG}                 {.png}       ] \
 			jpg [list {JPG, JPEG}           {.jpg .jpeg} ] \
 			gif [list {GIF}                 {.gif} ] \
-		]
+		] \
+		artscript(window_geom) {}
 	]
 	#--==== END of Artscript Default Settings
 	set settings [dict merge $mis_settings $wat_settings $siz_settings $col_settings $suf_settings $bool_settings $out_settings]
@@ -3117,7 +3118,7 @@ proc afterConvert { type n } {
 proc artscriptWidgetCatalogue {} {
 	set catalogue [dict create]
 
-	dict set catalogue variables {watermark_color collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state}
+	dict set catalogue variables {watermark_color collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state window_geom}
 	dict set catalogue preset_variables {watermark_color_swatches}
 	dict set catalogue col_styles {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color}
 	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_text_position watermark_text_offset_x watermark_text_offset_y watermark_image_offset_x watermark_image_offset_y watermark_text_rotation watermark_image_rotation watermark_image_position watermark_image_style watermark_text_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position format}
@@ -3203,6 +3204,7 @@ proc artscriptSetWidgetValues { dictionary } {
 proc artscriptSaveOnExit {} {
 	catch {file delete {*}$::deleteFileList }
 	after idle [after 0 exit] ; #Ensure always exit even if misterious error
+	set ::artscript(window_geom) [winfo geometry .]
 
 	if {$::artscript(remember_state) == 1} {
 		set catalogue [artscriptWidgetCatalogue]
@@ -3221,7 +3223,7 @@ proc artscriptSaveOnExit {} {
 				dict set save_settings col_styles $prop [lindex [$::widget_name(${parent}_canvas) itemconfigure $::canvas_element($prop) -fill] end]
 			}
 			foreach prop $variables {
-					dict set save_settings variables $prop [set ::artscript($prop)]
+				dict set save_settings variables $prop [set ::artscript($prop)]
 			}
 		}
 		puts [mc {Writing temporary settings file in %s
@@ -3296,6 +3298,7 @@ catch {tkdndLoad}
 setUserPresets [lindex [dict key $::presets] 0]
 # ---=== Validate input filetypes
 catch {artscriptOpenState}
+wm geometry . $::artscript(window_geom)
 
 set argvnops [lrange $::argv [llength $::ops] end]
 listValidate $argvnops
