@@ -258,9 +258,7 @@ proc getWidthHeightSVG { lines } {
 # Computes values to insert in global inputfiles dictionary
 # id => uniq integer, fpath filepath, size WxH, ext .string, h string(inkscape,calligra,gimp...)
 proc setDictEntries { id fpath size ext h {add 1}} {
-	global inputfiles handlers
-
-	set input_values [dict create \
+	dict set ::inputfiles $id [dict create \
 		name      [file tail $fpath] \
 		output    [getOutputName $fpath $::out_extension $::out_prefix $::out_suffix] \
 		size      $size \
@@ -269,10 +267,8 @@ proc setDictEntries { id fpath size ext h {add 1}} {
 		path      [file normalize $fpath] \
 		deleted   0 \
 	]
-	dict set handlers $id $h
-	dict for {key value} $input_values {
-		dict set inputfiles $id $key $value
-	}
+	dict set ::handlers $id $h
+
 	if {$add} {
 		addTreevalues $::widget_name(flist) $id
 	}
@@ -288,15 +284,11 @@ proc getOraKraSize { image_file filext } {
 	if { [catch { set zipcon [exec unzip -p $image_file $unzip_file]} msg] } {
 		return -code break "$image_file is not a valid ORA/KRA"
 	}
-
-	set zipkey [lsearch -inline -regexp -all $zipcon {^(w|h|width|height)} ]
-
-	foreach size_val $zipkey {
-		lassign [scan $size_val {%[hwiegdth]="%d"%s}] val1 val2
+	set zipkey [regexp -inline -all -- {(w|h|width|height)="([[:digit:]]*)"} $zipcon]
+	foreach {s val1 val2} $zipkey {
 		lappend size_list [list $val1 $val2]
 	}
-	set width_height [lsort -decreasing -index 0 $size_list]
-	lassign $width_height width height
+	lassign [lsort -decreasing -index 0 $size_list] width height
 	set size [join [list [lindex $width 1] [lindex $height 1]] {x}]
 
 	return $size
