@@ -433,6 +433,7 @@ proc setUserPresets { select } {
 
 	return
 }
+# Set preset dict values. remove all sizes in list to prevent overflood
 proc loadUserPresets { preset } {
 	sizeTreeDelete [array names ::sdict]
 	setUserPresets $preset
@@ -441,18 +442,17 @@ proc loadUserPresets { preset } {
 # get_del bool, true = get all files loaded
 # returns integer
 proc getFilesTotal { { get_del 0} } {
-	set count 0
+	set size [dict size $::inputfiles]
+	if { $get_del == 1 } {
+		return $size
+	}
 	set deleted 0
 	dict for {id datas} $::inputfiles {
-		incr count
 		if {[dict get $::inputfiles $id deleted]} {
 			incr deleted
 		}
 	}
-	if { $get_del == 1 } {
-		return $count
-	}
-	return [expr {$count - $deleted}]
+	return [expr {$size - $deleted}]
 }
 
 proc updateWinTitle { } {
@@ -462,11 +462,12 @@ proc updateWinTitle { } {
 # Returns a list of ids of all elements that have args string in value
 # args string list (gimp inkscape, magick, calligra)
 proc putsHandlers {args} {
-	global handlers
-	foreach c $args {
-		lappend images {*}[dict filter $handlers script {k v} {expr {$v eq $c}}]
+	dict for {id val} $::handlers {
+		if {[lsearch -all $args $val] >= 0} {
+			lappend images $id
+		}
 	}
-	return [dict keys $images]
+	return [expr {[info exists images] ? $images : {}}]
 }
 # Shows open dialog for supported types
 proc openFiles { args } {
