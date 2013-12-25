@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Artscript v2.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-12-23 21:40-0600\n"
-"PO-Revision-Date: 2013-12-23 21:52-0600\n"
+"POT-Creation-Date: 2013-12-24 19:40-0600\n"
+"PO-Revision-Date: 2013-12-24 19:45-0600\n"
 "Last-Translator: IvanYossi <ghevan@gmail.com>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -22,529 +22,582 @@ msgstr "%f => archivo.ext, %e => ext, %G => WxH"
 
 #: msgcatSTR_artscript2.tcl:3
 #, tcl-format
+msgid "%s file format not supported"
+msgstr "Formato de archivo %s no soportado"
+
+#: msgcatSTR_artscript2.tcl:4
+#, tcl-format
 msgid "%s has no thumb"
 msgstr "%s no tiene miniatura"
 
-#: msgcatSTR_artscript2.tcl:4
+#: msgcatSTR_artscript2.tcl:5
 #, tcl-format
 msgid "%s has normal thumb"
 msgstr "%s tiene miniatura normal"
 
-#: msgcatSTR_artscript2.tcl:5
+#: msgcatSTR_artscript2.tcl:6
+#, tcl-format
+msgid "%s is not a valid ORA/KRA"
+msgstr "%s no es un archivo ORA/KRA válido"
+
+#: msgcatSTR_artscript2.tcl:7
+#, tcl-format
+msgid "%s not a valid PSD file"
+msgstr "%s no es un archivo PSD válido"
+
+#: msgcatSTR_artscript2.tcl:8
 msgid "Add custom size. ratio : wxh"
 msgstr "Añadir tamaño personalizado: wxh"
 
-#: msgcatSTR_artscript2.tcl:6
+#: msgcatSTR_artscript2.tcl:9
 msgid "Add files"
 msgstr "Añadir"
 
-#: msgcatSTR_artscript2.tcl:7
+#: msgcatSTR_artscript2.tcl:10
 msgid "Add folder"
 msgstr "+Folder"
 
-#: msgcatSTR_artscript2.tcl:8
+#: msgcatSTR_artscript2.tcl:11
 msgid "All"
 msgstr "Todo"
 
-#: msgcatSTR_artscript2.tcl:9
+#: msgcatSTR_artscript2.tcl:12
 msgid "All collages assembled"
 msgstr "Todos los mosaicos armados"
 
-#: msgcatSTR_artscript2.tcl:10
+#: msgcatSTR_artscript2.tcl:13
 msgid "Allow Overwrite"
 msgstr "Sobreescribir"
 
-#: msgcatSTR_artscript2.tcl:11
+#: msgcatSTR_artscript2.tcl:14
 #, tcl-format
 msgid "Artscript %1$s -- %2$s Files selected"
 msgstr "Artscript %1$s -- %2$s Archivos seleccionados"
 
-#: msgcatSTR_artscript2.tcl:12
+#: msgcatSTR_artscript2.tcl:15
 #, tcl-format
 msgid "Artscript %s"
 msgstr "Artscript %s"
 
-#: msgcatSTR_artscript2.tcl:13
+#: msgcatSTR_artscript2.tcl:16
 msgid "Border"
 msgstr "Borde"
 
-#: msgcatSTR_artscript2.tcl:14
+#: msgcatSTR_artscript2.tcl:17
 msgid "Bottom"
 msgstr "Abajo"
 
-#: msgcatSTR_artscript2.tcl:15
+#: msgcatSTR_artscript2.tcl:18
 msgid "BottomLeft"
 msgstr "Abajo Iz."
 
-#: msgcatSTR_artscript2.tcl:16
+#: msgcatSTR_artscript2.tcl:19
 msgid "BottomRight"
 msgstr "Abajo Der."
 
-#: msgcatSTR_artscript2.tcl:17
+#: msgcatSTR_artscript2.tcl:20
 msgid "Center"
 msgstr "Centro"
 
-#: msgcatSTR_artscript2.tcl:18
+#: msgcatSTR_artscript2.tcl:21
+msgid "Choose color"
+msgstr "Elige un color"
+
+#: msgcatSTR_artscript2.tcl:22
 msgid "Collage"
 msgstr ""
 
-#: msgcatSTR_artscript2.tcl:19
+#: msgcatSTR_artscript2.tcl:23
+msgid "Collage Background Color"
+msgstr "Color de fondo"
+
+#: msgcatSTR_artscript2.tcl:24
+msgid "Collage Border Color"
+msgstr "Color de borde"
+
+#: msgcatSTR_artscript2.tcl:25
+msgid "Collage Label Color"
+msgstr "Color de etiqueta"
+
+#: msgcatSTR_artscript2.tcl:26
 msgid "Collage file name:"
 msgstr "Nombre del Collage:"
 
-#: msgcatSTR_artscript2.tcl:20
+#: msgcatSTR_artscript2.tcl:27
 msgid "Collections"
 msgstr "Colecciones"
 
-#: msgcatSTR_artscript2.tcl:21
+#: msgcatSTR_artscript2.tcl:28
 msgid "Color"
 msgstr ""
 
-#: msgcatSTR_artscript2.tcl:22
+#: msgcatSTR_artscript2.tcl:29
 msgid "Colors:"
 msgstr "Colores:"
 
-#: msgcatSTR_artscript2.tcl:23
+#: msgcatSTR_artscript2.tcl:30
 msgid "Columns:"
 msgstr "Columnas:"
 
-#: msgcatSTR_artscript2.tcl:24
+#: msgcatSTR_artscript2.tcl:31
 msgid "Compress:"
 msgstr "Comprimir:"
 
-#: msgcatSTR_artscript2.tcl:25
+#: msgcatSTR_artscript2.tcl:32
 msgid "Concatenation"
 msgstr "Concatenar"
 
-#: msgcatSTR_artscript2.tcl:26
+#: msgcatSTR_artscript2.tcl:33
 #, tcl-format
 msgid "Configuration file found in %s"
 msgstr "Archivo de configuración encontrado en %s"
 
-#: msgcatSTR_artscript2.tcl:27
+#: msgcatSTR_artscript2.tcl:34
 msgid "Convert"
 msgstr "Convertir"
 
-#: msgcatSTR_artscript2.tcl:28
+#: msgcatSTR_artscript2.tcl:35
 msgid "Convert done."
 msgstr "Conversión terminada"
 
-#: msgcatSTR_artscript2.tcl:29
+#: msgcatSTR_artscript2.tcl:36
 #, tcl-format
 msgid "Converting... %1$s to %2$s"
 msgstr "Convirtiendo... %1$s a %2$s"
 
-#: msgcatSTR_artscript2.tcl:30
+#: msgcatSTR_artscript2.tcl:37
 msgid "Crop"
 msgstr "Cortar"
 
-#: msgcatSTR_artscript2.tcl:31
+#: msgcatSTR_artscript2.tcl:38
 #, tcl-format
 msgid "Error! %s"
-msgstr ""
+msgstr "¡Error! %s"
 
-#: msgcatSTR_artscript2.tcl:32
+#: msgcatSTR_artscript2.tcl:39
 msgid "Estimate size"
 msgstr "Estimar tamaño"
 
-#: msgcatSTR_artscript2.tcl:33
+#: msgcatSTR_artscript2.tcl:40
 #, tcl-format
 msgid "Extracting file %s"
 msgstr "Extrayendo archivo %s"
 
-#: msgcatSTR_artscript2.tcl:34
+#: msgcatSTR_artscript2.tcl:41
 msgid "File Conversions Done!"
 msgstr "Conversión de archivos terminada!"
 
-#: msgcatSTR_artscript2.tcl:35
+#: msgcatSTR_artscript2.tcl:42
 msgid "File extractions finished"
 msgstr "Extracción de archivos terminada"
 
-#: msgcatSTR_artscript2.tcl:36
+#: msgcatSTR_artscript2.tcl:43
 msgid "Format:"
 msgstr "Formato:"
 
-#: msgcatSTR_artscript2.tcl:37
+#: msgcatSTR_artscript2.tcl:44
 msgid "Generating preview"
 msgstr "Generando pre visualización"
 
-#: msgcatSTR_artscript2.tcl:38
+#: msgcatSTR_artscript2.tcl:45
 msgid "ID"
 msgstr ""
 
-#: msgcatSTR_artscript2.tcl:39
+#: msgcatSTR_artscript2.tcl:46
 msgid "Image Strip h"
 msgstr "Tira de Imágenes h"
 
-#: msgcatSTR_artscript2.tcl:40
+#: msgcatSTR_artscript2.tcl:47
 msgid "Image Strip v"
 msgstr "Tira de Imágenes v"
 
-#: msgcatSTR_artscript2.tcl:41
+#: msgcatSTR_artscript2.tcl:48
 msgid "Image Style"
 msgstr "Estilo de imagen"
 
-#: msgcatSTR_artscript2.tcl:42
+#: msgcatSTR_artscript2.tcl:49
 msgid "Image area is bigger"
 msgstr "El área de imagen es mayor:"
 
-#: msgcatSTR_artscript2.tcl:43
+#: msgcatSTR_artscript2.tcl:50
 msgid "Input"
 msgstr "Entrada"
 
-#: msgcatSTR_artscript2.tcl:44
+#: msgcatSTR_artscript2.tcl:51
 msgid "Inverse"
 msgstr "Invertir"
 
-#: msgcatSTR_artscript2.tcl:45
+#: msgcatSTR_artscript2.tcl:52
 msgid "Keep format"
 msgstr "Mismo formato"
 
-#: msgcatSTR_artscript2.tcl:46
+#: msgcatSTR_artscript2.tcl:53
 msgid "Label:"
 msgstr "Etiqueta:"
 
-#: msgcatSTR_artscript2.tcl:47
+#: msgcatSTR_artscript2.tcl:54
 msgid "Layouts:"
 msgstr "Mapeo"
 
-#: msgcatSTR_artscript2.tcl:48
+#: msgcatSTR_artscript2.tcl:55
 msgid "Left"
 msgstr "Izquierda"
 
-#: msgcatSTR_artscript2.tcl:49
+#: msgcatSTR_artscript2.tcl:56
 msgid "Load preset:"
 msgstr "Cargar opciones:"
 
-#: msgcatSTR_artscript2.tcl:50
+#: msgcatSTR_artscript2.tcl:57
 msgid "Make Collage"
 msgstr "Crear Collage"
 
-#: msgcatSTR_artscript2.tcl:51
+#: msgcatSTR_artscript2.tcl:58
 #, tcl-format
 msgid "Make Collage%s"
 msgstr "Crear Collage!"
 
-#: msgcatSTR_artscript2.tcl:52
+#: msgcatSTR_artscript2.tcl:59
 msgid "Make Collage?"
 msgstr "Crear Collage?"
 
-#: msgcatSTR_artscript2.tcl:53
+#: msgcatSTR_artscript2.tcl:60
 msgid "Make ORA"
 msgstr "Crear ORA:"
 
-#: msgcatSTR_artscript2.tcl:54
+#: msgcatSTR_artscript2.tcl:61
 msgid "Mode"
 msgstr "Modo"
 
-#: msgcatSTR_artscript2.tcl:55
+#: msgcatSTR_artscript2.tcl:62
 msgid "Mode:"
 msgstr "Modo:"
 
-#: msgcatSTR_artscript2.tcl:56
+#: msgcatSTR_artscript2.tcl:63
 msgid "Need more data"
 msgstr "Necesito datos"
 
-#: msgcatSTR_artscript2.tcl:57
+#: msgcatSTR_artscript2.tcl:64
 msgid "New"
 msgstr "Nuevo"
 
-#: msgcatSTR_artscript2.tcl:58
+#: msgcatSTR_artscript2.tcl:65
 msgid "No Thumbnail"
 msgstr "Sin miniatura"
 
-#: msgcatSTR_artscript2.tcl:59
+#: msgcatSTR_artscript2.tcl:66
+msgid "No images loaded!"
+msgstr "¡No hay imágenes en lista!"
+
+#: msgcatSTR_artscript2.tcl:67
 msgid "None"
 msgstr "Nada"
 
-#: msgcatSTR_artscript2.tcl:60
+#: msgcatSTR_artscript2.tcl:68
+msgid "ORA Image Files Ready!"
+msgstr "¡Imágenes Ora listas!"
+
+#: msgcatSTR_artscript2.tcl:69
 msgid "OnlyGrow"
 msgstr "Agrandar solo"
 
-#: msgcatSTR_artscript2.tcl:61
+#: msgcatSTR_artscript2.tcl:70
 msgid "OnlyShrink"
 msgstr "Reducir solo"
 
-#: msgcatSTR_artscript2.tcl:62
+#: msgcatSTR_artscript2.tcl:71
 msgid "Opacity"
 msgstr "Opacidad"
 
-#: msgcatSTR_artscript2.tcl:63
+#: msgcatSTR_artscript2.tcl:72
+#, tcl-format
+msgid "Oraizing... %s"
+msgstr "Creando imágenes Ora... %s"
+
+#: msgcatSTR_artscript2.tcl:73
 msgid "Output"
 msgstr "Salida"
 
-#: msgcatSTR_artscript2.tcl:64
+#: msgcatSTR_artscript2.tcl:74
 msgid "Output & Quality"
 msgstr "Salida y Calidad"
 
-#: msgcatSTR_artscript2.tcl:65
+#: msgcatSTR_artscript2.tcl:75
 msgid "Padding"
 msgstr "Margen"
 
-#: msgcatSTR_artscript2.tcl:66
+#: msgcatSTR_artscript2.tcl:76
 msgid "Photo sheet"
 msgstr "Hoja de contactos"
 
-#: msgcatSTR_artscript2.tcl:67
+#: msgcatSTR_artscript2.tcl:77
 msgid "Position"
 msgstr "Posición"
 
-#: msgcatSTR_artscript2.tcl:68
+#: msgcatSTR_artscript2.tcl:78
 msgid "Powering up Collage Assembly line"
 msgstr "Encendiendo línea de ensamblaje de Collage"
 
-#: msgcatSTR_artscript2.tcl:69
+#: msgcatSTR_artscript2.tcl:79
 msgid "Prefix and Suffix"
 msgstr "Prefijo y Sufijo"
 
-#: msgcatSTR_artscript2.tcl:70
+#: msgcatSTR_artscript2.tcl:80
 msgid "Presets config name keys changed drastically from v2.0 to 2.1  If your presets does not load please review presets.config.example file to check the new names."
 msgstr "Los nombres de las opciones de configuración cambiaron drásticamente de la versión 2.0 a la 2.1. Si tus opciones son ignoradas, no olvides revisar el archivo \"presets.config.example\" para conocer los nombres nuevos."
 
-#: msgcatSTR_artscript2.tcl:71
+#: msgcatSTR_artscript2.tcl:81
 msgid "Preview"
 msgstr "Pre visualizar"
 
-#: msgcatSTR_artscript2.tcl:72
+#: msgcatSTR_artscript2.tcl:82
 #, tcl-format
 msgid "Program %s not found"
 msgstr "Programa %s no encontrado"
 
-#: msgcatSTR_artscript2.tcl:73
+#: msgcatSTR_artscript2.tcl:83
 msgid "Quality:"
 msgstr "Calidad:"
 
-#: msgcatSTR_artscript2.tcl:74
+#: msgcatSTR_artscript2.tcl:84
 msgid "Range:"
 msgstr "Rango:"
 
-#: msgcatSTR_artscript2.tcl:75
+#: msgcatSTR_artscript2.tcl:85
 msgid "Remove Alfa"
 msgstr "Remover Alfa"
 
-#: msgcatSTR_artscript2.tcl:76
+#: msgcatSTR_artscript2.tcl:86
 msgid "Remove Selected"
 msgstr "Quitar"
 
-#: msgcatSTR_artscript2.tcl:77
+#: msgcatSTR_artscript2.tcl:87
 msgid "Rename"
 msgstr "Renombrar"
 
-#: msgcatSTR_artscript2.tcl:78
+#: msgcatSTR_artscript2.tcl:88
+msgid "Rename Images Done!"
+msgstr "¡Cambio de nombre terminado!"
+
+#: msgcatSTR_artscript2.tcl:89
 msgid "Rename finished."
 msgstr "Renombrado terminado."
 
-#: msgcatSTR_artscript2.tcl:79
+#: msgcatSTR_artscript2.tcl:90
 msgid "Renaming..."
 msgstr "Renombrando..."
 
-#: msgcatSTR_artscript2.tcl:80
+#: msgcatSTR_artscript2.tcl:91
 msgid "Rendering Gimps"
 msgstr "Renderizando Gimps"
 
-#: msgcatSTR_artscript2.tcl:81
+#: msgcatSTR_artscript2.tcl:92
 msgid "Rendering Ink Scapes"
 msgstr "Renderizando InkScapes"
 
-#: msgcatSTR_artscript2.tcl:82
+#: msgcatSTR_artscript2.tcl:93
 msgid "Rendering Kriters"
 msgstr "Renderizando Kriters"
 
-#: msgcatSTR_artscript2.tcl:83
+#: msgcatSTR_artscript2.tcl:94
 msgid "Resize"
 msgstr "Escalar"
 
-#: msgcatSTR_artscript2.tcl:84
+#: msgcatSTR_artscript2.tcl:95
 msgid "Right"
 msgstr "Derecha"
 
-#: msgcatSTR_artscript2.tcl:85
+#: msgcatSTR_artscript2.tcl:96
 msgid "Rotation"
 msgstr "Rotación"
 
-#: msgcatSTR_artscript2.tcl:86
+#: msgcatSTR_artscript2.tcl:97
 msgid "Rows:"
 msgstr "Filas:"
 
-#: msgcatSTR_artscript2.tcl:87
+#: msgcatSTR_artscript2.tcl:98
 msgid "Scale"
 msgstr "Escalar"
 
-#: msgcatSTR_artscript2.tcl:88
+#: msgcatSTR_artscript2.tcl:99
 msgid "Select"
 msgstr "Escoger"
 
-#: msgcatSTR_artscript2.tcl:89
+#: msgcatSTR_artscript2.tcl:100
 msgid "Select:"
 msgstr "Escoger:"
 
-#: msgcatSTR_artscript2.tcl:90
+#: msgcatSTR_artscript2.tcl:101
 msgid "Size"
 msgstr "Tamaño"
 
-#: msgcatSTR_artscript2.tcl:91
+#: msgcatSTR_artscript2.tcl:102
 msgid "Size out"
 msgstr "T. Salida"
 
-#: msgcatSTR_artscript2.tcl:92
+#: msgcatSTR_artscript2.tcl:103
 msgid "Something went wrong, tmp png wasn't created"
 msgstr "Algo salio mal, no se pudo crear el archivo temporal png"
 
-#: msgcatSTR_artscript2.tcl:93
+#: msgcatSTR_artscript2.tcl:104
 msgid "Square 3x3"
 msgstr "Cuadrado 3x3"
 
-#: msgcatSTR_artscript2.tcl:94
+#: msgcatSTR_artscript2.tcl:105
 msgid "Starting Convert..."
 msgstr "Comenzando conversión..."
 
-#: msgcatSTR_artscript2.tcl:95
+#: msgcatSTR_artscript2.tcl:106
 msgid "Starting File extractions..."
 msgstr "Comenzando extracción de archivos..."
 
-#: msgcatSTR_artscript2.tcl:96
+#: msgcatSTR_artscript2.tcl:107
 msgid "Storyboard"
 msgstr ""
 
-#: msgcatSTR_artscript2.tcl:97
+#: msgcatSTR_artscript2.tcl:108
 msgid "Stretch"
 msgstr "Estirar"
 
-#: msgcatSTR_artscript2.tcl:98
+#: msgcatSTR_artscript2.tcl:109
 msgid "Style:"
 msgstr "Estilo:"
 
-#: msgcatSTR_artscript2.tcl:99
+#: msgcatSTR_artscript2.tcl:110
 msgid "Suported Images"
 msgstr "Imágenes soportadas"
 
-#: msgcatSTR_artscript2.tcl:100
+#: msgcatSTR_artscript2.tcl:111
 msgid "Text Style"
 msgstr "Estilo del texto"
 
-#: msgcatSTR_artscript2.tcl:101
+#: msgcatSTR_artscript2.tcl:112
 msgid "Thumbnail"
 msgstr "Miniatura"
 
-#: msgcatSTR_artscript2.tcl:102
+#: msgcatSTR_artscript2.tcl:113
 msgid "Tile size. ratio : w x h"
 msgstr "Tamaño de tesela:"
 
-#: msgcatSTR_artscript2.tcl:103
+#: msgcatSTR_artscript2.tcl:114
 msgid "Tk drag and drop enabled"
 msgstr "Tk, arrastrar y soltar habilitado"
 
-#: msgcatSTR_artscript2.tcl:104
+#: msgcatSTR_artscript2.tcl:115
 msgid "Top"
 msgstr "Arriba"
 
-#: msgcatSTR_artscript2.tcl:105
+#: msgcatSTR_artscript2.tcl:116
 msgid "TopLeft"
 msgstr "Arriba Iz."
 
-#: msgcatSTR_artscript2.tcl:106
+#: msgcatSTR_artscript2.tcl:117
 msgid "TopRight"
 msgstr "Arriba Der."
 
-#: msgcatSTR_artscript2.tcl:107
+#: msgcatSTR_artscript2.tcl:118
 msgid "Watermark"
 msgstr "Marca de agua"
 
-#: msgcatSTR_artscript2.tcl:108
+#: msgcatSTR_artscript2.tcl:119
+msgid "Watermark Text Color"
+msgstr "Color de texto de marca de agua"
+
+#: msgcatSTR_artscript2.tcl:120
 msgid "Wrap"
 msgstr "Repetir"
 
-#: msgcatSTR_artscript2.tcl:109
+#: msgcatSTR_artscript2.tcl:121
 msgid "Zero geometry"
 msgstr "Geometría Cero"
 
-#: msgcatSTR_artscript2.tcl:110
+#: msgcatSTR_artscript2.tcl:122
 msgid "Zoom"
 msgstr "Acercamiento"
 
-#: msgcatSTR_artscript2.tcl:111
+#: msgcatSTR_artscript2.tcl:123
 msgid "all"
 msgstr "todo"
 
-#: msgcatSTR_artscript2.tcl:112
+#: msgcatSTR_artscript2.tcl:124
 msgid "bright"
 msgstr "brillante"
 
-#: msgcatSTR_artscript2.tcl:113
+#: msgcatSTR_artscript2.tcl:125
 msgid "clear"
 msgstr "limpiar"
 
-#: msgcatSTR_artscript2.tcl:114
+#: msgcatSTR_artscript2.tcl:126
 msgid "dark"
 msgstr "oscuro"
 
-#: msgcatSTR_artscript2.tcl:115
+#: msgcatSTR_artscript2.tcl:127
 msgid "darker"
 msgstr "negro"
 
-#: msgcatSTR_artscript2.tcl:116
+#: msgcatSTR_artscript2.tcl:128
 msgid "default"
 msgstr "por defecto"
 
-#: msgcatSTR_artscript2.tcl:117
+#: msgcatSTR_artscript2.tcl:129
 #, tcl-format
 msgid "error: %s"
 msgstr ""
 
-#: msgcatSTR_artscript2.tcl:118
+#: msgcatSTR_artscript2.tcl:130
 msgid "ext."
 msgstr ""
 
-#: msgcatSTR_artscript2.tcl:119
+#: msgcatSTR_artscript2.tcl:131
 #, tcl-format
 msgid "file %s found!"
 msgstr "archivo %s encontrado!"
 
-#: msgcatSTR_artscript2.tcl:120
+#: msgcatSTR_artscript2.tcl:132
 msgid "icon"
 msgstr "ícono"
 
-#: msgcatSTR_artscript2.tcl:121
+#: msgcatSTR_artscript2.tcl:133
 msgid "image"
 msgstr "imagen"
 
-#: msgcatSTR_artscript2.tcl:122
+#: msgcatSTR_artscript2.tcl:134
 msgid "inv."
 msgstr ""
 
-#: msgcatSTR_artscript2.tcl:123
+#: msgcatSTR_artscript2.tcl:135
 msgid "label"
 msgstr "etiqueta"
 
-#: msgcatSTR_artscript2.tcl:124
+#: msgcatSTR_artscript2.tcl:136
 msgid "neutral"
 msgstr ""
 
-#: msgcatSTR_artscript2.tcl:125
+#: msgcatSTR_artscript2.tcl:137
 msgid "percentage"
 msgstr "porcentajes"
 
-#: msgcatSTR_artscript2.tcl:126
+#: msgcatSTR_artscript2.tcl:138
 #, tcl-format
 msgid "renaming... %s"
 msgstr "rebautizando... %s"
 
-#: msgcatSTR_artscript2.tcl:127
+#: msgcatSTR_artscript2.tcl:139
 msgid "sels"
 msgstr ""
 
-#: msgcatSTR_artscript2.tcl:128
+#: msgcatSTR_artscript2.tcl:140
 msgid "text"
 msgstr "texto"
 
-#: msgcatSTR_artscript2.tcl:129
+#: msgcatSTR_artscript2.tcl:141
 msgid "texture"
 msgstr "textura"
 
-#: msgcatSTR_artscript2.tcl:130
+#: msgcatSTR_artscript2.tcl:142
 msgid "wallpaper"
 msgstr "fondo de escritorio"
 
-#: msgcatSTR_artscript2.tcl:131
+#: msgcatSTR_artscript2.tcl:143
 msgid "webp lossy"
 msgstr "webp con pérdida"
+

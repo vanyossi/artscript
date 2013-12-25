@@ -282,7 +282,7 @@ proc getOraKraSize { image_file filext } {
 	".kra" { set unzip_file {maindoc.xml} }
 	}
 	if { [catch { set zipcon [exec unzip -p $image_file $unzip_file]} msg] } {
-		return -code break "$image_file is not a valid ORA/KRA"
+		return -code break [mc "%s is not a valid ORA/KRA" $image_file]
 	}
 	set zipkey [regexp -inline -all -- {(w|h|width|height)="([[:digit:]]*)"} $zipcon]
 	foreach {s val1 val2} $zipkey {
@@ -325,7 +325,7 @@ proc listValidate { files {step 0} } {
 			switch -- $filext {
 				.xcf     { binary scan [readFileHead $i 2] A14II f w h }
 				.psd     { binary scan [readFileHead $i 2] a4S1A6S1II f s t fo h w
-					if {$s != 1} { set msg "$i not a valid PSD file" }
+					if {$s != 1} { set msg [mc "%s not a valid PSD file" $i] }
 				} 
 				.ora     -
 				.kra     { if { ![catch {set size [getOraKraSize $i $filext]} msg]} { set msg {artscript_ok} } }
@@ -333,7 +333,7 @@ proc listValidate { files {step 0} } {
 				.ai      { binary scan [readFileHead $i 34] a10h18a145h14a2000 f s t fo lines 
 					if {![string match %PDF* $f]} { set msg error }
 				}
-				{}       { set msg "$i file format not supported" }
+				{}       { set msg [mc "%s file format not supported" $i] }
 				default  { if { ![catch {set finfo [identifyFile $i ] } msg]} { set msg {artscript_ok} } }
 			}
 		}
@@ -815,11 +815,11 @@ proc rgbtohsv { r g b } {
 proc setColor { w item col {chooser 1} } {
 	set identify_tag [lindex [$w itemcget $item -tags] 0]
 	switch -- $identify_tag {
-		"bg"          { set title "Collage Background Color"}
-		"border"      { set title "Collage Border Color"}
-		"label"       { set title "Collage Label Color"}
-		"watermark"   { set title "Watermark Text Color"}
-		"default"     { set title "Choose color"}
+		"bg"          { set title [mc "Collage Background Color"]}
+		"border"      { set title [mc "Collage Border Color"]}
+		"label"       { set title [mc "Collage Label Color"]}
+		"watermark"   { set title [mc "Watermark Text Color"]}
+		"default"     { set title [mc "Choose color"]}
 	}
 	set col [lindex $col end]
 
@@ -2725,7 +2725,7 @@ proc renameFiles { {index 0} {step 0} } {
 			set id [lindex $::artscript_convert(files) $index]
 			incr index
 			if {$id eq {}} {
-				pBarControl "Rename Images Done!" forget 600
+				pBarControl [mc "Rename Images Done!"] forget 600
 				puts [mc "Rename finished."]
 				afterConvert "Renaming" $index
 				return
@@ -2826,7 +2826,7 @@ proc makeOra { index ilist } {
 	incr index
 	
 	if { $idnumber eq {} } {
-		pBarControl "ORA Image Files Ready!" forget 600
+		pBarControl [mc "ORA Image Files Ready!"] forget 600
 		afterConvert "Make Ora" $index
 		return
 	}
@@ -2834,7 +2834,7 @@ proc makeOra { index ilist } {
 	set datas [dict get $::inputfiles $idnumber]
 	dict with datas {
 		if {!$deleted} {
-			pBarControl "Oraizing... $name" update
+			pBarControl [mc "Oraizing... %s" $name] update
 
 			set outname [file join [file dirname $path] $output]
 			set Cmd [list calligraconverter --batch -- $path $outname]
@@ -3067,7 +3067,7 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 	set ::artscript_convert(files) [processIds $ids]
 	set ::artscript_convert(collage_ids) [list]
 	if {[llength $::artscript_convert(files)] == 0} {
-		pBarControl "No images loaded!" forget 600
+		pBarControl [mc "No images loaded!"] forget 600
 		return -code break
 	}
 	set ::artscript_convert(wmark) [watermark]

@@ -4,8 +4,8 @@
 # msgstr ""
 # "Project-Id-Version: Artscript v2.2\n"
 # "Report-Msgid-Bugs-To: \n"
-# "POT-Creation-Date: 2013-12-23 21:40-0600\n"
-# "PO-Revision-Date: 2013-12-23 21:52-0600\n"
+# "POT-Creation-Date: 2013-12-24 19:40-0600\n"
+# "PO-Revision-Date: 2013-12-24 19:45-0600\n"
 # "Last-Translator: IvanYossi <ghevan@gmail.com>\n"
 # "Language-Team: \n"
 # "Language: \n"
@@ -19,8 +19,11 @@
 
 ::msgcat::mcmset es {
 {%f => file.ext, %e => ext, %G => WxH} {%f => archivo.ext, %e => ext, %G => WxH}
+{%s file format not supported} {Formato de archivo %s no soportado}
 {%s has no thumb} {%s no tiene miniatura}
 {%s has normal thumb} {%s tiene miniatura normal}
+{%s is not a valid ORA/KRA} {%s no es un archivo ORA/KRA válido}
+{%s not a valid PSD file} {%s no es un archivo PSD válido}
 {Add custom size. ratio : wxh} {Añadir tamaño personalizado: wxh}
 {Add files} {Añadir}
 {Add folder} {+Folder}
@@ -34,7 +37,11 @@
 {BottomLeft} {Abajo Iz.}
 {BottomRight} {Abajo Der.}
 {Center} {Centro}
+{Choose color} {Elige un color}
 {Collage} {Collage}
+{Collage Background Color} {Color de fondo}
+{Collage Border Color} {Color de borde}
+{Collage Label Color} {Color de etiqueta}
 {Collage file name:} {Nombre del Collage:}
 {Collections} {Colecciones}
 {Color} {Color}
@@ -47,7 +54,7 @@
 {Convert done.} {Conversión terminada}
 {Converting... %1$s to %2$s} {Convirtiendo... %1$s a %2$s}
 {Crop} {Cortar}
-{Error! %s} {Error! %s}
+{Error! %s} {¡Error! %s}
 {Estimate size} {Estimar tamaño}
 {Extracting file %s} {Extrayendo archivo %s}
 {File Conversions Done!} {Conversión de archivos terminada!}
@@ -75,10 +82,13 @@
 {Need more data} {Necesito datos}
 {New} {Nuevo}
 {No Thumbnail} {Sin miniatura}
+{No images loaded!} {¡No hay imágenes en lista!}
 {None} {Nada}
+{ORA Image Files Ready!} {¡Imágenes Ora listas!}
 {OnlyGrow} {Agrandar solo}
 {OnlyShrink} {Reducir solo}
 {Opacity} {Opacidad}
+{Oraizing... %s} {Creando imágenes Ora... %s}
 {Output} {Salida}
 {Output & Quality} {Salida y Calidad}
 {Padding} {Margen}
@@ -94,6 +104,7 @@
 {Remove Alfa} {Remover Alfa}
 {Remove Selected} {Quitar}
 {Rename} {Renombrar}
+{Rename Images Done!} {¡Cambio de nombre terminado!}
 {Rename finished.} {Renombrado terminado.}
 {Renaming...} {Renombrando...}
 {Rendering Gimps} {Renderizando Gimps}
@@ -124,6 +135,7 @@
 {TopLeft} {Arriba Iz.}
 {TopRight} {Arriba Der.}
 {Watermark} {Marca de agua}
+{Watermark Text Color} {Color de texto de marca de agua}
 {Wrap} {Repetir}
 {Zero geometry} {Geometría Cero}
 {Zoom} {Acercamiento}
