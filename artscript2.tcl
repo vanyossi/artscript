@@ -296,68 +296,83 @@ proc getOraKraSize { image_file filext } {
 
 # Validates the files supplied to be Filetypes supported by script
 # Search order: gimp(xcf,psd) > inkscape(svg,ai) > calligra(kra,ora,xcf,psd) > allelse
-# ltoval list
-proc listValidate { ltoval } {
+# files list
+proc listValidate { files {step 0} } {
 	# global fc
-	foreach i $ltoval {
-		set i [encoding convertfrom $i]
-		# Call itself with directory contents if arg is dir
-		if {[file isdirectory $i]} {
-			listValidate [glob -nocomplain -directory $i -type f *]
-			incr ::fc
-			continue
-		}
-		set filext [string tolower [file extension $i] ]
+	switch $step {
+	0 {
+		set ::artscript_in(count) 0
+		after idle [list after 0 [list listValidate $files 1]]
+	} 1 {
+		set idnumber [lindex $files $::artscript_in(count)]
+		incr ::artscript_in(count)
+		
+		if { $idnumber eq {} } { return }
+
+		set i [encoding convertfrom $idnumber]
 		set msg {artscript_ok}
 
-		# Get initial data to validate filetype
-		switch -- $filext {
-			.xcf     { binary scan [readFileHead $i 2] A14II f w h }
-			.psd     { binary scan [readFileHead $i 2] a4S1A6S1II f s t fo h w
-				if {$s != 1} { set msg "$i not a valid PSD file" }
-			} 
-			.ora     -
-			.kra     { if { ![catch {set size [getOraKraSize $i $filext]} msg]} { set msg {artscript_ok} } }
-			.svg     { set lines [readFileHead $i 34] }
-			.ai      { binary scan [readFileHead $i 34] a10h18a145h14a2000 f s t fo lines 
-				if {![string match %PDF* $f]} { continue }
+		# Call itself with directory contents if arg is dir
+		if {[file isdirectory $i]} {
+			lappend files {*}[glob -nocomplain -directory $i -type f *]
+			set msg directory
+		} else {
+			set filext [string tolower [file extension $i] ]
+			if {[lsearch $::ext $filext] == -1} {
+				set filext {}
 			}
-			default  { if { ![catch {set finfo [identifyFile $i ] } msg]} { set msg {artscript_ok} } }
+			# Get initial data to validate filetype
+			switch -- $filext {
+				.xcf     { binary scan [readFileHead $i 2] A14II f w h }
+				.psd     { binary scan [readFileHead $i 2] a4S1A6S1II f s t fo h w
+					if {$s != 1} { set msg "$i not a valid PSD file" }
+				} 
+				.ora     -
+				.kra     { if { ![catch {set size [getOraKraSize $i $filext]} msg]} { set msg {artscript_ok} } }
+				.svg     { set lines [readFileHead $i 34] }
+				.ai      { binary scan [readFileHead $i 34] a10h18a145h14a2000 f s t fo lines 
+					if {![string match %PDF* $f]} { set msg error }
+				}
+				{}       { set msg "$i file format not supported" }
+				default  { if { ![catch {set finfo [identifyFile $i ] } msg]} { set msg {artscript_ok} } }
+			}
 		}
 		# If msg carries error, print and skip next phase
-		if { $msg != "artscript_ok" } { 
-			puts $msg 
-			continue
-		}
-		# Parse data into size and converter program
-		switch -- $filext {
-			.xcf     -
-			.psd     {
-				set handler [expr {$::hasgimp ? "g" : "k"}]
-				set size [format {%dx%d} $w $h]
-			} 
-			.ora     { set handler [expr {$::hasgimp ? "g" : "k"}] }
-			.kra     { set handler [expr {$::hascalligra ? "k" : ""}]}
-			.svg     -
-			.ai      { 
-				set size [getWidthHeightSVG $lines]
-				set handler [expr {$::hasinkscape ? "i" : ""}]
+		if { $msg == "artscript_ok" } {
+			# Parse data into size and converter program
+			switch -- $filext {
+				.xcf     -
+				.psd     {
+					set handler [expr {$::hasgimp ? "g" : "k"}]
+					set size [format {%dx%d} $w $h]
+				} 
+				.ora     { set handler [expr {$::hasgimp ? "g" : "k"}] }
+				.kra     { set handler [expr {$::hascalligra ? "k" : ""}]}
+				.svg     -
+				.ai      { 
+					set size [getWidthHeightSVG $lines]
+					set handler [expr {$::hasinkscape ? "i" : ""}]
+				}
+				default  {
+					set size [dict get $finfo size]
+					set ext [dict get $finfo ext]
+					set handler "m"
+				}
 			}
-			default  {
-				set size [dict get $finfo size]
-				set ext [dict get $finfo ext]
-				set handler "m"
+			# Confirm calligra is available if not, do not add to list
+			if { $handler eq "k" && !$::hascalligra } {
+				set handler {}
 			}
+			if { $size != 0 && $handler ne {} } {
+				setDictEntries $::fc $i $size $filext $handler
+			}
+			
+		} else {
+			puts $msg
 		}
-		# Confirm calligra is available if not, do not add to list
-		if { $handler eq "k" && !$::hascalligra } {
-			set handler {}
-		}
-		if { $size == 0 || $handler eq {} } { continue }
-
-		setDictEntries $::fc $i $size $filext $handler
 		incr ::fc
-	}
+		after idle [list after 0 [list listValidate $files 1]]
+	}}
 }
 
 # Searchs for presets.config in script directory, parses and set values from file to global
@@ -519,7 +534,6 @@ proc addTreevalues { w id } {
 		set ::img::imgid$id [$w insert {} end -values $values]
 	}
 	updateWinTitle
-	update idletasks
 }
 
 # Deletes the keys from tree(w), and sets deletes value to 1
@@ -2474,7 +2488,6 @@ proc pBarControl { itext {action none} { delay 0 } {max 0} } {
 			pack $::widget_name(pbar-label) $::widget_name(pbar-main) -side left -expand 1 -fill x -padx 2 -pady 0
 			pack configure $::widget_name(pbar-main) -expand 0
 			pBarUpdate $::widget_name(pbar-main) cur max $max current -1
-			# update idletasks
 		}
 		"forget" { 
 			pack forget $::widget_name(pbar-main) $::widget_name(pbar-label)
