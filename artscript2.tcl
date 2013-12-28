@@ -16,8 +16,27 @@
 #
 # ---------------------::::::::::::::------------------------
 set ::version "v2.2-alpha"
-set ::artscript(dir) [file dirname [file normalize [info script]]]
-set ::artscript(lib) [file join $::artscript(dir) lib]
+
+proc setArtscriptDirs {} {
+	set home [file normalize ~]
+	set agent_dirs [dict create \
+		linux	[dict create \
+			home $home \
+			config [list $home .config artscript] \
+			tmp {/ tmp} ] \
+	]
+	set agent [string tolower $::tcl_platform(os)]
+	set ::artscript(home) [file join {*}[dict get $agent_dirs $agent home]]
+	set ::artscript(config) [file join {*}[dict get $agent_dirs $agent config]]
+	set ::artscript(tmp) [file join {*}[dict get $agent_dirs $agent tmp]]
+	# puts "$::artscript(home) , $::artscript(config) , $::artscript(tmp)"
+
+	# get current running dir for lib
+	set ::artscript(dir) [file dirname [file normalize [info script]]]
+	set ::artscript(lib) [file join $::artscript(dir) lib]
+}
+setArtscriptDirs
+
 lappend auto_path $::artscript(lib)
 
 package require Tk
@@ -39,9 +58,10 @@ namespace eval img { }
 # TkDND module lookup
 proc tkdndLoad {} {
 	if {[catch {package require tkdnd}]} {
-		source $::artscript(lib)/tkdnd/tkdnd.tcl
-		foreach dll [glob -type f $::artscript(lib)/tkdnd/*tkdnd*[info sharedlibextension]] {
-			catch {tkdnd::initialise $::artscript(lib)/tkdnd [file tail $dll] tkdnd}
+		set tkdnd_dir [file join $::artscript(lib) tkdnd]
+		source [file join $tkdnd_dir "tkdnd.tcl"]
+		foreach dll [glob -type f [file join $tkdnd_dir *tkdnd*[info sharedlibextension]] ] {
+			catch {tkdnd::initialise $tkdnd_dir [file tail $dll] tkdnd}
 		}
 	}
 	puts [mc "Tk drag and drop enabled"]
@@ -513,7 +533,7 @@ proc openFiles { args } {
 
 	return $files
 }
-
+		
 # Loads chosen file to watermark combobox
 proc loadImageWatermark {w args} {
 	set path [openFiles formats "magick png jpg gif" path_var imagepath multiple 0]
@@ -2266,7 +2286,7 @@ proc doCollage { files {step 1} args } {
 			set fsize "[expr {$xcol * ($width + $pixel_space)}]x[expr {$xrow * ($height + $pixel_space)}]"
 
 			#Add filename to dict
-			set output_path [format {%s_%02d.%s} "/tmp/${file_name}" $::artscript_convert(count) "png"]
+			set output_path [format {%s_%02d.%s} [file join $::artscript(tmp) ${file_name}] $::artscript_convert(count) "png"]
 			set geometry [expr { $zero_geometry || $wrap ? "1x1+${padding}+${padding}\\<" : "${width}x${height}+${padding}+${padding}" }]
 
 			set Cmd [concat montage -quiet [expr { $crop ? "-crop [list $geometry]" : {} }] $collage_names \
@@ -2611,7 +2631,7 @@ proc watermark {} {
 		} else {
 			set rotate {}
 		}
-		set wmtmptx [file join "/tmp" "artk-tmp-wtmk.png" ]
+		set wmtmptx [file join $::artscript(tmp) "artk-tmp-wtmk.png" ]
 		set width [expr {[string length $watermark_text] * 3 * ceil($text_size/4.0)}]
 		set height [expr {[llength [split $watermark_text {\n}]] * 30 * ceil($text_size/8.0)}]
 		set watermark_color_inverse [getContrastColor $::artscript(watermark_color) ]
@@ -2641,7 +2661,7 @@ proc watermark {} {
 				set rotate {}
 			}
 			set size [dict get $finfo size]
-			set wmtmpim [file join "/tmp" "artk-tmp-wtmkim.png" ]
+			set wmtmpim [file join $::artscript(tmp) "artk-tmp-wtmkim.png" ]
 			set wmicmd [ list convert -quiet -size $size xc:transparent -gravity Center $wmimsrc -compose dissolve -define compose:args=$::watermark_image_opacity -composite {*}$rotate $wmtmpim]
 			catch { exec {*}$wmicmd }
 
@@ -2896,8 +2916,7 @@ proc processHandlerFiles { index ilist {step 1}} {
 		
 		array set id [dict get $inputfiles $imgv]
 		
-		set outdir "/tmp"
-		set outname [file join ${outdir} [file root $id(name)]]
+		set outname [file join $::artscript(tmp) [file root $id(name)]]
 		append outname ".png"
 		
 		set ::artscript_convert(outname) $outname
