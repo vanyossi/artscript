@@ -2626,19 +2626,18 @@ proc watermark {} {
 	set wmimsrc [dict get $::watermark_image_list $wm_im_sel]
 	if { $::artscript(select_watermark_image) && [file exists $wmimsrc] } {
 		set identify {identify -quiet -format "%wx%h:%m:%M "}
-		if { [catch {set finfo [exec {*}$identify $wmimsrc ] } msg ] } {
-			puts $msg	
+
+		if { [catch {set finfo [identifyFile $wmimsrc ] } msg ] } {
+			puts $msg
 		} else {
 			set wmimpossel [lindex $::artscript(magick_pos) [$::widget_name(watermark_image_position) current] ]
 			set rotation [$::widget_name(watermark_image_rotation) get]
 			if {($rotation != 0) && ($rotation ne {} )} {
 				set rotate "+distort ScaleRotateTranslate $rotation +repage"
-			}	else {
+			} else {
 				set rotate {}
 			}
-			set imfl [split $finfo { }]
-			set iminfo [lindex [split $imfl ":"] 0]
-			set size [lindex $iminfo 0]
+			set size [dict get $finfo size]
 			set wmtmpim [file join "/tmp" "artk-tmp-wtmkim.png" ]
 			set wmicmd [ list convert -quiet -size $size xc:transparent -gravity Center $wmimsrc -compose dissolve -define compose:args=$::watermark_image_opacity -composite {*}$rotate $wmtmpim]
 			catch { exec {*}$wmicmd }
