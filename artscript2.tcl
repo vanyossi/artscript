@@ -500,8 +500,9 @@ proc openFiles { args } {
 	} else {
 		set files [tk_chooseDirectory -initialdir $path -title "Choose a directory"]
 	}
-	
-	set ::artscript($path_var) [file dirname [lindex $files 0]]
+	if { $files ne {}} {	
+		set ::artscript($path_var) [file dirname [lindex $files 0]]
+	}
 
 	return $files
 }
@@ -650,10 +651,10 @@ proc makeThumb { path filext tsize } {
 	dict set cmd .ora {Thumbnails/thumbnail.png}
 	dict set cmd .kra {preview.png}
 
-	if { [regexp {.ora|.kra} $filext ] } {
-		set container [dict get $cmd $filext]
+	if {![catch {set container [dict get $cmd $filext]}] } {
 		set Cmd [list unzip -p $path $container | convert PNG:- ]
-	} elseif {[regexp {.xcf|.psd} $filext ]} {
+
+	} elseif {[lsearch -exact {.psd .xcf} $filext ] >= 0 } {
 		$::widget_name(thumb-im) configure -compound text -text [mc "No Thumbnail"]
 		return 0
 	} else {
@@ -726,7 +727,7 @@ proc showThumb { w f {tryprev 1}} {
 
 	} elseif { [file exists $nthumb] } {
 		puts [mc "%s has normal thumb" $path]
-		if {[regexp {.xcf|.psd} $filext ]} {
+		if {[lsearch -exact {.xcf .psd} $filext] >= 0} {
 			setThumbGif $nthumb
 			return
 		}
