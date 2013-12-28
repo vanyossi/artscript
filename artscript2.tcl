@@ -307,7 +307,10 @@ proc listValidate { files {step 0} } {
 		set idnumber [lindex $files $::artscript_in(count)]
 		incr ::artscript_in(count)
 		
-		if { $idnumber eq {} } { return }
+		if { $idnumber eq {} } { 
+			updateWinTitle
+			return
+		}
 
 		set i [encoding convertfrom $idnumber]
 		set msg {artscript_ok}
@@ -371,6 +374,10 @@ proc listValidate { files {step 0} } {
 			puts $msg
 		}
 		incr ::fc
+		if {($::fc % 11) == 0} {
+			# reduce the amount of list calculation, useful for extremely long lists
+			updateWinTitle
+		}
 		after idle [list after 0 [list listValidate $files 1]]
 	}}
 }
@@ -506,11 +513,7 @@ proc openFiles { args } {
 
 	return $files
 }
-# Validates the input and updates the window title
-proc loadTreeFiles { {mode files} } {
-	listValidate [openFiles mode $mode]
-	updateWinTitle
-}
+
 # Loads chosen file to watermark combobox
 proc loadImageWatermark {w args} {
 	set path [openFiles formats "magick png jpg gif" path_var imagepath multiple 0]
@@ -534,7 +537,6 @@ proc addTreevalues { w id } {
 		set values [list $id $ext $name $size $output $osize]
 		set ::img::imgid$id [$w insert {} end -values $values]
 	}
-	updateWinTitle
 }
 
 # Deletes the keys from tree(w), and sets deletes value to 1
@@ -1040,8 +1042,8 @@ proc guiFileList { w } {
 	set im_selnone [list $::select_none]
 	set im_remove [list $::symbol_x]
 
-	ttk::button $a.add -text [mc "Add files"] -image $im_add -compound $compound -style menu.TButton -command { loadTreeFiles }
-	ttk::button $a.add_folder -text [mc "Add folder"] -image $im_add -compound $compound -style menu.TButton -command { loadTreeFiles folder }
+	ttk::button $a.add -text [mc "Add files"] -image $im_add -compound $compound -style menu.TButton -command { listValidate [openFiles] }
+	ttk::button $a.add_folder -text [mc "Add folder"] -image $im_add -compound $compound -style menu.TButton -command { listValidate [openFiles mode folder]}
 	ttk::label $a.select_label -text [mc "Select"]
 	ttk::button $a.select_all -text [mc "All"] -image $im_selall -compound $compound -style menu.TButton \
 		-command { $::widget_name(flist) selection add [$::widget_name(flist) children {}] }
@@ -3088,9 +3090,9 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 
 proc afterConvert { type n } {
 	incr n -1
-	set message [format {Artscript %1$s finished %2$s images processed} $type "\n$n" ]
+	set message [mc {Artscript %1$s finished %2$s images processed} $type "\n$n" ]
 	if {[catch {exec notify-send -i [file join $::artscript(dir) icons "artscript.gif"] -t 4000 $message}]} {
-		tk_messageBox -type ok -icon info -title "Operations Done" -message $message
+		tk_messageBox -type ok -icon info -title [mc "Operations Done"] -message $message
 	}
 }
 
