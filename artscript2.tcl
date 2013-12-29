@@ -22,15 +22,24 @@ proc setArtscriptDirs {} {
 	set agent_dirs [dict create \
 		linux	[dict create \
 			home $home \
-			config [list $home .config artscript] \
-			tmp {/ tmp} ] \
+			config [file join $home .config artscript] \
+			thumb_normal [file join $home .thumbnails normal] \
+			thumb_large [file join $home .thumbnails large] \
+			tmp [file join / tmp] ] \
 	]
 	set agent [string tolower $::tcl_platform(os)]
-	set ::artscript(home) [file join {*}[dict get $agent_dirs $agent home]]
-	set ::artscript(config) [file join {*}[dict get $agent_dirs $agent config]]
-	set ::artscript(tmp) [file join {*}[dict get $agent_dirs $agent tmp]]
-	# puts "$::artscript(home) , $::artscript(config) , $::artscript(tmp)"
+	set ::artscript(home) [dict get $agent_dirs $agent home]
+	set ::artscript(config) [dict get $agent_dirs $agent config]
+	set ::artscript(tmp) [dict get $agent_dirs $agent tmp]
+	set ::artscript(thumb_normal) [dict get $agent_dirs $agent thumb_normal]
+	set ::artscript(thumb_large) [dict get $agent_dirs $agent thumb_large]
 
+	# If folder does not exists, create it
+	foreach thumb_dir {thumb_normal thumb_large} {
+		if { ![file exists $::artscript($thumb_dir)] } {
+			file mkdir $::artscript($thumb_dir)
+		}
+	}
 	# get current running dir for lib
 	set ::artscript(dir) [file dirname [file normalize [info script]]]
 	set ::artscript(lib) [file join $::artscript(dir) lib]
@@ -738,9 +747,8 @@ proc showThumb { w f {tryprev 1}} {
 	set filext [string tolower [file extension $path] ]
 	# Get png md5sum name.
 	set thumbname [string tolower [::md5::md5 -hex "file://$path"]]
-	set thumbdir "$env(HOME)/.thumbnails"
-	set lthumb "${thumbdir}/large/$thumbname.png"
-	set nthumb "${thumbdir}/normal/$thumbname.png"
+	set nthumb [file join $::artscript(thumb_normal) "$thumbname.png"]
+	set lthumb [file join $::artscript(thumb_large) "$thumbname.png"]
 
 	# Displays preview in widget
 	if { [file exists $lthumb ] } {
@@ -2174,7 +2182,7 @@ proc prepCollage { input_files } {
 
 	#Add Conditional settings
 	lassign [list 0 0 {} 0 0] concatenate zero_geometry trim crop wrap
-	switch -nocase -glob -- [dict get $artscript(collage_modes) $mode] {
+	switch -nocase -glob -- [dict get $::artscript(collage_modes) $mode] {
 		{conc*}	{ set concatenate 1 }
 		{zero*} { set zero_geometry 1 }
 		{crop}	{ set crop 1 }
