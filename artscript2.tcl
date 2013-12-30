@@ -2655,9 +2655,10 @@ proc watermark {} {
 # size = image size, dsize = destination size, filter = resize filter
 # unsharp = unsharp string options
 # return string
-proc getResize { size dsize } {
+proc getResize { size dsize set_space } {
 	# Operator is force size (!)
 	set operator "\\!"
+	set resize {}
 	lassign [concat [split $size {x}] [split $dsize {x}] ] cur_w cur_h dest_w dest_h
 	lassign [list [expr {$cur_w * $cur_h}] [expr {$dest_w * $dest_h}] ] cur_area dest_area
 
@@ -2678,7 +2679,9 @@ proc getResize { size dsize } {
 	# set filter "-interpolate bicubic -filter Parzen"
 	# set unsharp [string repeat "-unsharp 0x0.55+0.25+0.010 " 1]
 
-	set resize "-colorspace RGB"
+	if {$set_space} {
+		set resize "-colorspace RGB"
+	}
 	#Check if enlarging or not.
 	if {$cur_area > $dest_area} {
 		set resize [concat $resize $filter]
@@ -2693,7 +2696,7 @@ proc getResize { size dsize } {
 		  set resize [concat -define filter:blur=.9264075766146068 -distort Resize ${finalscale} -sigmoidal-contrast $contrast ]
 	}
 	# Final resize output
-	set resize [concat $resize $crop +repage "-colorspace sRGB" $unsharp]
+	set resize [concat $resize $crop +repage [expr {$set_space ? "-colorspace sRGB" : ""}] $unsharp]
 
 	return $resize
 }
@@ -3016,7 +3019,9 @@ proc doConvert { files {step 1} args } {
 				if {[dict exists $datas tmp]} {
 					set opath $tmp
 				}
-
+				# necessary for resize sRGB inputfiles.
+				set file_info [exec identify $opath]
+				set colorspace_make_linear [expr {[lsearch $file_info sRGB] >= 0 ? 1 : 0}]
 				# get make resize string
 				set sizes [getOutputSizesForTree $size]
 				
@@ -3024,7 +3029,7 @@ proc doConvert { files {step 1} args } {
 					incr i
 					set resize {}
 					if { ($size != $osize) && $::artscript(select_size) } {
-						set resize [getResize $size $dimension]
+						set resize [getResize $size $dimension $colorspace_make_linear]
 					}
 					puts "converting... $name"
 					pBarControl "Converting... ${name} to $dimension" update
