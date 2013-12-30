@@ -49,6 +49,7 @@ setArtscriptDirs
 lappend auto_path $::artscript(lib)
 
 package require Tk
+package require platform
 package require msgcat
 namespace import ::msgcat::mc
 ::msgcat::mclocale $::env(LANG)
@@ -63,6 +64,29 @@ set ::tk::dialog::file::showHiddenBtn 1
 #Set default theme to clam if supported
 catch {ttk::style theme use clam}
 namespace eval img { }
+
+proc tkpngLoad {args} {
+	set load 0
+	if {[catch {package require tkpng}]} {
+		set tkpng_dir [file join $::artscript(lib) tkpng0.9]
+		set sys_id [split [platform::identify] {-}]
+		if {[string match *64  [lindex $sys_id end]]} {
+			file link -symbolic [file join $tkpng_dir libtkpng0.9.so] [file join $tkpng_dir libtkpng_x64-0.9.so]
+		} else {
+			file link -symbolic [file join $tkpng_dir libtkpng0.9.so] [file join $tkpng_dir libtkpng_x86-0.9.so]
+		}
+		if {[file exists [file join $tkpng_dir libtkpng0.9.so] ]} {
+			package require tkpng
+			set load 1
+		}
+	} else {
+		set load 1
+	}
+	if {$load} {
+		puts [mc "Tk png enabled"]
+		return 1
+	}
+}
 
 # TkDND module lookup
 proc tkdndLoad {} {
@@ -720,7 +744,6 @@ proc getBinaryData { script var} {
 		fileevent $::artscript(thumb_chan) readable [list readBinaryFile $::artscript(thumb_chan) $var]
 }
 proc setThumbGif { path } {
-
 	getBinaryData [list convert $path -strip GIF:-] ::thumb
 	vwait ::thumb
 	set ::artscript(thumb) $::artscript(data)
@@ -730,6 +753,10 @@ proc setThumbGif { path } {
 
 	$::widget_name(thumb-im) configure -compound image -image $::img_thumb
 	unset ::artscript(thumb)
+}
+proc setThumbPng { path } {
+	set ::img_thumb [image create photo -file $path]
+	$::widget_name(thumb-im) configure -compound image -image $::img_thumb
 }
 
 # Attempts to load a thumbnail from thumbnails folder if exists.
@@ -750,15 +777,16 @@ proc showThumb { w f {tryprev 1}} {
 	set nthumb [file join $::artscript(thumb_normal) "$thumbname.png"]
 	set lthumb [file join $::artscript(thumb_large) "$thumbname.png"]
 
+	set thumbCmd [expr {[string is bool -strict $::artscript(tkpng)] ? {setThumbPng} : {setThumbGif}}]
 	# Displays preview in widget
 	if { [file exists $lthumb ] } {
-		setThumbGif $lthumb
+		$thumbCmd $lthumb
 		return 
 
 	} elseif { [file exists $nthumb] } {
 		puts [mc "%s has normal thumb" $path]
 		if {[lsearch -exact {.xcf .psd} $filext] >= 0} {
-			setThumbGif $nthumb
+			$thumbCmd $nthumb
 			return
 		}
 		makeThumb $path $filext [dict create 256 $lthumb]
@@ -766,7 +794,6 @@ proc showThumb { w f {tryprev 1}} {
 		puts [mc "%s has no thumb" $path]
 		makeThumb $path $filext [dict create 128 $nthumb 256 $lthumb]
 	}
-
 	if {$tryprev} {
 		showThumb w $f 0
 	}
@@ -3279,6 +3306,9 @@ set ::fc 1
 set ::artscript(human_pos) [list [mc "TopLeft"] [mc "Top"] [mc "TopRight"] [mc "Left"] [mc "Center"] [mc "Right"] [mc "BottomLeft"] [mc "Bottom"]  [mc "BottomRight"]]
 set ::artscript(magick_pos) [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
 
+# Load drag and drop, png support,
+catch {tkdndLoad}
+set ::artscript(tkpng) [tkpngLoad]
 
 # ---===  GUI Construct
 updateWinTitle
@@ -3287,7 +3317,8 @@ wm protocol . WM_DELETE_WINDOW { artscriptSaveOnExit }
 bind . <Control-q> { artscriptSaveOnExit }
 
 # We test if icon exist before addin it to the wm
-set wmiconpath [file join $::artscript(dir) icons "artscript.gif"]
+set icon_image [expr {[string is bool -strict $::artscript(tkpng)] ? "artscript_48x48.png" : "artscript.gif"}]
+set wmiconpath [file join $::artscript(dir) icons $icon_image]
 if {![catch {set wmicon [image create photo -file $wmiconpath  ]} msg ]} {
 	wm iconphoto . -default $wmicon
 }
@@ -3303,9 +3334,6 @@ createImageVars
 guiTopBar .f1
 guiMiddle .f2
 guiStatusBar .f3
-
-# Load drag and drop Unix
-catch {tkdndLoad}
 
 # Set user presets
 setUserPresets [lindex [dict key $::presets] 0]
