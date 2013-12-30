@@ -104,6 +104,10 @@ proc tkdndLoad {} {
 	}
 	return -code ok
 }
+# lambda template
+proc lambda {params body} {
+	list apply [list $params $body]
+}
 # Declare default values for setting vars
 proc artscriptSettings {} {
 	# Date values
@@ -123,9 +127,9 @@ proc artscriptSettings {} {
 		watermark_text_size                10                  \
 		artscript(watermark_color)              "#000000"           \
 		watermark_text_opacity        80                  \
-		watermark_text_position            "BottomRight"       \
+		watermark_text_position            [mc "BottomRight"]       \
 		watermark_image_list          [dict create ] \
-		watermark_image_position      "Center"            \
+		watermark_image_position      [mc "Center"]            \
 		watermark_image_size          "0"                 \
 		watermark_image_style         "Over"              \
 		watermark_image_opacity       100                 \
@@ -147,8 +151,8 @@ proc artscriptSettings {} {
 		collage_styles([mc darker]) "bg_color grey5 border_color grey10 label_color grey45 img_color black" \
 		collage_layouts([mc "Photo sheet"]) "ratio 3:2 wid 275 hei 183 col 6 row 5 range 30 border 1 padding 4 label {%f: (%G)} mode {}" \
 		collage_layouts([mc "Storyboard"]) "ratio 16:9 wid 500 hei 281 col 3 row 3 range 9 border 1 padding 8 label {%f} mode {}" \
-		collage_layouts([mc "Image Strip v"]) "ratio 4:3 wid 300 hei {} col 1 row {} range {} border 0 padding 0 label {} mode {Zero geometry}" \
-		collage_layouts([mc "Image Strip h"]) "ratio 4:3 wid {} hei 300 col {} row 1 range {} border 0 padding 0 label {} mode {Zero geometry}" \
+		collage_layouts([mc "Image Strip v"]) [list ratio 4:3 wid 300 hei {} col 1 row {} range {} border 0 padding 0 label {} mode [mc "Zero geometry"]] \
+		collage_layouts([mc "Image Strip h"]) [list ratio 4:3 wid {} hei 300 col {} row 1 range {} border 0 padding 0 label {} mode [mc "Zero geometry"]] \
 		collage_layouts([mc "Square 3x3"]) "ratio 1:1 wid 350 hei 350 col 3 row 3 range {} border 0 padding 2 label {} mode {}" \
 	]
 
@@ -2609,8 +2613,7 @@ proc getSizeZoom { w h dw dh } {
 # size, string WidthxHeight, the original file size,
 # Returns a list of wxh elements, Bool returns formated list
 proc getOutputSizesForTree { size {formated 0}} {
-	set cur_w [lindex [split $size {x} ] 0]
-	set cur_h [lindex [split $size {x} ] 1]
+	lassign [split $size {x}] cur_w cur_h
 	
 	set sizelist [getFinalSizelist]
 	foreach dimension $sizelist {
@@ -2622,8 +2625,7 @@ proc getOutputSizesForTree { size {formated 0}} {
 			set dest_w $cur_w	
 			set dest_h $cur_h
 		} else {
-			set dest_w [lindex [split $dimension {x} ] 0]
-			set dest_h [lindex [split $dimension {x} ] 1]
+			lassign [split $dimension {x}] dest_w dest_h
 		}
 		# get final size
 		set mode [dict get $::artscript(size_operators) [$::widget_name(resize_operators) get]]
@@ -2963,8 +2965,19 @@ proc processHandlerFiles { index ilist {step 1}} {
 		set extracting_string [mc "Extracting file %s" $id(name)]
 		puts $extracting_string
 		pBarControl $extracting_string update
-		
-		if { ![file exists $outname ] } {
+
+		# Review if any requested size is bigger than normal size to render biggest (SVG)
+		if { $handler($imgv) == {i} } {
+			set id_output_sizes [lsort -command [lambda {a b} {
+				expr ([string map {x *} $a]) < ([string map {x *} $b])
+			} ] [getOutputSizesForTree $id(size)]]
+
+			set bigger_size [expr [string map {x *} [lindex $id_output_sizes 0]] ]
+			set original_size [expr [string map {x *} $id(size)] ]
+			set make_bigger [expr {$bigger_size > $original_size}]
+		}
+		# we do not want to re render svg on each preview, so we only re-render if size is bigger.
+		if { ![file exists $outname] || ([info exists make_bigger] && $make_bigger) } {
 			if { $handler($imgv) == {g} } {
 				puts [mc "Rendering Gimps"]
 				set i $id(path)
@@ -2980,8 +2993,13 @@ proc processHandlerFiles { index ilist {step 1}} {
 			}
 			if { $handler($imgv) == {i} } {
 				puts [mc "Rendering Ink Scapes"]
-				# output 100%, resize imagick
-				set extractCmd [list inkscape $id(path) -z -C -d 90 -e $outname]
+				if {$make_bigger} {
+					lassign [split [lindex $id_output_sizes 0] {x}] width height
+					set inksize "-w $width"
+				} else {
+					set inksize "-d 90"
+				}
+				set extractCmd [concat inkscape $id(path) -z -C $inksize -e $outname]
 			}
 			if { $handler($imgv) == {k} } {
 				puts [mc "Rendering Kriters"]
@@ -3293,6 +3311,7 @@ proc artscriptOpenState { } {
 artscriptSettings
 array set ::widget_name {}
 set ::artscript_rc [file join [file dirname [info script]] ".artscriptrc"]
+set ::artscript(tkpng) [tkpngLoad]
 #-==== Global dictionaries, files values, files who process
 set ::inputfiles [dict create]
 set ::handlers [dict create]
@@ -3305,10 +3324,6 @@ set ::hascalligra [validate "calligraconverter"]
 set ::fc 1
 set ::artscript(human_pos) [list [mc "TopLeft"] [mc "Top"] [mc "TopRight"] [mc "Left"] [mc "Center"] [mc "Right"] [mc "BottomLeft"] [mc "Bottom"]  [mc "BottomRight"]]
 set ::artscript(magick_pos) [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
-
-# Load drag and drop, png support,
-catch {tkdndLoad}
-set ::artscript(tkpng) [tkpngLoad]
 
 # ---===  GUI Construct
 updateWinTitle
@@ -3335,6 +3350,8 @@ guiTopBar .f1
 guiMiddle .f2
 guiStatusBar .f3
 
+# Load drag and drop, after windows construct
+catch {tkdndLoad}
 # Set user presets
 setUserPresets [lindex [dict key $::presets] 0]
 # ---=== Validate input filetypes
