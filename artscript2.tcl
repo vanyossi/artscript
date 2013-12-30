@@ -1287,9 +1287,9 @@ proc tabWatermarkPosition { wt type } {
 	set ::widget_name(watermark_${type}_position) [ttk::combobox $wt.position -state readonly -textvariable ::watermark_${type}_position -values $::artscript(human_pos) -width 10]
 	bind $wt.position <<ComboboxSelected>> [ list eventWatermark $type ]
 	ttk::label $wt.plus -image $::plus_normal
-	set ::widget_name(watermark_${type}_offset_x) [ttk::spinbox $wt.offset_x -width 3 -from 0 -to 20 \
+	set ::widget_name(watermark_${type}_offset_x) [ttk::spinbox $wt.offset_x -width 3 -from -100 -to 100 \
 		-validate key -validatecommand { string is integer %P }]
-	set ::widget_name(watermark_${type}_offset_y) [ttk::spinbox $wt.offset_y -width 3 -from 0 -to 20 \
+	set ::widget_name(watermark_${type}_offset_y) [ttk::spinbox $wt.offset_y -width 3 -from -100 -to 100 \
 		-validate key -validatecommand { string is integer %P }]
 }
 
@@ -2645,7 +2645,7 @@ proc watermarkGetOffset { type } {
 		set value [$::widget_name(watermark_${type}_offset_${var}) get]
 		set $var [expr { $value eq {} ? 0 : $value }]
 	}
-	return [format {+%d+%d} $x $y]
+	return [format {%+d%+d} $x $y]
 }
 #Preproces functions
 # Renders watermark images based on parameters to tmp folder
