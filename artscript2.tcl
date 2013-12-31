@@ -272,12 +272,12 @@ proc getUserOps { l } {
 # Receives an absolute (f)ile path
 # Returns dict or error if file is not supported
 proc identifyFile { f } {
-	set identify [list identify -quiet -format "%wx%h:%m:%M "]
+	set identify [list identify -quiet -format {%wx%h:%m:%M:%b:%[colorspace] } -ping]
 	if { [catch {set finfo [exec {*}$identify $f] } msg ] } {
 		return -code break "$msg"
 	} else {
-		foreach {size ext path} [split [lindex $finfo 0] ":"] {
-			set valist "size $size ext [string tolower $ext] path $path"
+		foreach {size ext path fsize colorspace} [split [lindex $finfo 0] ":"] {
+			set valist "size $size ext [string tolower $ext] path $path colorspace $colorspace"
 		}
 		return [dict merge $valist]
 	}
@@ -314,7 +314,7 @@ proc getWidthHeightSVG { lines } {
 
 # Computes values to insert in global inputfiles dictionary
 # id => uniq integer, fpath filepath, size WxH, ext .string, h string(inkscape,calligra,gimp...)
-proc setDictEntries { id fpath size ext h {add 1}} {
+proc setDictEntries { id fpath size ext mode h {add 1}} {
 	dict set ::inputfiles $id [dict create \
 		name      [file tail $fpath] \
 		output    [getOutputName $fpath $::out_extension $::out_prefix $::out_suffix] \
@@ -322,6 +322,7 @@ proc setDictEntries { id fpath size ext h {add 1}} {
 		osize     [getOutputSizesForTree $size 1] \
 		ext       [string trim $ext {.}] \
 		path      [file normalize $fpath] \
+		color     $mode \
 		deleted   0 \
 	]
 	dict set ::handlers $id $h
@@ -383,15 +384,18 @@ proc listValidate { files {step 0} } {
 			}
 			# Get initial data to validate filetype
 			switch -- $filext {
-				.xcf     { binary scan [readFileHead $i 2] A14II f w h }
-				.psd     { binary scan [readFileHead $i 2] a4S1A6S1II f s t fo h w
+				.xcf     { binary scan [readFileHead $i 2] A14III f w h m
+					set colormodes [list 0 sRGB 1 Grayscale 2 Indexed]
+				 }
+				.psd     { binary scan [readFileHead $i 2] a4SS3SIISS f s t fo h w depth m
 					if {$s != 1} { set msg [mc "%s not a valid PSD file" $i] }
+					set colormodes [dict create 0 Bitmap 1 Grayscale 2 Indexed 3 RGB 4 CMYK 7 Multichannel 8 Duotone 9 Lab]
 				} 
 				.ora     -
 				.kra     { if { ![catch {set size [getOraKraSize $i $filext]} msg]} { set msg {artscript_ok} } }
 				.svg     { set lines [readFileHead $i 34] }
 				.ai      { binary scan [readFileHead $i 34] a10h18a145h14a2000 f s t fo lines 
-					if {![string match %PDF* $f]} { set msg error }
+					if {![string match %PDF* $f]} { set msg "error PDF" }
 				}
 				{}       { set msg [mc "%s file format not supported" $i] }
 				default  { if { ![catch {set finfo [identifyFile $i ] } msg]} { set msg {artscript_ok} } }
@@ -399,12 +403,14 @@ proc listValidate { files {step 0} } {
 		}
 		# If msg carries error, print and skip next phase
 		if { $msg == "artscript_ok" } {
+			set mode sRGB
 			# Parse data into size and converter program
 			switch -- $filext {
 				.xcf     -
 				.psd     {
 					set handler [expr {$::hasgimp ? "g" : "k"}]
 					set size [format {%dx%d} $w $h]
+					set mode [dict get $colormodes $m]
 				} 
 				.ora     { set handler [expr {$::hasgimp ? "g" : "k"}] }
 				.kra     { set handler [expr {$::hascalligra ? "k" : ""}]}
@@ -416,6 +422,7 @@ proc listValidate { files {step 0} } {
 				default  {
 					set size [dict get $finfo size]
 					set ext [dict get $finfo ext]
+					set mode [dict get $finfo colorspace]
 					set handler "m"
 				}
 			}
@@ -424,7 +431,7 @@ proc listValidate { files {step 0} } {
 				set handler {}
 			}
 			if { $size != 0 && $handler ne {} } {
-				setDictEntries $::fc $i $size $filext $handler
+				setDictEntries $::fc $i $size $filext $mode $handler
 			}
 			
 		} else {
@@ -3019,7 +3026,6 @@ proc relauchHandler {index ilist} {
 	
 	set outname $::artscript_convert(outname)
 	set imgv $::artscript_convert(imgv)
-
 	#Error reporting, if code NONE then png conversion success.
 	if { ![file exists $outname ]} {
 		set errc $::errorCode;
