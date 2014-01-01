@@ -272,13 +272,12 @@ proc getUserOps { l } {
 # Receives an absolute (f)ile path
 # Returns dict or error if file is not supported
 proc identifyFile { f } {
-	set identify [list identify -quiet -format {%wx%h:%m:%M:%b:%[colorspace] } -ping]
+	set identify [list identify -quiet -format {%wx%h:%m:%M:%b:%[colorspace]@@} -ping]
 	if { [catch {set finfo [exec {*}$identify $f] } msg ] } {
 		return -code break "$msg"
 	} else {
-		foreach {size ext path fsize colorspace} [split [lindex $finfo 0] ":"] {
-			set valist "size $size ext [string tolower $ext] path $path colorspace $colorspace"
-		}
+		lassign [split [lindex [split $finfo @@] 0] ":"] size ext path fsize colorspace 
+		set valist [list size $size ext [string tolower $ext] path $path colorspace $colorspace]
 		return [dict merge $valist]
 	}
 }
@@ -2316,10 +2315,12 @@ proc doCollage { files {step 1} args } {
 					lappend collage_names -gravity $position +repage
 				}
 				# Make concatenate mode remove read in size
+				set format {"%s"}
 				if {$concatenate == 0} {
-					set format {%s[%s]}
-				} else {
-					set format {%s}
+					set format {"%s[%s]"}
+					if {[file extension $opath] eq {.gif}} {
+						set format [format {( %s -flatten )} $format]
+					}
 				}
 				lappend collage_names [format $format $opath $rsize]
 			}
@@ -2335,7 +2336,7 @@ proc doCollage { files {step 1} args } {
 			set output_path [format {%s_%02d.%s} [file join $::artscript(tmp) ${file_name}] $::artscript_convert(count) "png"]
 			set geometry [expr { $zero_geometry || $wrap ? "1x1+${padding}+${padding}\\<" : "${width}x${height}+${padding}+${padding}" }]
 
-			set Cmd [concat montage -quiet [expr { $crop ? "-crop [list $geometry]" : {} }] $collage_names \
+			set Cmd [concat montage -quiet [expr { $crop ? "-crop [list $geometry]" : {} }] {*}$collage_names \
 				-geometry [list $geometry] [expr { $concatenate ? "-mode Concatenate" : {}}] -tile ${col}x${row} \
 				-border $border -background $bg_color -bordercolor $border_color -fill $label_color \
 				"PNG32:$output_path" ]
@@ -2352,7 +2353,7 @@ proc relaunchCollage { file_generated destination files } {
 		set name [file join $output_dir [file tail $file_generated]]
 
 		lappend ::artscript_convert(collage_ids) $::fc
-		setDictEntries $::fc $name $size {.png} {m} 0
+		setDictEntries $::fc $name $size {.png} sRGB {m} 0
 		dict set ::inputfiles $::fc tmp $file_generated
 		lappend ::deleteFileList $file_generated
 		incr ::fc
@@ -3128,7 +3129,7 @@ proc doConvert { files {step 1} args } {
 						puts [mc "Generating preview"]
 						set soname "show:"
 					}
-					set convertCmd [concat convert -quiet \"$opath\" $trim $resize $::artscript_convert(wmark) $::artscript_convert(alfa_off) $::artscript_convert(quality) $soname]
+					set convertCmd [concat convert -quiet \"$opath\" -flatten $trim $resize $::artscript_convert(wmark) $::artscript_convert(alfa_off) $::artscript_convert(quality) $soname]
 puts $convertCmd
 					runCommand $convertCmd [list doConvert $files 1 {*}$args]
 				}
