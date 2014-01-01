@@ -1301,6 +1301,8 @@ proc tabWatermarkPosition { wt type } {
 		-validate key -validatecommand { string is integer %P }]
 	set ::widget_name(watermark_${type}_offset_y) [ttk::spinbox $wt.offset_y -width 3 -from -100 -to 100 \
 		-validate key -validatecommand { string is integer %P }]
+	$wt.offset_x set 0
+	$wt.offset_y set 0
 }
 
 proc tabWatermarkGeneralOps { wt type } {
@@ -1821,7 +1823,7 @@ proc sizeTreeOps { w } {
 }
 
 proc sizeOptions { w } {
-	ttk::frame $w -padding {0 12 0 0}
+	ttk::frame $w -padding {0 12 0 24}
 
 	ttk::label $w.label_operator -text [mc "Mode:"]
 
@@ -1830,8 +1832,17 @@ proc sizeOptions { w } {
 	$w.operator set [mc "OnlyShrink"]
 	bind $w.operator <<ComboboxSelected>> { showOperatorOptions $::widget_name(resize_size_options) [%W get] }
 
-	set ::widget_name(resize_zoom_position) [ttk::combobox $w.zoom_position -width 12 -state readonly -values $::artscript(human_pos)]
-	$w.zoom_position set [lindex $::artscript(human_pos) 0]
+	ttk::frame $w.zoom
+
+	set ::widget_name(resize_zoom_position) [ttk::combobox $w.zoom.position -width 12 -state readonly -values $::artscript(human_pos)]
+	$w.zoom.position set [lindex $::artscript(human_pos) 0]
+	set ::widget_name(resize_zoom_offset_x) [ttk::spinbox $w.zoom.offset_x -width 3 -from -100 -to 100 \
+		-validate key -validatecommand { string is integer %P }]
+	set ::widget_name(resize_zoom_offset_y) [ttk::spinbox $w.zoom.offset_y -width 3 -from -100 -to 100 \
+		-validate key -validatecommand { string is integer %P }]
+	$w.zoom.offset_x set 0
+	$w.zoom.offset_y set 0
+	pack $w.zoom.position $w.zoom.offset_x $w.zoom.offset_y -side left
 
 	pack $w.label_operator $w.operator -side left
 
@@ -1848,9 +1859,9 @@ proc getSizesSel { {sizes {} } } {
 
 proc showOperatorOptions { w mode } {
 	if {[dict get $::artscript(size_operators) $mode] eq "Zoom"} {
-		pack $w.zoom_position -after $w.operator -side left
+		place $w.zoom -in $w -anchor nw -relx 0.145 -y 20
 	} else {
-		catch {pack forget $w.zoom_position }
+		catch { place forget $w.zoom }
 	}
 	eventSize
 }
@@ -2650,9 +2661,9 @@ proc getOutputSizesForTree { size {formated 0}} {
 }
 # Return offset x y in format +n+n
 #TODO make apply function to return 0 if empty
-proc watermarkGetOffset { type } {
+proc widgetGetOffset { family type } {
 	foreach var {x y} {
-		set value [$::widget_name(watermark_${type}_offset_${var}) get]
+		set value [$::widget_name(${family}_${type}_offset_${var}) get]
 		set $var [expr { $value eq {} ? 0 : $value }]
 	}
 	return [format {%+d%+d} $x $y]
@@ -2686,7 +2697,7 @@ proc watermark {} {
 		
 		lappend deleteFileList $wmtmptx
 		
-		set offset [watermarkGetOffset text]
+		set offset [widgetGetOffset watermark text]
 		append wmcmd [list -gravity $wmpossel $wmtmptx -compose dissolve -define compose:args=$::watermark_text_opacity -geometry $offset -composite ]
 	}
 	if {$wm_im_sel eq {}} { return $wmcmd }
@@ -2712,7 +2723,7 @@ proc watermark {} {
 
 			lappend deleteFileList $wmtmpim ; # add wmtmp to delete list
 
-			set offset [watermarkGetOffset image]
+			set offset [widgetGetOffset watermark image]
 			append wmcmd " " [list -gravity $wmimpossel $wmtmpim -compose $::watermark_image_style -define compose:args=$::watermark_image_opacity -geometry $offset -composite ]
 		}
 	}
@@ -2733,7 +2744,8 @@ proc getResize { size dsize set_space } {
 	if {[dict get $::artscript(size_operators) [$::widget_name(resize_operators) get]] eq "Zoom"} {
 		set finalscale [getSizeZoom $cur_w $cur_h $dest_w $dest_h ]
 		set position [lindex $::artscript(magick_pos) [$::widget_name(resize_zoom_position) current] ]
-		set crop [format {-gravity %s -crop %sx%s+0+0} $position $dest_w $dest_h]
+		set offset [widgetGetOffset resize zoom]
+		set crop [format {-gravity %s -crop %sx%s%s} $position $dest_w $dest_h $offset]
 	} else {
 		set finalscale $dsize
 		set crop {}
@@ -2760,7 +2772,7 @@ proc getResize { size dsize set_space } {
 		set resize [concat $resize -distort Resize ${finalscale}${operator}]
 	} else {
 		  set contrast 1.0
-		  set resize [concat -colorspace RGB +sigmoidal-contrast $contrast -filter Lanczos ]
+		  set resize [concat +sigmoidal-contrast $contrast -filter Lanczos ]
 		  set resize [concat -define filter:blur=.9264075766146068 -distort Resize ${finalscale} -sigmoidal-contrast $contrast ]
 	}
 	# Final resize output
@@ -3186,7 +3198,7 @@ proc artscriptWidgetCatalogue {} {
 	dict set catalogue variables {watermark_color collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state window_geom}
 	dict set catalogue preset_variables {watermark_color_swatches}
 	dict set catalogue col_styles {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color}
-	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_text_position watermark_text_offset_x watermark_text_offset_y watermark_image_offset_x watermark_image_offset_y watermark_text_rotation watermark_image_rotation watermark_image_position watermark_image_style watermark_text_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position format}
+	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_text_position watermark_text_offset_x watermark_text_offset_y watermark_image_offset_x watermark_image_offset_y watermark_text_rotation watermark_image_rotation watermark_image_position watermark_image_style watermark_text_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position resize_zoom_offset_x resize_zoom_offset_y format}
 	dict set catalogue lists {watermark_text_list suffix_list}
 	return $catalogue
 }
