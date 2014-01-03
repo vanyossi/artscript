@@ -1071,6 +1071,7 @@ proc guiMiddle { w } {
 	ttk::frame $file_pane
 	set paned_botom [guiMakePaned $paned_big.ac horizontal]
 	guiAddChildren $paned_big $file_pane $paned_botom
+	$paned_big pane $file_pane -weight 1
 
 	guiFileList $file_pane
 	guiThumbnail $file_pane
@@ -1210,8 +1211,8 @@ proc guiOptionTabs { w } {
 	bind $w <Button> {guiTabCheckbox %W [%W select] [%W identify tab %x %y]}
 	
 	$w add $::widget_name(tab_Watermark) -text $::atk_msg(tab_watermark) -underline 0 -compound left
-	$w add $::widget_name(tab_Resize) -text $::atk_msg(tab_resize) -underline 0 -sticky nsew -compound left
-	$w add $::widget_name(tab_Collage) -text $::atk_msg(tab_collage) -underline 0 -sticky nsew -compound left
+	$w add $::widget_name(tab_Resize) -text $::atk_msg(tab_resize) -underline 0 -sticky nesw -compound left
+	$w add $::widget_name(tab_Collage) -text $::atk_msg(tab_collage) -underline 0 -sticky nesw -compound left
 
 	return $w
 }
@@ -2518,7 +2519,7 @@ proc guiStatusBar { w } {
 	set ::artscript(bconvert_string) [mc "Convert"]
 	set ::artscript(bconvert_cmd) {prepConvert}
 	pack [ttk::frame $w] -side top -expand 0 -fill x -padx 4 -pady {0 4}
-	
+
 	ttk::frame $w.rev
 	ttk::frame $w.do
 
@@ -3281,7 +3282,8 @@ proc artscriptSetWidgetValues { dictionary } {
 proc artscriptSaveOnExit {} {
 	catch {file delete {*}$::deleteFileList }
 	after idle [after 0 exit] ; #Ensure always exit even if misterious error
-	set ::artscript(window_geom) [winfo geometry .]
+	scan [wm geometry .] {%dx%d+%d+%d} gw gh gx gy; # 954x624 min
+	set ::artscript(window_geom) [format {%dx%d%+d%+d} [expr {$gw < 954 ? 954 : $gw}] [expr {$gh < 624 ? 624 : $gh}] $gx $gy]
 
 	if {$::artscript(remember_state) == 1} {
 		set catalogue [artscriptWidgetCatalogue]
