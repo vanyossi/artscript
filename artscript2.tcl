@@ -17,22 +17,37 @@
 # ---------------------::::::::::::::------------------------
 set ::version "v2.2-alpha"
 
+package require Tk
+package require platform
+package require msgcat
+namespace import ::msgcat::mc
+
 proc setArtscriptDirs {} {
 	set home [file normalize ~]
-	set agent_dirs [dict create \
-		linux	[dict create \
+	switch -glob -- [platform::identify] {
+		macosx* { set ::artscript(platform) osx }
+		windows* { set ::artscript(platform) win }
+		default { set ::artscript(platform) linux }
+	}
+	switch -- $::artscript(platform) {
+		osx -
+		linux {
+			set agent_dirs [dict create \
 			home $home \
 			config [file join $home .config artscript] \
 			thumb_normal [file join $home .thumbnails normal] \
 			thumb_large [file join $home .thumbnails large] \
-			tmp [file join / tmp] ] \
-	]
-	set agent [string tolower $::tcl_platform(os)]
-	set ::artscript(home) [dict get $agent_dirs $agent home]
-	set ::artscript(config) [dict get $agent_dirs $agent config]
-	set ::artscript(tmp) [dict get $agent_dirs $agent tmp]
-	set ::artscript(thumb_normal) [dict get $agent_dirs $agent thumb_normal]
-	set ::artscript(thumb_large) [dict get $agent_dirs $agent thumb_large]
+			tmp [file join / tmp] \
+			]
+		}
+		windows {}
+	}
+	
+	set ::artscript(home) [dict get $agent_dirs home]
+	set ::artscript(config) [dict get $agent_dirs config]
+	set ::artscript(tmp) [dict get $agent_dirs tmp]
+	set ::artscript(thumb_normal) [dict get $agent_dirs thumb_normal]
+	set ::artscript(thumb_large) [dict get $agent_dirs thumb_large]
 
 	# If folder does not exists, create it
 	foreach thumb_dir {thumb_normal thumb_large} {
@@ -48,26 +63,30 @@ setArtscriptDirs
 
 lappend auto_path $::artscript(lib)
 
-package require Tk
-package require platform
-package require msgcat
-namespace import ::msgcat::mc
-::msgcat::mclocale $::env(LANG)
+if {[info exist ::env(LANG)]} {
+	::msgcat::mclocale $::env(LANG)
+}
 ::msgcat::mcload [file join $::artscript(dir) msg]
 
 catch {package require md5}
+
 # Do not show .dot files by default. !fails in OSX
-catch {tk_getOpenFile foo bar}
-set ::tk::dialog::file::showHiddenVar 0
-set ::tk::dialog::file::showHiddenBtn 1
+if { $::artscript(platform) ne {osx} } {
+	catch { tk_getOpenFile foo bar }
+	set ::tk::dialog::file::showHiddenVar 0
+	set ::tk::dialog::file::showHiddenBtn 1
+}
 
 #Set default theme to clam if supported
-catch {ttk::style theme use clam}
+if { [catch {ttk::style theme use aqua}] } {
+	ttk::style theme use clam
+}
+
 namespace eval img { }
 
 proc tkpngLoad {args} {
 	set load 0
-	if {[catch {package require tkpng}]} {
+	if {[catch {package require tkpng}] && ($::artscript(platform) eq {linux})} {
 		set tkpng_dir [file join $::artscript(lib) tkpng0.9]
 		set sys_id [split [platform::identify] {-}]
 		if {[string match *64  [lindex $sys_id end]]} {
@@ -94,7 +113,7 @@ proc tkdndLoad {} {
 		set tkdnd_dir [file join $::artscript(lib) tkdnd]
 		source [file join $tkdnd_dir "tkdnd.tcl"]
 		foreach dll [glob -type f [file join $tkdnd_dir *tkdnd*[info sharedlibextension]] ] {
-			catch {tkdnd::initialise $tkdnd_dir [file tail $dll] tkdnd}
+			catch{ tkdnd::initialise $tkdnd_dir [file tail $dll] tkdnd}
 		}
 	}
 	puts [mc "Tk drag and drop enabled"]
@@ -1024,6 +1043,7 @@ proc artscriptStyles {} {
 			}
 		}
 	ttk::style configure no_indicator.TCheckbutton -font "-weight bold"
+	ttk::style configure TLabelFrame -background red
 }
 
 # ----=== Gui Construct ===----
@@ -1340,7 +1360,7 @@ proc tabWatermarkTextStyle { wt } {
 	$::widget_name(watermark_text_position) set $::watermark_text_position
 	
 	ttk::label $wt.style_label -text [mc "Color"]
-	set ::widget_name(watermark_canvas) [canvas $wt.color  -width 62 -height 26]
+	set ::widget_name(watermark_canvas) [canvas $wt.color  -width 62 -height 28]
 	set ::canvas_element(watermark_main_color) [$wt.color create rectangle 2 2 26 26 -fill $::artscript(watermark_color) -width 2 -outline [getContrastColor $::artscript(watermark_color)] -tags {watermark main}]
 	$wt.color bind main <Button-1> { setColorAndContrast %W $::canvas_element(watermark_main_color) [%W itemconfigure $::canvas_element(watermark_main_color) -fill] }
 
@@ -1660,8 +1680,9 @@ proc addSizeBox { w name } {
 		-validate key -validatecommand { string is integer %P } ]
 	bind $::widget_name(${name}_hei) <ButtonRelease> [list sizeAlter $w hei $name]
 	bind $::widget_name(${name}_hei) <KeyRelease> [list sizeAlter $w hei $name]
-	
-	foreach bind_key {<ButtonPress> <Shift-ButtonPress> <Shift-Alt-ButtonPress>} inc {10 1 100} {
+
+	set wheel_bind [expr {$::artscript(platform) eq {osx} ? "MouseWheel" : "ButtonPress"}]
+	foreach bind_key [list <$wheel_bind> <Shift-$wheel_bind> <Shift-Control-$wheel_bind>] inc {10 1 100} {
 		bind $::widget_name(${name}_wid) $bind_key [list $w.wid configure -increment $inc]
 		bind $::widget_name(${name}_hei) $bind_key [list $w.hei configure -increment $inc]
 	}
@@ -2435,7 +2456,7 @@ proc frameOutput { w } {
 
 	ttk::checkbutton $w.overwrite -text [mc "Allow Overwrite"] -onvalue 1 -offvalue 0 -variable ::artscript(overwrite) -command { treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output }
 	ttk::checkbutton $w.alfa_off -text [mc "Remove Alfa"] -onvalue "-background %s -alpha remove" -offvalue "" -variable ::artscript(alfaoff)
-	canvas $w.alpha_color -width 16 -height 16
+	set ::widget_name(canvas_alpha_color) [canvas $w.alpha_color -width 16 -height 16]
 	set ::widget_name(alfa_color) [$w.alpha_color create rectangle 1 1 15 15 -fill $::artscript(alfa_color) -width 1 -outline "grey20" -tags {alfa}]
 	$w.alpha_color bind alfa <Button-1> { set ::artscript(alfa_color) [setColor %W $::widget_name(alfa_color) [%W itemconfigure $::widget_name(alfa_color) -fill]] }
 
@@ -3142,8 +3163,9 @@ proc doConvert { files {step 1} args } {
 						puts [mc "Generating preview"]
 						set soname "show:"
 					}
-					set convertCmd [concat convert -quiet \"$opath\" -flatten $trim $resize $::artscript_convert(wmark) $::artscript_convert(alfa_off) $::artscript_convert(quality) $soname]
-puts $convertCmd
+					# puts $::artscript_convert(alfa_off)
+					set convertCmd [concat convert -quiet \"$opath\" $trim $resize $::artscript_convert(wmark) $::artscript_convert(alfa_off) $::artscript_convert(quality) $soname]
+					puts $convertCmd
 					runCommand $convertCmd [list doConvert $files 1 {*}$args]
 				}
 			}
@@ -3328,6 +3350,15 @@ proc artscriptOpenState { } {
 	}
 }
 
+proc osAdjusts { args } {
+	# ::artscript(platform)
+	# canvas default margins
+	foreach canvas {canvas_alpha_color watermark_canvas} {
+		# osx systemTransparent -background red -highlightbackground red
+		$::widget_name($canvas) configure -highlightthickness 0 -borderwidth 0 -insertborderwidth 0 -insertwidth 0
+	}
+}
+
 #-==== Global variable declaration
 artscriptSettings
 array set ::widget_name {}
@@ -3372,12 +3403,15 @@ guiMiddle .f2
 guiStatusBar .f3
 
 # Load drag and drop, after windows construct
-catch {tkdndLoad}
+catch { tkdndLoad }
 # Set user presets
 setUserPresets [lindex [dict key $::presets] 0]
-# ---=== Validate input filetypes
-catch {artscriptOpenState}
-wm geometry . $::artscript(window_geom)
 
+# Os specifyc adjusts
+osAdjusts
+
+# ---=== Validate input filetypes
+catch { artscriptOpenState }
+wm geometry . $::artscript(window_geom)
 set argvnops [lrange $::argv [llength $::ops] end]
 listValidate $argvnops
