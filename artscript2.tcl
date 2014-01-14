@@ -2978,7 +2978,7 @@ proc processIds { {ids ""} } {
 # id = files to process, none given: process all
 # return nothing
 proc doConvert { files {step 1} args } {
-	lassign [lrepeat 2 {}] preview trim
+	lassign { 0 {} } preview trim
 	foreach {key value} $args {
 		set $key $value
 	}
@@ -3006,7 +3006,7 @@ proc doConvert { files {step 1} args } {
 				}
 				set ::artscript_convert(collage_ids) {}
 			}
-			afterConvert "Convert" $::artscript_convert(count)
+			afterConvert "Convert" $::artscript_convert(count) {*}$args
 			return
 		}
 		
@@ -3039,14 +3039,14 @@ proc doConvert { files {step 1} args } {
 						set ::artscript_convert(quality) [getQuality $ext]
 					}
 					
-					if {$preview eq {}} {
-						set soname \"[file join $outpath [getOutputName $path $::artscript_convert(out_extension) $::artscript_convert(out_prefix) $::artscript_convert(out_suffix) $dimension] ]\"
-					} else {
+					if {$preview} {
 						puts "Generating preview"
 						set soname "show:"
+					} else {
+						set soname \"[file join $outpath [getOutputName $path $::artscript_convert(out_extension) $::artscript_convert(out_prefix) $::artscript_convert(out_suffix) $dimension] ]\"
 					}
 					set convertCmd [concat convert -quiet \"$opath\" $trim $resize $::artscript_convert(wmark) $::artscript_convert(alfa_off) $::artscript_convert(quality) $soname]
-puts $convertCmd
+					puts $convertCmd
 					runCommand $convertCmd [list doConvert $files 1 {*}$args]
 				}
 			}
@@ -3057,7 +3057,7 @@ puts $convertCmd
 
 # Set convert global and values total files to process
 # id = files to convert, if none given, all will be processed
-proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
+proc prepConvert { {type "Convert"} {ids ""} {preview 0} } {
 
 	pBarControl {} create 0 1
 
@@ -3088,11 +3088,14 @@ proc prepConvert { {type "Convert"} {ids ""} {preview {}} } {
 	do$type $::artscript_convert(files) 0 preview $preview
 }
 
-proc afterConvert { type n } {
-	incr n -1
-	set message [format {Artscript %1$s finished %2$s images processed} $type "\n$n" ]
-	if {[catch {exec notify-send -i [file join $::artscript(dir) icons "artscript.gif"] -t 4000 $message}]} {
-		tk_messageBox -type ok -icon info -title "Operations Done" -message $message
+proc afterConvert { type n args } {
+	array set vars $args
+	if {!$vars(preview)} {
+		incr n -1
+		set message [format {Artscript %1$s finished %2$s images processed} $type "\n$n" ]
+		if {[catch {exec notify-send -i [file join $::artscript(dir) icons "artscript.gif"] -t 4000 $message}]} {
+			tk_messageBox -type ok -icon info -title "Operations Done" -message $message
+		}
 	}
 }
 
