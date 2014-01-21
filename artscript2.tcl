@@ -612,7 +612,7 @@ proc loadImageWatermark {w args} {
 # Add key values into new treeview item id
 # Receives w=widget name and id= key name of global dict
 proc addTreevalues { w id } {
-	global inputfiles
+	# global inputfiles
 	
 	dict with ::inputfiles $id {
 		set values [list $id $ext $name $size $output $osize]
@@ -623,12 +623,12 @@ proc addTreevalues { w id } {
 # Deletes the keys from tree(w), and sets deletes value to 1
 # TODO Remove all entries of file type. (filtering)
 proc removeTreeItem { w i } {
-	global inputfiles
+	# global inputfiles
 
+	# TODO undo last delete
 	foreach item $i {
 		set id [$w set $item id]
-		# TODO undo last delete
-		dict set inputfiles $id deleted 1
+		dict set ::inputfiles $id deleted 1
 		# unset ::img::imgid$id
 	}
 	# remove keys from tree
