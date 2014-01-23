@@ -1,0 +1,602 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Artscript v2.2\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-01-23 19:40-0600\n"
+"PO-Revision-Date: 2014-01-23 19:45-0600\n"
+"Last-Translator: Deevad <info@davidrevoy.com>\n"
+"Language-Team: \n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: _;gettext;gettext_noop\n"
+"X-Poedit-Basepath: .\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-SearchPath-0: .\n"
+
+#: msgcatSTR_artscript2.tcl:2
+#, tcl-format
+msgid "%f => file.ext, %e => ext, %G => WxH"
+msgstr "%f => fichier.ext, %e => ext, %G => WxH"
+
+#: msgcatSTR_artscript2.tcl:3
+#, tcl-format
+msgid "%s file format not supported"
+msgstr "Format de fichier %s non pris en charge"
+
+#: msgcatSTR_artscript2.tcl:4
+#, tcl-format
+msgid "%s has no thumb"
+msgstr "%s n'a pas de vignette"
+
+#: msgcatSTR_artscript2.tcl:5
+#, tcl-format
+msgid "%s has normal thumb"
+msgstr "%s a une vignette normale"
+
+#: msgcatSTR_artscript2.tcl:6
+#, tcl-format
+msgid "%s is not a valid ORA/KRA"
+msgstr "%s n'est pas un fichier ORA/KRA valide"
+
+#: msgcatSTR_artscript2.tcl:7
+#, tcl-format
+msgid "%s not a valid PSD file"
+msgstr "%s n'est pas un fichier PSD valide"
+
+#: msgcatSTR_artscript2.tcl:8
+msgid "Add custom size. ratio : wxh"
+msgstr "Personnaliser la taille, le ratio: wxh"
+
+#: msgcatSTR_artscript2.tcl:9
+msgid "Add files"
+msgstr "Ajouter"
+
+#: msgcatSTR_artscript2.tcl:10
+msgid "Add folder"
+msgstr "+Dossier"
+
+#: msgcatSTR_artscript2.tcl:11
+msgid "All"
+msgstr "Tout"
+
+#: msgcatSTR_artscript2.tcl:12
+msgid "All collages assembled"
+msgstr "Tous les collages assemblé"
+
+#: msgcatSTR_artscript2.tcl:13
+msgid "Allow Overwrite"
+msgstr "Permettre l'écrasement"
+
+#: msgcatSTR_artscript2.tcl:14
+#, tcl-format
+msgid "Artscript %1$s -- %2$s Files selected"
+msgstr "Artscript %1$s -- %2$s fichiers selectionnés"
+
+#: msgcatSTR_artscript2.tcl:15
+#, tcl-format
+msgid "Artscript %s"
+msgstr "Artscript %s"
+
+#: msgcatSTR_artscript2.tcl:16
+msgid "Border"
+msgstr "Bordure"
+
+#: msgcatSTR_artscript2.tcl:17
+msgid "Bottom"
+msgstr "Bas"
+
+#: msgcatSTR_artscript2.tcl:18
+msgid "BottomLeft"
+msgstr "Bas-Gauche."
+
+#: msgcatSTR_artscript2.tcl:19
+msgid "BottomRight"
+msgstr "Bas-Droit"
+
+#: msgcatSTR_artscript2.tcl:20
+msgid "Center"
+msgstr "Centre"
+
+#: msgcatSTR_artscript2.tcl:21
+msgid "Choose color"
+msgstr "Choisir une couleur"
+
+#: msgcatSTR_artscript2.tcl:22
+msgid "Collage"
+msgstr "Collage"
+
+#: msgcatSTR_artscript2.tcl:23
+msgid "Collage Background Color"
+msgstr "Couleur du fond"
+
+#: msgcatSTR_artscript2.tcl:24
+msgid "Collage Border Color"
+msgstr "Couleur de la bordure"
+
+#: msgcatSTR_artscript2.tcl:25
+msgid "Collage Label Color"
+msgstr "Couleur de l'étiquette"
+
+#: msgcatSTR_artscript2.tcl:26
+msgid "Collage file name:"
+msgstr "Nom du Collage:"
+
+#: msgcatSTR_artscript2.tcl:27
+msgid "Collections"
+msgstr "Collections"
+
+#: msgcatSTR_artscript2.tcl:28
+msgid "Color"
+msgstr "Couleur"
+
+#: msgcatSTR_artscript2.tcl:29
+msgid "Colors:"
+msgstr "Couleurs:"
+
+#: msgcatSTR_artscript2.tcl:30
+msgid "Columns:"
+msgstr "Colonnes:"
+
+#: msgcatSTR_artscript2.tcl:31
+msgid "Compress:"
+msgstr "Compresser:"
+
+#: msgcatSTR_artscript2.tcl:32
+msgid "Concatenation"
+msgstr "Concatener"
+
+#: msgcatSTR_artscript2.tcl:33
+#, tcl-format
+msgid "Configuration file found in %s"
+msgstr "Fichier de configuration trouvé dans %s"
+
+#: msgcatSTR_artscript2.tcl:34
+msgid "Convert"
+msgstr "Convertir"
+
+#: msgcatSTR_artscript2.tcl:35
+msgid "Convert done."
+msgstr "Convertion terminé"
+
+#: msgcatSTR_artscript2.tcl:36
+#, tcl-format
+msgid "Converting... %1$s to %2$s"
+msgstr "Convertion... %1$s a %2$s"
+
+#: msgcatSTR_artscript2.tcl:37
+msgid "Crop"
+msgstr "Recadrer"
+
+#: msgcatSTR_artscript2.tcl:38
+#, tcl-format
+msgid "Error! %s"
+msgstr "Erreur! %s"
+
+#: msgcatSTR_artscript2.tcl:39
+msgid "Estimate size"
+msgstr "Taille estimée"
+
+#: msgcatSTR_artscript2.tcl:40
+#, tcl-format
+msgid "Extracting file %s"
+msgstr "Extraction du fichier %s"
+
+#: msgcatSTR_artscript2.tcl:41
+msgid "File Conversions Done!"
+msgstr "Convertion de fichier terminé!"
+
+#: msgcatSTR_artscript2.tcl:42
+msgid "File extractions finished"
+msgstr "Convertions de fichiers terminés!"
+
+#: msgcatSTR_artscript2.tcl:43
+msgid "Format:"
+msgstr "Format:"
+
+#: msgcatSTR_artscript2.tcl:44
+msgid "Generating preview"
+msgstr "Generation d'une prévisualisation"
+
+#: msgcatSTR_artscript2.tcl:45
+msgid "ID"
+msgstr "ID"
+
+#: msgcatSTR_artscript2.tcl:46
+msgid "Image Strip h"
+msgstr "Suite d'image h"
+
+#: msgcatSTR_artscript2.tcl:47
+msgid "Image Strip v"
+msgstr "Suite d'image v"
+
+#: msgcatSTR_artscript2.tcl:48
+msgid "Image Style"
+msgstr "style d'image"
+
+#: msgcatSTR_artscript2.tcl:49
+msgid "Image area is bigger"
+msgstr "Zone de l'image est plus grande:"
+
+#: msgcatSTR_artscript2.tcl:50
+msgid "Input"
+msgstr "Ajout"
+
+#: msgcatSTR_artscript2.tcl:51
+msgid "Inverse"
+msgstr "Inverser"
+
+#: msgcatSTR_artscript2.tcl:52
+msgid "Keep format"
+msgstr "Garder le format"
+
+#: msgcatSTR_artscript2.tcl:53
+msgid "Label:"
+msgstr "Etiquette:"
+
+#: msgcatSTR_artscript2.tcl:54
+msgid "Layouts:"
+msgstr "Disposition:"
+
+#: msgcatSTR_artscript2.tcl:55
+msgid "Left"
+msgstr "Gauche"
+
+#: msgcatSTR_artscript2.tcl:56
+msgid "Load preset:"
+msgstr "Charger la preconfiguration:"
+
+#: msgcatSTR_artscript2.tcl:57
+msgid "Make Collage"
+msgstr "Faire le Collage"
+
+#: msgcatSTR_artscript2.tcl:58
+#, tcl-format
+msgid "Make Collage%s"
+msgstr "Créer le Collage!"
+
+#: msgcatSTR_artscript2.tcl:59
+msgid "Make Collage?"
+msgstr "Créer le Collage?"
+
+#: msgcatSTR_artscript2.tcl:60
+msgid "Make ORA"
+msgstr "Faire un ORA:"
+
+#: msgcatSTR_artscript2.tcl:61
+msgid "Mode"
+msgstr "Mode"
+
+#: msgcatSTR_artscript2.tcl:62
+msgid "Mode:"
+msgstr "Mode:"
+
+#: msgcatSTR_artscript2.tcl:63
+msgid "Need more data"
+msgstr "Necessite plus de données"
+
+#: msgcatSTR_artscript2.tcl:64
+msgid "New"
+msgstr "Nouveau"
+
+#: msgcatSTR_artscript2.tcl:65
+msgid "No Thumbnail"
+msgstr "Sans vignettes"
+
+#: msgcatSTR_artscript2.tcl:66
+msgid "No images loaded!"
+msgstr "Pas d'images listées!"
+
+#: msgcatSTR_artscript2.tcl:67
+msgid "None"
+msgstr "Rien"
+
+#: msgcatSTR_artscript2.tcl:68
+msgid "ORA Image Files Ready!"
+msgstr "Fichier ORA prêt!"
+
+#: msgcatSTR_artscript2.tcl:69
+msgid "OnlyGrow"
+msgstr "Seulement Agrandir"
+
+#: msgcatSTR_artscript2.tcl:70
+msgid "OnlyShrink"
+msgstr "Seulement rétrecir"
+
+#: msgcatSTR_artscript2.tcl:71
+msgid "Opacity"
+msgstr "Opacité"
+
+#: msgcatSTR_artscript2.tcl:72
+#, tcl-format
+msgid "Oraizing... %s"
+msgstr "Cretion d'image Ora... %s"
+
+#: msgcatSTR_artscript2.tcl:73
+msgid "Output"
+msgstr "Sortie"
+
+#: msgcatSTR_artscript2.tcl:74
+msgid "Output & Quality"
+msgstr "Sortie et qualité"
+
+#: msgcatSTR_artscript2.tcl:75
+msgid "Padding"
+msgstr "Marge"
+
+#: msgcatSTR_artscript2.tcl:76
+msgid "Photo sheet"
+msgstr "Planche de contact"
+
+#: msgcatSTR_artscript2.tcl:77
+msgid "Position"
+msgstr "Position"
+
+#: msgcatSTR_artscript2.tcl:78
+msgid "Powering up Collage Assembly line"
+msgstr "Motorisation d'un assemblage de collage"
+
+#: msgcatSTR_artscript2.tcl:79
+msgid "Prefix and Suffix"
+msgstr "Prefix et Suffix"
+
+#: msgcatSTR_artscript2.tcl:80
+msgid "Presets config name keys changed drastically from v2.0 to 2.1  If your presets does not load please review presets.config.example file to check the new names."
+msgstr "Les fichiers de configurations ont changés depuis v2.0 a 2.1. Si vos presets ne charge pas , merci de reconfigurer presets.config.example et verifier les nouveaux noms."
+
+#: msgcatSTR_artscript2.tcl:81
+msgid "Preview"
+msgstr "Prévisualisation"
+
+#: msgcatSTR_artscript2.tcl:82
+#, tcl-format
+msgid "Program %s not found"
+msgstr "Logiciel %s introuvable"
+
+#: msgcatSTR_artscript2.tcl:83
+msgid "Quality:"
+msgstr "Qualité:"
+
+#: msgcatSTR_artscript2.tcl:84
+msgid "Range:"
+msgstr "Etendu:"
+
+#: msgcatSTR_artscript2.tcl:85
+msgid "Remove Alfa"
+msgstr "Supprimer la transparence"
+
+#: msgcatSTR_artscript2.tcl:86
+msgid "Remove Selected"
+msgstr "Supprimer les selectionnés"
+
+#: msgcatSTR_artscript2.tcl:87
+msgid "Rename"
+msgstr "Renommer"
+
+#: msgcatSTR_artscript2.tcl:88
+msgid "Rename Images Done!"
+msgstr "Renommage d'image terminé!"
+
+#: msgcatSTR_artscript2.tcl:89
+msgid "Rename finished."
+msgstr "Renommage terminé."
+
+#: msgcatSTR_artscript2.tcl:90
+msgid "Renaming..."
+msgstr "Renommage..."
+
+#: msgcatSTR_artscript2.tcl:91
+msgid "Rendering Gimps"
+msgstr "Rendu de Gimps"
+
+#: msgcatSTR_artscript2.tcl:92
+msgid "Rendering Ink Scapes"
+msgstr "Rendu d'InkScapes"
+
+#: msgcatSTR_artscript2.tcl:93
+msgid "Rendering Kriters"
+msgstr "Rendu de Krita"
+
+#: msgcatSTR_artscript2.tcl:94
+msgid "Resize"
+msgstr "Redimensionner"
+
+#: msgcatSTR_artscript2.tcl:95
+msgid "Right"
+msgstr "Droite"
+
+#: msgcatSTR_artscript2.tcl:96
+msgid "Rotation"
+msgstr "Rotation"
+
+#: msgcatSTR_artscript2.tcl:97
+msgid "Rows:"
+msgstr "Lignes:"
+
+#: msgcatSTR_artscript2.tcl:98
+msgid "Scale"
+msgstr "Redimensionné"
+
+#: msgcatSTR_artscript2.tcl:99
+msgid "Select"
+msgstr "Selectionné"
+
+#: msgcatSTR_artscript2.tcl:100
+msgid "Select:"
+msgstr "Selection:"
+
+#: msgcatSTR_artscript2.tcl:101
+msgid "Size"
+msgstr "Taille"
+
+#: msgcatSTR_artscript2.tcl:102
+msgid "Size out"
+msgstr "Taille extérieur"
+
+#: msgcatSTR_artscript2.tcl:103
+msgid "Something went wrong, tmp png wasn't created"
+msgstr "Quelquechose d'imprevu c'est passé ; et le png temporaire n'a pas pu être crée"
+
+#: msgcatSTR_artscript2.tcl:104
+msgid "Square 3x3"
+msgstr "Carré 3x3"
+
+#: msgcatSTR_artscript2.tcl:105
+msgid "Starting Convert..."
+msgstr "Début de la convertion..."
+
+#: msgcatSTR_artscript2.tcl:106
+msgid "Starting File extractions..."
+msgstr "Début de l'extraction de fichier..."
+
+#: msgcatSTR_artscript2.tcl:107
+msgid "Storyboard"
+msgstr "Storyboard"
+
+#: msgcatSTR_artscript2.tcl:108
+msgid "Stretch"
+msgstr "Etirer"
+
+#: msgcatSTR_artscript2.tcl:109
+msgid "Style:"
+msgstr "Style:"
+
+#: msgcatSTR_artscript2.tcl:110
+msgid "Suported Images"
+msgstr "Images supportées"
+
+#: msgcatSTR_artscript2.tcl:111
+msgid "Text Style"
+msgstr "Style de texte"
+
+#: msgcatSTR_artscript2.tcl:112
+msgid "Thumbnail"
+msgstr "Vignette"
+
+#: msgcatSTR_artscript2.tcl:113
+msgid "Tile size. ratio : w x h"
+msgstr "Tamaño de tesela:"
+
+#: msgcatSTR_artscript2.tcl:114
+msgid "Tk drag and drop enabled"
+msgstr "Tk, glisser/déposer actif"
+
+#: msgcatSTR_artscript2.tcl:115
+msgid "Top"
+msgstr "Haut"
+
+#: msgcatSTR_artscript2.tcl:116
+msgid "TopLeft"
+msgstr "Haut-Gauche."
+
+#: msgcatSTR_artscript2.tcl:117
+msgid "TopRight"
+msgstr "Haut-Droit."
+
+#: msgcatSTR_artscript2.tcl:118
+msgid "Watermark"
+msgstr "Filigrane"
+
+#: msgcatSTR_artscript2.tcl:119
+msgid "Watermark Text Color"
+msgstr "Couleur du text filigrané"
+
+#: msgcatSTR_artscript2.tcl:120
+msgid "Wrap"
+msgstr "Enveloppé"
+
+#: msgcatSTR_artscript2.tcl:121
+msgid "Zero geometry"
+msgstr "Dimmension zéro"
+
+#: msgcatSTR_artscript2.tcl:122
+msgid "Zoom"
+msgstr "Zoom"
+
+#: msgcatSTR_artscript2.tcl:123
+msgid "all"
+msgstr "tous"
+
+#: msgcatSTR_artscript2.tcl:124
+msgid "bright"
+msgstr "brillance"
+
+#: msgcatSTR_artscript2.tcl:125
+msgid "clear"
+msgstr "effacer"
+
+#: msgcatSTR_artscript2.tcl:126
+msgid "dark"
+msgstr "obscurité"
+
+#: msgcatSTR_artscript2.tcl:127
+msgid "darker"
+msgstr "plus sombre"
+
+#: msgcatSTR_artscript2.tcl:128
+msgid "default"
+msgstr "par défaut"
+
+#: msgcatSTR_artscript2.tcl:129
+#, tcl-format
+msgid "error: %s"
+msgstr "erreur: %s"
+
+#: msgcatSTR_artscript2.tcl:130
+msgid "ext."
+msgstr ""
+
+#: msgcatSTR_artscript2.tcl:131
+#, tcl-format
+msgid "file %s found!"
+msgstr "fichier %s trouvé!"
+
+#: msgcatSTR_artscript2.tcl:132
+msgid "icon"
+msgstr "icone"
+
+#: msgcatSTR_artscript2.tcl:133
+msgid "image"
+msgstr "image"
+
+#: msgcatSTR_artscript2.tcl:134
+msgid "inv."
+msgstr ""
+
+#: msgcatSTR_artscript2.tcl:135
+msgid "label"
+msgstr "étiquette"
+
+#: msgcatSTR_artscript2.tcl:136
+msgid "neutral"
+msgstr "neutre"
+
+#: msgcatSTR_artscript2.tcl:137
+msgid "percentage"
+msgstr "pourcentage"
+
+#: msgcatSTR_artscript2.tcl:138
+#, tcl-format
+msgid "renaming... %s"
+msgstr "renommage... %s"
+
+#: msgcatSTR_artscript2.tcl:139
+msgid "sels"
+msgstr ""
+
+#: msgcatSTR_artscript2.tcl:140
+msgid "text"
+msgstr "texte"
+
+#: msgcatSTR_artscript2.tcl:141
+msgid "texture"
+msgstr "texture"
+
+#: msgcatSTR_artscript2.tcl:142
+msgid "wallpaper"
+msgstr "fond d'écran"
+
+#: msgcatSTR_artscript2.tcl:143
+msgid "webp lossy"
+msgstr "webp avec perte"
