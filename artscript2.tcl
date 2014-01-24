@@ -779,12 +779,24 @@ proc setThumbGif { path } {
 	set ::img_thumb [image create photo]
 		$::img_thumb put $::artscript(thumb)
 
+	thumbUpscale $path
 	$::widget_name(thumb-im) configure -compound image -image $::img_thumb
-	unset ::artscript(thumb)
+	set ::artscript(thumb) {}
 }
 proc setThumbPng { path } {
 	set ::img_thumb [image create photo -file $path]
+	thumbUpscale $path
 	$::widget_name(thumb-im) configure -compound image -image $::img_thumb
+}
+# doubles sizes of thumbnail if comes from normal size folder.
+proc thumbUpscale { path } {
+	if {[lindex [file split $path] end-1] eq "normal"} {
+		set ::img_scale [image create photo]
+		$::img_scale copy $::img_thumb
+	    $::img_thumb blank
+	    $::img_thumb copy $::img_scale -shrink -zoom 2 2
+	    image delete $::img_scale
+	}
 }
 
 # Attempts to load a thumbnail from thumbnails folder if exists.
@@ -806,6 +818,7 @@ proc showThumb { w f {tryprev 1}} {
 	set lthumb [file join $::artscript(thumb_large) "$thumbname.png"]
 
 	set thumbCmd [expr {[string is bool -strict $::artscript(tkpng)] ? {setThumbPng} : {setThumbGif}}]
+	catch {image delete $::img_thumb}
 	# Displays preview in widget
 	if { [file exists $lthumb ] } {
 		$thumbCmd $lthumb
