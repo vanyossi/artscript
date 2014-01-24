@@ -2775,10 +2775,15 @@ proc getResize { size dsize set_space } {
 	# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
 	# with -distort Resize instead of -resize Lanczos "or LanczosRadius"
 	set sigma [format %.2f [expr { ( (1 / ([format %.1f $dest_w] / $cur_w)) / 4 ) * .8 }] ]
-	set filter "-interpolate bicubic -filter LanczosRadius -define filter:blur=.9891028367558475"
-	set unsharp "	-unsharp 0x$sigma+0.80+0.010"
+	# set filter "-interpolate bicubic -filter LanczosRadius -define filter:blur=.9891028367558475"
+	# set unsharp "	-unsharp 0x$sigma+0.80+0.010"
 	# set filter "-interpolate bicubic -filter Parzen"
 	# set unsharp [string repeat "-unsharp 0x0.55+0.25+0.010 " 1]
+	#
+	# - Deevad Custom scaling + unsharp method , to mimic manual work he did on Gimp
+	#  Sharp and crispy , for my own painting only 
+	set filter "-filter LanczosRadius"
+        set unsharp " -unsharp 1x1+0.5+0.010"
 
 	if {$set_space} {
 		set resize "-colorspace RGB"

@@ -1,6 +1,12 @@
 artscriptk
 ==========
 
+
+Note : if you read this line, it's mean you didn't cloned the official Artscriptk. 
+       This one his a personnal fork by Deevad for labs and experimentation. 
+       check https://github.com/vanyossi/artscriptk for the official 
+
+
 Artscript is, in essence, a small app (or big script) to easy convert production file images (KRA, XCF, PSD, ORA, SVG, PNG) to universal formats (JPG, PNG, GIF or WEBM).
 
 In between the production file and the final image you can decide many aspects of the final image. The final image can be of any size, or multiple, have a watermark placed, image or text, or a collection or images can be ensemble together to form a tiled image file (For more details read "How to use it" section below).
