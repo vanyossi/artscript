@@ -24,6 +24,13 @@ Other input images supported are: BMP, DNG EXR GIF JPG TGA TIF XPM WEBP
 ### License
 GPL 3.0
 
+### Credits
+Developer:**Ivan Yossi** (http://colorathis.wordpress.com/ , ghevan@gmail.com)
+Original idea:**David Revoy** (www.davidrevoy.com , info@davidrevoy.com)
+Other contributors: Vasco Alexander Basqué (Gui advice)
+
+Project page: https://github.com/vanyossi/artscriptk
+
 ### Disclamer
 I'm a developer in training wheels. I have tested as much as possible but there might be some rough edges and bugs. I encourage you to report on the github project page.
 
@@ -45,7 +52,8 @@ Detailed info: * [Installing Dependencies](https://github.com/vanyossi/artscript
 
 How to use it
 -------------
-The original idea, developed by by **David Revoy** (www.davidrevoy.com , info@davidrevoy.com), was about a small script to run from the file manager (dolphin, thunar nautilus) to quickly deploy the desired images. It can still be used like that, and some other ways are possible now.
+The original idea was about a small script to run from the file manager (dolphin, thunar nautilus) to quickly deploy the desired images. It can still be used like that, and some other ways are possible now.
+
 
 It can be used in the following ways
 * From the right click menu of your file manager (recommended)
