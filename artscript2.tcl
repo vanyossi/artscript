@@ -439,7 +439,7 @@ proc setUserPresets { select } {
 		}
 	}
 	artscriptSetWidgetValues $settings
-	sizeTreeAddPreset default
+	catch {sizeTreeAddPreset default}
 
 	return
 }
