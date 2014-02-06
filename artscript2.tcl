@@ -1,7 +1,7 @@
 #! /usr/bin/env wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: 2.1.11
+#  Version: v2.2-alpha
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #  License: GPLv3 
@@ -301,6 +301,7 @@ proc identifyFile { f } {
 }
 # Read only the first n lines of a textFile and return the data
 proc readFileHead { file_name {n 10} } {
+	set data_read {}
 	set file_path [file normalize $file_name]
 	set data [open $file_path r]
 	incr i
@@ -318,7 +319,7 @@ proc readFileHead { file_name {n 10} } {
 proc getWidthHeightSVG { lines } {
 	foreach l [split $lines] {
 		set value [string trim [lsearch -inline -regexp -all [list $l] {^(.)*(width|height)} ] {<xapGImg/\"\\=:whidte>}]
-		if {[string is integer -strict $value]} {
+		if {[string is double -strict $value]} {
 			lappend size $value
 		}
 	}
@@ -532,7 +533,7 @@ proc setUserPresets { select } {
 		}
 	}
 	artscriptSetWidgetValues $settings
-	sizeTreeAddPreset default
+	catch {sizeTreeAddPreset default}
 
 	return
 }
@@ -738,7 +739,7 @@ proc makeThumb { path filext tsize } {
 		set Cmd [list unzip -p $path $container | convert PNG:- ]
 
 	} elseif {[lsearch -exact {.psd .xcf} $filext ] >= 0 } {
-		$::widget_name(thumb-im) configure -compound text -text [mc "No Thumbnail"]
+		$::widget_name(thumb-im) configure -image {} -compound text -text [mc "No Thumbnail"]
 		return 0
 	} else {
 		lappend Cmd convert -quiet $path		
