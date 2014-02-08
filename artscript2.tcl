@@ -87,6 +87,8 @@ proc tkpngLoad {args} {
 	set load 0
 	if {[catch {package require tkpng}] && ($::artscript(platform) eq {linux})} {
 		set tkpng_dir [file join $::artscript(lib) tkpng0.9]
+		# check if file is writable before attempting to make link
+		if {![file writable $tkpng_dir]} { return }
 		set sys_id [split [platform::identify] {-}]
 		if {[string match *64  [lindex $sys_id end]]} {
 			file link -symbolic [file join $tkpng_dir libtkpng0.9.so] [file join $tkpng_dir libtkpng_x64-0.9.so]
