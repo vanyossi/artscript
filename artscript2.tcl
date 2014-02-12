@@ -432,7 +432,7 @@ proc listValidate { files {step 0} } {
 					set size [format {%dx%d} $w $h]
 					set mode [dict get $colormodes $m]
 				} 
-				.ora     { set handler [expr {$::hasgimp ? "g" : "k"}] }
+				.ora     { set handler [expr {$::hascalligra ? "k" : "g"}] }
 				.kra     { set handler [expr {$::hascalligra ? "k" : ""}]}
 				.svg     -
 				.ai      { 
@@ -3389,6 +3389,28 @@ set ::ops [getUserOps $::argv]
 set ::hasgimp [validate "gimp"]
 set ::hasinkscape [validate "inkscape"]
 set ::hascalligra [validate "calligraconverter"]
+
+# Avoids hang on first Calligra processed file if no kde environment running.
+if { $::hascalligra } {
+	set run_kdeinit4 false
+	if {[validate pgrepo]} {
+		if {![catch {exec pgrep kdeinit4}]} {
+			set run_kdeinit4 true
+		}
+	} else {
+		set ps_aux [exec ps aux]
+		foreach el [split $ps_aux \n] {
+			if {[string match *kdeinit4* $el] > 0 } { 
+				set run_kdeinit4 true
+				break
+			}
+		}
+	}
+	if !$run_kdeinit4 {
+		exec kdeinit4 &
+	}
+	unset run_kdeinit4
+}
 #-====# Global file counter TODO: separate delete to a list
 set ::fc 1
 set ::artscript(human_pos) [list [mc "TopLeft"] [mc "Top"] [mc "TopRight"] [mc "Left"] [mc "Center"] [mc "Right"] [mc "BottomLeft"] [mc "Bottom"]  [mc "BottomRight"]]
