@@ -3407,7 +3407,7 @@ if { $::hascalligra } {
 		}
 	}
 	if !$run_kdeinit4 {
-		exec kdeinit4 &
+		catch {exec kdeinit4 &} ; #Do not break if kdeinit4 missing.
 	}
 	unset run_kdeinit4
 }
