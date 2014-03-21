@@ -3223,7 +3223,7 @@ proc prepConvert { {type "Convert"} {ids ""} { preview 0} } {
 
 proc afterConvert { type n args} {
 	array set vars $args
-	if {!$vars(preview)} {
+	if {![info exists vars(preview)]} {
 		incr n -1
 		set message [mc {Artscript %1$s finished %2$s images processed} $type "\n$n" ]
 		if {[catch {exec notify-send -i [file join $::artscript(dir) icons "artscript.gif"] -t 4000 $message}]} {
