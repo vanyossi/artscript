@@ -2635,7 +2635,7 @@ proc getSizeScale { w h dw dh {mode "OnlyShrink"} } {
 	} else {
 		set dw [ expr {round($w * $dh / [format "%0.2f" $h])} ]
 	}
-	lassign [list [expr {$w * $h}] [expr {$ow * $oh}] ] a da
+	lassign [list [expr {max($w,$h)}] [expr {max($ow,$oh)}] ] a da
 
 	switch -- $mode {
 		OnlyShrink {
