@@ -1296,7 +1296,7 @@ proc tabWatermarkOptions { wt } {
 	tabWatermarkImage $wt
 
 	ttk::button $wt.img_select -image $::folder_on -text [mc "New"] -style small.TButton \
-			-command [list loadImageWatermark $wt.iwatermarks]
+			-command [list loadImageWatermark $::widget_name(watermark_image)]
 
 	grid x x x $wt.lsize $wt.lrot $wt.lop -sticky we
 	grid $wt.text_checkbox $wt.text_watermark_list - $wt.text_size $wt.text_rotation \
