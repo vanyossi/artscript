@@ -1206,14 +1206,15 @@ proc guiTabCheckbox {w previous selected} {
 }
 proc guiTabToggleCheck {args} {
 	set vals {*}$args
-	set tabnames [dict create $::atk_msg(tab_watermark) Watermark $::atk_msg(tab_resize) Resize  $::atk_msg(tab_collage) Collage ]
+	set tabnames [dict create $::atk_msg(tab_watermark) Watermark $::atk_msg(tab_resize) Resize  $::atk_msg(tab_collage) Collage]
 	dict with vals {
 		if {$::tab_on == ${-image}} {
 			set image {}
 		} else {
 			set image $::tab_on
 		}
-		set tab_name [dict get $tabnames ${-text}]
+		# If tab not in dictionary do nothing
+		if { [catch {set tab_name [dict get $tabnames ${-text}]} ]} { return 0}
 		$::option_tab tab $::widget_name(tab_${tab_name}) -image $image
 		set bool [expr {$image eq {} ? 0 : 1}]
 		switch -exact -- $tab_name {
@@ -1221,7 +1222,7 @@ proc guiTabToggleCheck {args} {
 				set ::artscript(select_collage) $bool
 				eventCollage
 			}
-			"Resize"   { set ::artscript(select_size) $bool }
+			"Resize"    { set ::artscript(select_size) $bool }
 			"Watermark" { eventWatermark parent              }
 		}
 	}
@@ -3151,7 +3152,7 @@ proc doConvert { files {step 1} args } {
 					set opath $tmp
 				}
 				# necessary for resize sRGB inputfiles.
-				set file_info [exec identify $opath]
+				set file_info [exec identify -quiet $opath]
 				set colorspace_make_linear [expr {[lsearch $file_info sRGB] >= 0 ? 1 : 0}]
 				# get make resize string
 				set sizes [getOutputSizesForTree $size]
@@ -3393,7 +3394,7 @@ set ::hascalligra [validate "calligraconverter"]
 # Avoids hang on first Calligra processed file if no kde environment running.
 if { $::hascalligra } {
 	set run_kdeinit4 false
-	if {[validate pgrepo]} {
+	if {[validate pgrep]} {
 		if {![catch {exec pgrep kdeinit4}]} {
 			set run_kdeinit4 true
 		}
