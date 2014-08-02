@@ -195,6 +195,8 @@ proc artscriptSettings {} {
 		artscript(alfa_color)	           "white"    \
 		artscript(remember_state)          0          \
 		artscript(unsharp)                 0          \
+		artscript(global_output_folder)    0          \
+		artscript(output_directory)        {}         \
 	]
 	#Extension & output
 	set supported_files_string [mc "Suported Images"]
@@ -255,6 +257,11 @@ proc getOutputName { iname out_extension { prefix {} } { suffix {} } { sizesufix
 	}
 	
 	set dir [file normalize [file dirname $iname]]
+	# change dir to destination dir to allow overwrite failsafe to work
+	if $::artscript(global_output_folder) {
+		set dir $::artscript(output_directory)
+	}
+
 	set name [file rootname [file tail $iname]]
 	# Name in brackets to protect white space
 	set lname [concat $prefix [list $name] $suffix $sizesufix ]
@@ -2424,15 +2431,56 @@ proc tabEtc { w } {
 	set ::widget_name(adjust_image_unsharp) [ttk::combobox $wu.unsharp_box -state readonly -width 8 -values {Soft None}]
 	$::widget_name(adjust_image_unsharp) current 0
 
-	grid $wu.cb_unsharp $wu.unsharp_box
-	grid columnconfigure $wu "all" -pad 12
+	grid $wu.cb_unsharp $wu.unsharp_box -sticky we
+	grid columnconfigure $wu 0 -pad 12 -weight 1
+
+	set wo [ttk::frame $w.output_dir -padding {0 8}]
+	ttk::checkbutton $wo.cb_outputdir -text [mc "Send all output images to one directory"] -variable ::artscript(global_output_folder)
+	set ::widget_name(output_directory) [ ttk::entry $wo.path -textvariable ::artscript(output_directory)  \
+		-validate focus -validatecommand { validateDirectory %P } -invalidcommand { setPreviousFolder }]
+	ttk::button $wo.folder_select -image $::folder_on -text [mc "Set output folder"] -style small.TButton \
+			-command {setOutputFolder}
+
+	grid $wo.cb_outputdir -sticky we
+	grid $wo.path $wo.folder_select -sticky we
+	grid columnconfigure $wo 0 -pad 12 -weight 1
+
+	grid configure $wu.unsharp_box $wo.folder_select -sticky e
 
 	ttk::separator $w.bottom_sep -orient vertical
 
-	addFrameTop $wu $w.bottom_sep
+	addFrameTop $wu $wo $w.bottom_sep
 
 	return $w
 }
+
+# Folder validation event funtions for folder entry select
+proc validateDirectory { path } {
+	if {[file isdirectory $path]} {
+		catch [set ::artscript(prev_directory) $path]
+		return 1
+	}
+	return 0
+}
+
+proc setPreviousFolder {} {
+	if {[string length [$::widget_name(output_directory) get]] == 0} {
+		return
+	}
+	if {[info exists ::artscript(output_directory)]} {
+		$::widget_name(output_directory) delete 0 end
+		$::widget_name(output_directory) insert 0 $::artscript(prev_directory)
+	}
+}
+proc setOutputFolder {} {
+	set folder [openFiles mode "dir"]
+	if {[file isdirectory $folder]} {
+		set ::artscript(prev_directory) $folder
+		$::widget_name(output_directory) delete 0 end
+		$::widget_name(output_directory) insert 0 $folder
+	}
+}
+
 
 # --== Suffix and prefix ops
 proc guiOutput { w } {
@@ -3185,6 +3233,7 @@ proc doConvert { files {step 1} args } {
 			if {!$deleted} {
 				set opath $path
 				set outpath [file dirname $path]
+				if $::artscript(global_output_folder) { set outpath $::artscript(output_directory) }
 				
 				if {[dict exists $datas tmp]} {
 					set opath $tmp
