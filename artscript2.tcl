@@ -194,6 +194,7 @@ proc artscriptSettings {} {
 		artscript(alfaoff)		           {}         \
 		artscript(alfa_color)	           "white"    \
 		artscript(remember_state)          0          \
+		artscript(unsharp)                 0          \
 	]
 	#Extension & output
 	set supported_files_string [mc "Suported Images"]
@@ -1238,17 +1239,20 @@ proc guiOptionTabs { w } {
 	set ::atk_msg(tab_watermark) [mc "Watermark"]
 	set ::atk_msg(tab_resize) [mc "Resize"]
 	set ::atk_msg(tab_collage) [mc "Collage"]
+	set ::atk_msg(tab_etc) [mc "etc."]
 	
 	set ::widget_name(tab_Watermark) [tabWatermark $w.wm]
 	set ::widget_name(tab_Resize) [tabResize $w.sz]
 	set ::widget_name(tab_Collage) [tabCollage $w.cl]
-	set ::wt $::widget_name(tab_Watermark) ; #TODO remove, bidsetACtion locks this variable name
+	set ::widget_name(tab_Etc) [tabEtc $w.tw]
+	# set ::wt $::widget_name(tab_Watermark) ; #TODO remove, bidsetAction locks this variable name
 
 	bind $w <Button> {guiTabCheckbox %W [%W select] [%W identify tab %x %y]}
 	
 	$w add $::widget_name(tab_Watermark) -text $::atk_msg(tab_watermark) -underline 0 -compound left
 	$w add $::widget_name(tab_Resize) -text $::atk_msg(tab_resize) -underline 0 -sticky nesw -compound left
 	$w add $::widget_name(tab_Collage) -text $::atk_msg(tab_collage) -underline 0 -sticky nesw -compound left
+	$w add $::widget_name(tab_Etc) -text $::atk_msg(tab_etc) -underline 1 -sticky nesw -compound left
 
 	return $w
 }
@@ -2410,6 +2414,25 @@ proc relaunchCollage { file_generated destination files } {
 	after idle [list after 0 [list doCollage $files]]
 }
 
+# --== Adjust and tweaks options
+proc tabEtc { w } {
+	ttk::frame $w -padding 6
+
+	set wu [ttk::frame $w.unsharp]
+	ttk::checkbutton $wu.cb_unsharp -text [mc "Resize unsharp filter strength"] -variable ::artscript(unsharp)
+	# ttk::label $wu.unsharp_label -text {Unsharp}
+	set ::widget_name(adjust_image_unsharp) [ttk::combobox $wu.unsharp_box -state readonly -width 8 -values {Soft None}]
+	$::widget_name(adjust_image_unsharp) current 0
+
+	grid $wu.cb_unsharp $wu.unsharp_box
+	grid columnconfigure $wu "all" -pad 12
+
+	ttk::separator $w.bottom_sep -orient vertical
+
+	addFrameTop $wu $w.bottom_sep
+
+	return $w
+}
 
 # --== Suffix and prefix ops
 proc guiOutput { w } {
@@ -2793,7 +2816,9 @@ proc getResize { size dsize set_space } {
 	# with -distort Resize instead of -resize Lanczos "or LanczosRadius"
 	set sigma [format %.2f [expr { ( (1 / ([format %.1f $dest_w] / $cur_w)) / 4 ) * .8 }] ]
 	set filter "-interpolate bicubic -filter LanczosRadius -define filter:blur=.9891028367558475"
-	set unsharp "	-unsharp 0x$sigma+0.80+0.010"
+	#set unsharp "-unsharp 0x$sigma+0.80+0.010"
+
+	set unsharp [getUnsharpValue $sigma]
 	# set filter "-interpolate bicubic -filter Parzen"
 	# set unsharp [string repeat "-unsharp 0x0.55+0.25+0.010 " 1]
 
@@ -2831,6 +2856,19 @@ proc getQuality { ext } {
 		default { set quality {} }
 	}
 	return $quality
+}
+
+# set unsharp value depending on widget value
+# returns string
+proc getUnsharpValue { {sigma 0} } {
+	if $::artscript(unsharp) {
+		puts $::artscript_convert(unsharp_force)
+		switch -glob -- $::artscript_convert(unsharp_force) {
+			Soft	{ return "-unsharp 0x$sigma+0.80+0.010" }
+			default { return {} }
+		}
+	}
+	return {}
 }
 
 proc renameFiles { {index 0} {step 0} } {
@@ -3208,7 +3246,7 @@ proc prepConvert { {type "Convert"} {ids ""} { preview 0} } {
 	}
 	set ::artscript_convert(wmark) [watermark]
 	set ::artscript_convert(quality) [getQuality $::out_extension]
-
+	set ::artscript_convert(unsharp_force) [$::widget_name(adjust_image_unsharp) get]
  	#controls all extracts are done before convert
 	set ::artscript_convert(extract) true
 	
@@ -3236,10 +3274,10 @@ proc afterConvert { type n args} {
 proc artscriptWidgetCatalogue {} {
 	set catalogue [dict create]
 
-	dict set catalogue variables {watermark_color collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state window_geom}
+	dict set catalogue variables {watermark_color collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image unsharp overwrite alfaoff image_quality remember_state window_geom}
 	dict set catalogue preset_variables {watermark_color_swatches}
 	dict set catalogue col_styles {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color}
-	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_text_position watermark_text_offset_x watermark_text_offset_y watermark_image_offset_x watermark_image_offset_y watermark_text_rotation watermark_image_rotation watermark_image_position watermark_image_style watermark_text_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality format resize_operators resize_zoom_position resize_zoom_offset_x resize_zoom_offset_y format}
+	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_text_position watermark_text_offset_x watermark_text_offset_y watermark_image_offset_x watermark_image_offset_y watermark_text_rotation watermark_image_rotation watermark_image_position watermark_image_style watermark_text_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality adjust_image_unsharp format resize_operators resize_zoom_position resize_zoom_offset_x resize_zoom_offset_y format}
 	dict set catalogue lists {watermark_text_list suffix_list}
 	return $catalogue
 }
