@@ -8,7 +8,7 @@
 # -----------------------------------------------------------
 #  Goal : Aid in the deploy of digital artwork for media with the best possible quality
 #   Dependencies: >=imagemagick-6.7.5, tk 8.5 zip
-#   Optional deps: calligraconverter, inkscape, gimp
+#   Optional deps: krita, inkscape, gimp
 #
 #  Customize:__
 #   Make a config file (rename presets.config.example to presets.config)
@@ -206,7 +206,7 @@ proc artscriptSettings {} {
 		artscript(supported_files) [dict create \
 			all [list $supported_files_string    [dict get $mis_settings ext] ] \
 			magick [list $supported_files_string  {.png .jpg .jpeg .gif .bmp .miff .svg .tif .webp} ] \
-			calligra [list {KRA, ORA}       {.ora .kra}  ] \
+			krita [list {KRA, ORA}       {.ora .kra}  ] \
 			inkscape [list {SVG, AI}        {.svg .ai}   ] \
 			gimp [list {XCF, PSD}           {.xcf .psd}  ] \
 			png [list {PNG}                 {.png}       ] \
@@ -234,6 +234,42 @@ proc validate {program} {
 		expr { [file exists [file join $place $program]] == 1 ? [return 1] : [continue] }
 	}
 	puts [mc "Program %s not found" $program]
+	return 0
+}
+
+# Avoids hang on first Krita processed file if no kde environment running.
+# Selects Calligraconverter for older krita releases than 2.9
+proc prepare_krita_environment { args } {
+	set run_kdeinit4 false
+	if {[validate pgrep]} {
+		if {![catch {exec pgrep kdeinit4}]} {
+			set run_kdeinit4 true
+		}
+	} else {
+		set ps_aux [exec ps aux]
+		foreach el [split $ps_aux \n] {
+			if {[string match *kdeinit4* $el] > 0 } { 
+				set run_kdeinit4 true
+				break
+			}
+		}
+	}
+	if !$run_kdeinit4 {
+		catch {exec kdeinit4 &} ; #Do not break if kdeinit4 missing.
+	}
+
+	#check what version of krita is being used
+	set krita_version [exec krita --version]
+	set krita_string [lindex [split $krita_version \n] end]
+	set krita_number [lindex $krita_string 1]
+
+	#default to krita --export
+	set ::artscript(kra_cmd) [list krita {$path} --export --export-filename {$outname}]
+
+	#If version is 2.* or *.9 and Pre-alpha, use calligraconverter instead
+	if { (floor($krita_number) == 2) && ($krita_number == {2.9} && [lindex $krita_string 2] == "Pre-Alpha")} {
+		set ::artscript(kra_cmd) [list calligraconverter --batch -- {$path} {$outname}]
+	}
 	return 0
 }
 
@@ -341,7 +377,7 @@ proc getWidthHeightSVG { lines } {
 }
 
 # Computes values to insert in global inputfiles dictionary
-# id => uniq integer, fpath filepath, size WxH, ext .string, h string(inkscape,calligra,gimp...)
+# id => uniq integer, fpath filepath, size WxH, ext .string, h string(inkscape,krita ,gimp...)
 proc setDictEntries { id fpath size ext mode h {add 1}} {
 	dict set ::inputfiles $id [dict create \
 		name      [file tail $fpath] \
@@ -381,7 +417,7 @@ proc getOraKraSize { image_file filext } {
 }
 
 # Validates the files supplied to be Filetypes supported by script
-# Search order: gimp(xcf,psd) > inkscape(svg,ai) > calligra(kra,ora,xcf,psd) > allelse
+# Search order: gimp(xcf,psd) > inkscape(svg,ai) > krita(kra,ora,xcf,psd) > allelse
 # files list
 proc listValidate { files {step 0} } {
 	# global fc
@@ -440,8 +476,8 @@ proc listValidate { files {step 0} } {
 					set size [format {%dx%d} $w $h]
 					set mode [dict get $colormodes $m]
 				} 
-				.ora     { set handler [expr {$::hascalligra ? "k" : "g"}] }
-				.kra     { set handler [expr {$::hascalligra ? "k" : ""}]}
+				.ora     { set handler [expr {$::haskrita ? "k" : "g"}] }
+				.kra     { set handler [expr {$::haskrita ? "k" : ""}]}
 				.svg     -
 				.ai      { 
 					set size [getWidthHeightSVG $lines]
@@ -454,8 +490,8 @@ proc listValidate { files {step 0} } {
 					set handler "m"
 				}
 			}
-			# Confirm calligra is available if not, do not add to list
-			if { $handler eq "k" && !$::hascalligra } {
+			# Confirm krita is available if not, do not add to list
+			if { $handler eq "k" && !$::haskrita } {
 				set handler {}
 			}
 			if { $size != 0 && $handler ne {} } {
@@ -574,7 +610,7 @@ proc updateWinTitle { } {
 }
 
 # Returns a list of ids of all elements that have args string in value
-# args string list (gimp inkscape, magick, calligra)
+# args string list (gimp inkscape, magick, krita)
 proc putsHandlers {args} {
 	dict for {id val} $::handlers {
 		if {[lsearch -all $args $val] >= 0} {
@@ -585,7 +621,7 @@ proc putsHandlers {args} {
 }
 # Shows open dialog for supported types
 proc openFiles { args } {
-	lassign [list {all calligra inkscape gimp png jpg gif} openpath 1 . files] formats path_var multiple path mode
+	lassign [list {all krita inkscape gimp png jpg gif} openpath 1 . files] formats path_var multiple path mode
 	foreach {key value} $args { set $key $value	}
 
 	if {[info exists ::artscript($path_var)]} { set path $::artscript($path_var) }
@@ -3043,14 +3079,14 @@ proc makeOra { index ilist } {
 			pBarControl [mc "Oraizing... %s" $name] update
 
 			set outname [file join [file dirname $path] $output]
-			set Cmd [list calligraconverter --batch -- $path $outname]
+			set Cmd [subst $::artscript(kra_cmd)]
 			runCommand $Cmd [list makeOra $index $ilist]
 		}
 	}
 	return
 }
 
-# Gets files to be rendered by gimp, calligra or inkscape
+# Gets files to be rendered by gimp, krita or inkscape
 # ids = files to convert (default all)
 # returns integer, total files to process
 proc prepHandlerFiles { {files ""} } {
@@ -3072,7 +3108,7 @@ proc prepHandlerFiles { {files ""} } {
 	return $id_length
 }
 
-# Calligra, gimp and inkscape converter
+# Krita, gimp and inkscape converter
 # Creates a png file in tmp and adds file path to dict id
 # index = current process position, ilist = list to walk, outfdir = output directory
 # returns nothing
@@ -3147,7 +3183,8 @@ proc processHandlerFiles { index ilist {step 1}} {
 			}
 			if { $handler($imgv) == {k} } {
 				puts [mc "Rendering Kriters"]
-				set extractCmd [list calligraconverter --mimetype "image/png" --batch -- $id(path) $outname]
+				set path $id(path)
+				set extractCmd [subst $::artscript(kra_cmd)]
 			}
 			runCommand $extractCmd [list relauchHandler $index $ilist]
 		} else {
@@ -3299,7 +3336,7 @@ proc prepConvert { {type "Convert"} {ids ""} { preview 0} } {
  	#controls all extracts are done before convert
 	set ::artscript_convert(extract) true
 	
-	#process Gimp Calligra and inkscape to Tmp files
+	#process Gimp Krita and inkscape to Tmp files
 	set ::artscript_convert(files) [processIds $ids]
 	set ::artscript_convert(total_renders) [prepHandlerFiles $::artscript_convert(files)]
 
@@ -3476,29 +3513,10 @@ set ::ops [getUserOps $::argv]
 #-==== Find Optional dependencies (as global to search file only once)
 set ::hasgimp [validate "gimp"]
 set ::hasinkscape [validate "inkscape"]
-set ::hascalligra [validate "calligraconverter"]
+set ::haskrita [validate "krita"]
+# setup environment for krita
+if $::haskrita prepare_krita_environment
 
-# Avoids hang on first Calligra processed file if no kde environment running.
-if { $::hascalligra } {
-	set run_kdeinit4 false
-	if {[validate pgrep]} {
-		if {![catch {exec pgrep kdeinit4}]} {
-			set run_kdeinit4 true
-		}
-	} else {
-		set ps_aux [exec ps aux]
-		foreach el [split $ps_aux \n] {
-			if {[string match *kdeinit4* $el] > 0 } { 
-				set run_kdeinit4 true
-				break
-			}
-		}
-	}
-	if !$run_kdeinit4 {
-		catch {exec kdeinit4 &} ; #Do not break if kdeinit4 missing.
-	}
-	unset run_kdeinit4
-}
 #-====# Global file counter TODO: separate delete to a list
 set ::fc 1
 set ::artscript(human_pos) [list [mc "TopLeft"] [mc "Top"] [mc "TopRight"] [mc "Left"] [mc "Center"] [mc "Right"] [mc "BottomLeft"] [mc "Bottom"]  [mc "BottomRight"]]
