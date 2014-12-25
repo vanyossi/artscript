@@ -197,6 +197,7 @@ proc artscriptSettings {} {
 		artscript(unsharp)                 0          \
 		artscript(global_output_folder)    0          \
 		artscript(output_directory)        {}         \
+		artscript(prev_directory)          {}         \
 	]
 	#Extension & output
 	set supported_files_string [mc "Suported Images"]
@@ -2468,7 +2469,8 @@ proc tabEtc { w } {
 	$::widget_name(adjust_image_unsharp) current 0
 
 	grid $wu.cb_unsharp $wu.unsharp_box -sticky we
-	grid columnconfigure $wu 0 -pad 12 -weight 1
+	grid columnconfigure $wu 0 -pad 12
+	#grid columnconfigure $wu 1 -weight 1
 
 	set wo [ttk::frame $w.output_dir -padding {0 8}]
 	ttk::checkbutton $wo.cb_outputdir -text [mc "Send all output images to one directory"] -variable ::artscript(global_output_folder)
