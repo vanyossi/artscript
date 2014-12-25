@@ -182,8 +182,8 @@ proc artscriptSettings {} {
 		out_prefix    {}              \
 		out_suffix    {}              \
 	]
-	#General checkboxes
-	set bool_settings [dict create  \
+	#General arscript settings
+	set general_settings [dict create  \
 		artscript(select_watermark)        0          \
 		artscript(select_watermark_text)   0          \
 		artscript(select_watermark_image)  0          \
@@ -191,13 +191,14 @@ proc artscriptSettings {} {
 		artscript(select_collage)          0          \
 		artscript(select_suffix)           0          \
 		artscript(overwrite)               0          \
-		artscript(alfaoff)		           {}         \
-		artscript(alfa_color)	           "white"    \
 		artscript(remember_state)          0          \
 		artscript(unsharp)                 0          \
 		artscript(global_output_folder)    0          \
 		artscript(output_directory)        {}         \
 		artscript(prev_directory)          {}         \
+		artscript(window_geom)             {}         \
+		artscript(alfaoff)		           {}         \
+		artscript(alfa_color)	           "white"    \
 	]
 	#Extension & output
 	set supported_files_string [mc "Suported Images"]
@@ -214,10 +215,9 @@ proc artscriptSettings {} {
 			jpg [list {JPG, JPEG}           {.jpg .jpeg} ] \
 			gif [list {GIF}                 {.gif} ] \
 		] \
-		artscript(window_geom) {}
 	]
 	#--==== END of Artscript Default Settings
-	set settings [dict merge $mis_settings $wat_settings $siz_settings $col_settings $suf_settings $bool_settings $out_settings]
+	set settings [dict merge $mis_settings $wat_settings $siz_settings $col_settings $suf_settings $general_settings $out_settings]
 	dict for {key value} $settings {
 		set ::$key [subst $value]
 	}
