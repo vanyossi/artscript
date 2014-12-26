@@ -139,6 +139,7 @@ proc artscriptSettings {} {
 	set mis_settings [dict create \
 		ext ".ai .bmp .dng .exr .gif .jpeg .jpg .kra .miff .ora .png .psd .svg .tga .tif .xcf .xpm .webp" \
 		autor "Autor" \
+		columns_only_show [list id ext name size output osize] \
 	]
 	# Watermark options
 	set wat_settings [dict create     \
@@ -572,8 +573,8 @@ proc setUserPresets { select } {
 	    catch { dict lappend settings sets {*}[dict filter $preset_values key collage_lay*] }
 	    catch { dict set settings img_src [dict create values $preset(watermark_image_list) selection {}] }
 
-		foreach prop_lists [list $get_values $col_styles [concat $variables $preset_variables] $lists collage_label]\
-			prop_names {get_values col_styles variables lists entries} {
+		foreach prop_lists [list $get_values $col_styles $raw_vars [concat $variables $preset_variables] $lists collage_label]\
+			prop_names {get_values col_styles raw_vars variables lists entries} {
 			foreach prop $prop_lists {
 				catch {dict set settings $prop_names $prop $preset(${prop})}
 			}
@@ -661,10 +662,8 @@ proc loadImageWatermark {w args} {
 # Receives w=widget name and id= key name of global dict
 proc addTreevalues { w id } {
 	# global inputfiles
-	
 	dict with ::inputfiles $id {
-		set values [list $id $ext $name $size $output $osize]
-		set ::img::imgid$id [$w insert {} end -values $values]
+		set ::img::imgid$id [$w insert {} end -values [list $id $ext $name $size $output $osize $color $path]]
 	}
 }
 
@@ -732,6 +731,41 @@ proc updateTextLabel { var value } {
 	return
 }
 
+#creates headers and assing visibility to them.
+proc treeviewHeaderAssign { {w 0} {tree_scroll 0}} {
+	set header_strings [dict create id [mc "ID"] ext [mc "ext."] name [mc "Input"] size [mc "Size"] output [mc "Output"] osize [mc "Size out"] color [mc "Color Profiles"] path [mc "Location"] ]
+	set fileheaders [dict keys $header_strings]
+	if {$w != 0} {
+		set ::widget_name(flist) [ttk::treeview $w -columns $fileheaders -show headings -yscrollcommand "$tree_scroll set"]
+		$::widget_name(flist) configure -displaycolumns {0 1 2 3 4 5}
+	}
+
+	for {set i 0} {$i < [dict size $header_strings]} {incr i} {
+		set col [$::widget_name(flist) column $i -id]
+		$::widget_name(flist) heading $col -text [dict get $header_strings $col] -command [list treeSort $::widget_name(flist) $col 0 ]
+		switch -exact -- $col {
+			id { $::widget_name(flist) column id -width 32 -stretch 0 }
+			ext { $::widget_name(flist) column ext -width 48 -stretch 0 }
+			size { $::widget_name(flist) column size -width 86 -stretch 0 }
+			osize { $::widget_name(flist) column osize -width 86 }
+		}
+		if { [lsearch -exact $::columns_only_show $col] >= 0 } {
+			lappend column_requested $i
+		}
+	}
+	if { [info exist column_requested]} {
+		# set the order as requested.
+		foreach  col_u $::columns_only_show {
+			foreach col_s $column_requested {
+				if { [$::widget_name(flist) column $col_s -id] == $col_u } {
+					lappend column_order $col_s
+				}
+			}
+		}
+		$::widget_name(flist) configure -displaycolumns $column_order
+	}
+}
+
 # Transform a read with the supplied script and writes it to dict and treeview
 # Script: script to run, w = widget, write/read = dict key or tree column
 proc treeAlterVal { {script {set $value}} w read write  } {
@@ -755,13 +789,18 @@ proc treeAlterVal { {script {set $value}} w read write  } {
 		}
 	}
 }
+# Update output name column value only if column is available
+proc treeUpdateOuputColumn {} {
+	treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output
+	return
+}
 
 # Updates checkbox state and output name values on tree (w)
 proc printOutname { w } {
 	if {$::artscript(select_suffix) || $w != 0} {
 		set ::artscript(select_suffix) 1
 	}
-	treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output
+	treeUpdateOuputColumn
 }
 
 # Check id of thumbnail shown sends it to convert to preview.
@@ -1203,32 +1242,23 @@ proc guiFileList { w } {
 	ttk::label $a.sep
 	ttk::label $a.sep_sels
 
-	lassign [list $w.flist.tree.files $w.flist.tree.sscrl] tree_files tree_scroll
+	set tree_scroll $w.flist.tree.sscrl 
+	#Treeview header asignment, review if calling tree_files is better than global array
+	treeviewHeaderAssign $w.flist.tree.files $tree_scroll
 
-	set header_strings [dict create id [mc "ID"] ext [mc "ext."] input [mc "Input"] size [mc "Size"] output [mc "Output"] osize [mc "Size out"] ]
-	set fileheaders [dict keys $header_strings]
-	set ::widget_name(flist) [ttk::treeview $tree_files -columns $fileheaders -show headings -yscrollcommand "$tree_scroll set"]
-	foreach col $fileheaders {
-		$tree_files heading $col -text [dict get $header_strings $col] -command [list treeSort $tree_files $col 0 ]
-	}
-	$tree_files column id -width 32 -stretch 0
-	$tree_files column ext -width 48 -stretch 0
-	$tree_files column size -width 86 -stretch 0
-	$tree_files column osize -width 86
-
-	bind $tree_files <<TreeviewSelect>> { showThumb $::widget_name(thumb-im) [%W selection] }
-	bind $tree_files <Key-Delete> { removeTreeItem %W [%W selection] }
+	bind $::widget_name(flist) <<TreeviewSelect>> { showThumb $::widget_name(thumb-im) [%W selection] }
+	bind $::widget_name(flist) <Key-Delete> { removeTreeItem %W [%W selection] }
 	bind $::widget_name(flist) <Control-a> { $::widget_name(flist) selection add [$::widget_name(flist) children {}] }
 	bind $::widget_name(flist) <Control-d> { $::widget_name(flist) selection remove [$::widget_name(flist) children {}] }
 	bind $::widget_name(flist) <Control-i> { $::widget_name(flist) selection toggle [$::widget_name(flist) children {}] }
 
-	ttk::scrollbar $tree_scroll -orient vertical -command [list $tree_files yview ]
+	ttk::scrollbar $tree_scroll -orient vertical -command [list $::widget_name(flist) yview ]
 	$::widget_name(flist) tag configure exists -foreground #f00
 
 	pack $a $w.flist.tree -side top -fill x
 	pack $a.add $a.sep $a.select_label $a.select_all $a.select_inv $a.select_none $a.sep_sels $a.clear -side left -padx {0 2}
-	pack $tree_files $tree_scroll -side left -fill y
-	pack configure $a.sep $a.sep_sels $w.flist.tree $tree_files -expand 1 -fill both
+	pack $::widget_name(flist) $tree_scroll -side left -fill y
+	pack configure $a.sep $a.sep_sels $w.flist.tree $::widget_name(flist) -expand 1 -fill both
 	pack configure $a.clear -padx {0 15}
 
 	return $w
@@ -2579,7 +2609,7 @@ proc frameOutput { w } {
 	$w.format set png
 	bind $w.format <<ComboboxSelected>> [list setFormatOptions $w ]
 
-	ttk::checkbutton $w.overwrite -text [mc "Allow Overwrite"] -onvalue 1 -offvalue 0 -variable ::artscript(overwrite) -command { treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output }
+	ttk::checkbutton $w.overwrite -text [mc "Allow Overwrite"] -onvalue 1 -offvalue 0 -variable ::artscript(overwrite) -command { treeUpdateOuputColumn }
 	ttk::checkbutton $w.alfa_off -text [mc "Remove Alfa"] -onvalue "-background %s -alpha remove" -offvalue "" -variable ::artscript(alfaoff)
 	set ::widget_name(canvas_alpha_color) [canvas $w.alpha_color -width 16 -height 16]
 	set ::widget_name(alfa_color) [$w.alpha_color create rectangle 1 1 15 15 -fill $::artscript(alfa_color) -width 1 -outline "grey20" -tags {alfa}]
@@ -2602,7 +2632,7 @@ proc frameOutput { w } {
 # w = widget name
 proc setFormatOptions { w } {
 	set ::out_extension [dict get $::artscript(formats) [$::widget_name(format) get]]
-	treeAlterVal {getOutputName $value $::out_extension $::out_prefix $::out_suffix} $::widget_name(flist) path output
+	treeUpdateOuputColumn
 	$::widget_name(convert-but) configure -text $::artscript(bconvert_string) -command $::artscript(bconvert_cmd)
 	$::widget_name(thumb-prev) state !disabled
 	$::widget_name(quality_label) state !disabled
@@ -3362,6 +3392,7 @@ proc afterConvert { type n args} {
 proc artscriptWidgetCatalogue {} {
 	set catalogue [dict create]
 
+	dict set catalogue raw_vars {autor columns_only_show ext}
 	dict set catalogue variables {watermark_color collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image unsharp overwrite alfaoff image_quality remember_state window_geom}
 	dict set catalogue preset_variables {watermark_color_swatches}
 	dict set catalogue col_styles {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color}
@@ -3420,6 +3451,11 @@ proc artscriptSetWidgetValues { dictionary } {
 					$::widget_name(watermark_image) set $selection
 				}
 			}
+			"raw_vars" {
+				foreach {key value} $elements {
+					set ::$key $value
+				}
+			}
 			"variables" {
 				foreach {key value} $elements {
 					set ::artscript($key) $value
@@ -3444,6 +3480,7 @@ proc artscriptSetWidgetValues { dictionary } {
 	eventCollage
 	eventWatermark
 	setFormatOptions $::widget_name(frame-output)
+	treeviewHeaderAssign
 }
 proc artscriptSaveOnExit {} {
 	catch {file delete {*}$::deleteFileList }

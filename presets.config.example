@@ -31,6 +31,10 @@ autor=Autor
 # Settings will be saved in .artscriptrc file in the same directory the script is running
 # remember_state=1
 
+# Order and columns shown in file treeview
+# Options available: id, ext, name, size, output, osize, color, path
+# columns_only_show=id ext output osize
+
 #-==== Watermark options
 # watermark_text=
 
