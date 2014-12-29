@@ -193,7 +193,6 @@ proc artscriptSettings {} {
 		artscript(select_suffix)           0          \
 		artscript(overwrite)               0          \
 		artscript(remember_state)          0          \
-		artscript(unsharp)                 0          \
 		artscript(global_output_folder)    0          \
 		artscript(output_directory)        {}         \
 		artscript(prev_directory)          {}         \
@@ -2493,9 +2492,9 @@ proc tabEtc { w } {
 	ttk::frame $w -padding 6
 
 	set wu [ttk::frame $w.unsharp]
-	ttk::checkbutton $wu.cb_unsharp -text [mc "Resize unsharp filter strength"] -variable ::artscript(unsharp)
+	ttk::label $wu.cb_unsharp -text [mc "Resize unsharp filter strength:"]
 	# ttk::label $wu.unsharp_label -text {Unsharp}
-	set ::widget_name(adjust_image_unsharp) [ttk::combobox $wu.unsharp_box -state readonly -width 8 -values {Soft None}]
+	set ::widget_name(adjust_image_unsharp) [ttk::combobox $wu.unsharp_box -state readonly -width 10 -values {Soft Hard {2.1 Soft} {Fixed sharp} None}]
 	$::widget_name(adjust_image_unsharp) current 0
 
 	grid $wu.cb_unsharp $wu.unsharp_box -sticky we
@@ -2930,7 +2929,7 @@ proc getResize { size dsize set_space } {
 
 	# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
 	# with -distort Resize instead of -resize Lanczos "or LanczosRadius"
-	set sigma [format %.2f [expr { ( (1 / ([format %.1f $dest_w] / $cur_w)) / 4 ) * .8 }] ]
+	set sigma [format %.2f [expr { .2 / ([format %.1f $dest_w] / $cur_w) }] ]
 	set filter "-interpolate bicubic -filter LanczosRadius -define filter:blur=.9891028367558475"
 	#set unsharp "-unsharp 0x$sigma+0.80+0.010"
 
@@ -2977,12 +2976,13 @@ proc getQuality { ext } {
 # set unsharp value depending on widget value
 # returns string
 proc getUnsharpValue { {sigma 0} } {
-	if $::artscript(unsharp) {
-		puts $::artscript_convert(unsharp_force)
-		switch -glob -- $::artscript_convert(unsharp_force) {
-			Soft	{ return "-unsharp 0x$sigma+0.80+0.010" }
-			default { return {} }
-		}
+	set amount [format %.2f [expr {.8 / $sigma}] ]
+	switch -glob -- $::artscript_convert(unsharp_force) {
+		Soft	{ return "-unsharp 0x$sigma+$amount+0.010" }
+		Hard 	{ return "-unsharp 0x[expr {$sigma * 1.5}]+[expr {$amount * 1.5}]+0.010" }
+		{2.1 Soft}	{ return "-unsharp 0x$sigma+0.80+0.010" }
+		{Fixed sharp} { return "-unsharp 0.48x0.48+0.60+0.012" }
+		default { return {} }
 	}
 	return {}
 }
@@ -3393,7 +3393,7 @@ proc artscriptWidgetCatalogue {} {
 	set catalogue [dict create]
 
 	dict set catalogue raw_vars {autor columns_only_show ext}
-	dict set catalogue variables {watermark_color collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image unsharp overwrite alfaoff image_quality remember_state window_geom}
+	dict set catalogue variables {watermark_color collage_name select_suffix select_collage select_watermark select_watermark_text select_watermark_image overwrite alfaoff image_quality remember_state window_geom}
 	dict set catalogue preset_variables {watermark_color_swatches}
 	dict set catalogue col_styles {watermark_main_color collage_bg_color collage_border_color collage_label_color collage_img_color}
 	dict set catalogue get_values {collage_ratio collage_wid collage_hei collage_col collage_row collage_range collage_border collage_padding collage_mode watermark_text watermark_text_position watermark_text_offset_x watermark_text_offset_y watermark_image_offset_x watermark_image_offset_y watermark_text_rotation watermark_image_rotation watermark_image_position watermark_image_style watermark_text_size watermark_text_opacity watermark_image_size watermark_image_opacity out_suffix out_prefix quality adjust_image_unsharp format resize_operators resize_zoom_position resize_zoom_offset_x resize_zoom_offset_y format}
