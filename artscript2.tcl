@@ -207,7 +207,7 @@ proc artscriptSettings {} {
 		artscript(image_quality)    92      \
 		artscript(supported_files) [dict create \
 			all [list $supported_files_string    [dict get $mis_settings ext] ] \
-			magick [list $supported_files_string  {.png .jpg .jpeg .gif .bmp .miff .svg .tif .webp} ] \
+			magick [list $supported_files_string  {.png .jpg .jpeg .gif .bmp .miff .tif .webp} ] \
 			krita [list {KRA, ORA}       {.ora .kra}  ] \
 			inkscape [list {SVG, AI}        {.svg .ai}   ] \
 			gimp [list {XCF, PSD}           {.xcf .psd}  ] \
@@ -810,66 +810,39 @@ proc showPreview {} {
 	}
 	return
 }
-# TODO: Break appart preview function to allow loading thumbs from tmp folder
-# Creates a thumbnail and places it in user thumbnail folders
-# It uses md5 string to store the file name in thumbs dir
-proc makeThumb { path filext tsize } {
-	set cmd [dict create]
-	set i 1
 
-	dict set cmd .ora {Thumbnails/thumbnail.png}
-	dict set cmd .kra {preview.png}
-
-	if {![catch {set container [dict get $cmd $filext]}] } {
-		set Cmd [list unzip -p $path $container | convert PNG:- ]
-
-	} elseif {[lsearch -exact {.psd .xcf} $filext ] >= 0 } {
-		$::widget_name(thumb-im) configure -image {} -compound text -text [mc "No Thumbnail"]
-		return 0
-	} else {
-		lappend Cmd convert -quiet $path		
-	}
-	dict for {size dest} $tsize {
-		if { $i < [dict size $tsize] } {
-			lappend Cmd ( +clone -thumbnail [append size x $size] -flatten -write PNG32:$dest +delete )
-			incr i
-			continue
-		}
-		lappend Cmd -thumbnail [append size x $size] -flatten PNG32:$dest
-	}
-	puts $Cmd
-	catch { exec {*}$Cmd } msg
-	puts $msg
-}
-
+# Read process for binary files, to avoid breakage fo binary data. TODO, proper fix
 proc readBinaryFile { f var } {
-	set ::artscript(data) [append ::artscript(data) [read $f]]
-	if { [eof $f] } {
+	set status [catch {append ::artscript(thumb_data) [read $f]} message]
+	# set status [catch { gets $f line } result]
+	if { $status != 0 } {
+		# unexpected error
+		puts [mc "Error! %s" $message]
+		closePipe $f [list after idle set $var 1]
+	} elseif { [eof $f] } {
 		fconfigure $f -blocking true
-    	close $f
-    	after idle set $var 1
+		closePipe $f [list after idle set $var 1]
 	}
+	#elseif { $message >= 0 } { }
 }
-proc getBinaryData { script var} {
+proc getBinaryData { script var } {
 	catch {close $::artscript(thumb_chan)}
-	set ::artscript(data) {}
+	set ::artscript(thumb_data) {}
 	set ::artscript(thumb_chan) [open "| $script 2>@1" rb]
 	fconfigure $::artscript(thumb_chan) -blocking false
-		fileevent $::artscript(thumb_chan) readable [list readBinaryFile $::artscript(thumb_chan) $var]
+	fileevent $::artscript(thumb_chan) readable [list readBinaryFile $::artscript(thumb_chan) $var]
 }
-proc setThumbGif { path } {
+
+# Make Gif thumbnail (bug at fast scrubbing)
+proc setThumbGIF { path } {
 	getBinaryData [list convert $path -strip GIF:-] ::thumb
 	vwait ::thumb
-	set ::artscript(thumb) $::artscript(data)
-
-	set ::img_thumb [image create photo]
-		$::img_thumb put $::artscript(thumb)
+	catch {set ::img_thumb [image create photo -data $::artscript(thumb_data)]}
 
 	thumbUpscale $path
 	$::widget_name(thumb-im) configure -compound image -image $::img_thumb
-	set ::artscript(thumb) {}
 }
-proc setThumbPng { path } {
+proc setThumbPNG { path } {
 	set ::img_thumb [image create photo -file $path]
 	thumbUpscale $path
 	$::widget_name(thumb-im) configure -compound image -image $::img_thumb
@@ -885,45 +858,50 @@ proc thumbUpscale { path } {
 	}
 }
 
-# Attempts to load a thumbnail from thumbnails folder if exists.
-# Creates a thumbnail for files missing Large thumbnail
-proc showThumb { w f {tryprev 1}} {
-	global inputfiles env
+# Loads the proper thumbnail into preview widget.
+# w = widget, selected_f = tree item selected
+proc showThumb { w selected_f } {
+	set f [lindex $selected_f 0]
 
-	# Do not process if selection is multiple
-	if {[llength $f] > 1 || $f eq {} } {
-		return -code break
-	}
-	set ::artscript(preview_id) [$::widget_name(flist) set $f id]
-	
-	set path [dict get $inputfiles $::artscript(preview_id) path]
-	set filext [string tolower [file extension $path] ]
+	set preview_path [dict get $::inputfiles [$::widget_name(flist) set $f id] path]
+	set preview_ext [string tolower [file extension $preview_path] ]
+
 	# Get png md5sum name.
-	set thumbname [string tolower [::md5::md5 -hex "file://$path"]]
-	set nthumb [file join $::artscript(thumb_normal) "$thumbname.png"]
-	set lthumb [file join $::artscript(thumb_large) "$thumbname.png"]
+	set thumb_name [string tolower [::md5::md5 -hex "file://$preview_path"]]
+	set thumb_normal [file join $::artscript(thumb_normal) "$thumb_name.png"]
+	set thumb_large [file join $::artscript(thumb_large) "$thumb_name.png"]
+	set thumb_Cmd [expr {$::artscript(tkpng) ? {setThumbPNG} : {setThumbGIF}}]
 
-	set thumbCmd [expr {[string is bool -strict $::artscript(tkpng)] ? {setThumbPng} : {setThumbGif}}]
 	catch {image delete $::img_thumb}
-	# Displays preview in widget
-	if { [file exists $lthumb ] } {
-		$thumbCmd $lthumb
-		return 
 
-	} elseif { [file exists $nthumb] } {
-		puts [mc "%s has normal thumb" $path]
-		if {[lsearch -exact {.xcf .psd} $filext] >= 0} {
-			$thumbCmd $nthumb
-			return
-		}
-		makeThumb $path $filext [dict create 256 $lthumb]
+	# Loads preview from thumbs in disk if available
+	if {[catch {$thumb_Cmd $thumb_large}]} {
+		catch {$thumb_Cmd $thumb_normal}
+	}
+	getThumb $preview_path $preview_ext [string range $thumb_Cmd end-2 end]
+
+	return 0
+}
+
+# Gets or renders large thumbnail for all images, thumbnail is not saved ondisk
+# path location, extension type.
+proc getThumb {path ext format} {
+	if {[lsearch [lindex [dict get $::artscript(supported_files) krita] 1] $ext] >= 0} {
+		dict set type .ora {Thumbnails/thumbnail.png}
+		dict set type .kra {preview.png}
+		set Cmd [list unzip -p $path [dict get $type $ext] | convert - $format:-]
+	} elseif {[lsearch [lindex [dict get $::artscript(supported_files) magick] 1] $ext] >= 0} {
+		set Cmd [list convert $path -thumbnail 256x256 $format:-]
 	} else {
-		puts [mc "%s has no thumb" $path]
-		makeThumb $path $filext [dict create 128 $nthumb 256 $lthumb]
+		$::widget_name(thumb-im) configure -image {} -compound text -text [mc "No Thumbnail"]
+		return
 	}
-	if {$tryprev} {
-		showThumb w $f 0
-	}
+	getBinaryData $Cmd ::thumb
+	vwait ::thumb
+
+	catch {set ::img_thumb [image create photo -data $::artscript(thumb_data)]}
+	$::widget_name(thumb-im) configure -compound image -image $::img_thumb
+	# set ::artscript(thumb_data) {}
 }
 
 # Scroll trough tabs on a notebook. (dir = direction)
@@ -3046,7 +3024,7 @@ proc closePipe {f script} {
     fconfigure $f -blocking true
     if {[catch {close $f} err]} {
         #output error $err
-        puts ["Operation encounter error: %s" $err]
+        puts [mc "Operation encounter error: %s" $err]
     }
     after idle [list after 0 $script]
 }
