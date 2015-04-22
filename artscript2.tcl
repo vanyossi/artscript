@@ -230,11 +230,13 @@ proc alert { title msg type icon } {
 }
 # Find program in path
 # Return bool
-proc validate {program} {
+proc validate { program {msg 1}} {
 	foreach place [split $::env(PATH) {:}] {
 		expr { [file exists [file join $place $program]] == 1 ? [return 1] : [continue] }
 	}
-	puts [mc "Program %s not found" $program]
+	if $msg {
+		puts [mc "Program %s not found" $program]
+	}
 	return 0
 }
 
@@ -259,16 +261,10 @@ proc prepare_krita_environment { args } {
 		catch {exec kdeinit4 &} ; #Do not break if kdeinit4 missing.
 	}
 
-	#check what version of krita is being used
-	set krita_version [exec krita --version]
-	set krita_string [lindex [split $krita_version \n] end]
-	set krita_number [lindex $krita_string 1]
-
-	#default to krita --export
-	set ::artscript(kra_cmd) [list krita {$path} --export --export-filename {$outname}]
-
-	#If version is 2.* or *.9 and Pre-alpha, use calligraconverter instead
-	if { (floor($krita_number) == 2) && ($krita_number == {2.9} && [lindex $krita_string 2] == "Pre-Alpha")} {
+	# Choose batch converter 2.8 uses calligraconverter, 2.9 krita --export
+	if [validate "calligraconverter" 0] {
+		set ::artscript(kra_cmd) [list krita {$path} --export --export-filename {$outname}]
+	} else {
 		set ::artscript(kra_cmd) [list calligraconverter --batch -- {$path} {$outname}]
 	}
 	return 0
