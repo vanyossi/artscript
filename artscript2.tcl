@@ -861,6 +861,8 @@ proc showThumb { w selected_f } {
 
 	set preview_path [dict get $::inputfiles [$::widget_name(flist) set $f id] path]
 	set preview_ext [string tolower [file extension $preview_path] ]
+	# TODO avoid repetition
+	set ::artscript(preview_id) [$::widget_name(flist) set $f id]
 
 	# Get png md5sum name.
 	set thumb_name [string tolower [::md5::md5 -hex "file://$preview_path"]]
@@ -3321,7 +3323,7 @@ proc doConvert { files {step 1} args } {
 
 # Set convert global and values total files to process
 # id = files to convert, if none given, all will be processed
-proc prepConvert { {type "Convert"} {ids ""} { preview 0} } {
+proc prepConvert { {type "Convert"} {ids ""} { preview 0 } } {
 
 	pBarControl {} create 0 1
 
@@ -3354,7 +3356,7 @@ proc prepConvert { {type "Convert"} {ids ""} { preview 0} } {
 
 proc afterConvert { type n args} {
 	array set vars $args
-	if {![info exists ::artscript(preview_id)]} {
+	if {!$vars(preview)} {
 		incr n -1
 		set message [mc {%1$s finished %2$s images processed} $type "\n$n" ]
 		if {[catch {exec notify-send -i [file join $::artscript(dir) icons "artscript.gif"] -u Critical "Artscript" "$message"}]} {
