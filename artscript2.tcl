@@ -4,7 +4,7 @@
 #  Version: v2.2-alpha
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
-#  License: GPLv3 
+#   License: GPLv3
 # -----------------------------------------------------------
 #  Goal : Aid in the deploy of digital artwork for media with the best possible quality
 #   Dependencies: >=imagemagick-6.7.5, tk 8.5 zip
@@ -15,7 +15,7 @@
 #   File must be in the same directory as the script.
 #
 # ---------------------::::::::::::::------------------------
-set ::version "v2.2-alpha"
+set ::version "v2.2"
 
 package require Tk
 package require platform
