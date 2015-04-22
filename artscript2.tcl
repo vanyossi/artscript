@@ -3354,10 +3354,10 @@ proc prepConvert { {type "Convert"} {ids ""} { preview 0} } {
 
 proc afterConvert { type n args} {
 	array set vars $args
-	if {![info exists vars(preview)]} {
+	if {![info exists ::artscript(preview_id)]} {
 		incr n -1
-		set message [mc {Artscript %1$s finished %2$s images processed} $type "\n$n" ]
-		if {[catch {exec notify-send -i [file join $::artscript(dir) icons "artscript.gif"] -t 4000 $message}]} {
+		set message [mc {%1$s finished %2$s images processed} $type "\n$n" ]
+		if {[catch {exec notify-send -i [file join $::artscript(dir) icons "artscript.gif"] -u Critical "Artscript" "$message"}]} {
 			tk_messageBox -type ok -icon info -title [mc "Operations Done"] -message $message
 		}
 	}
