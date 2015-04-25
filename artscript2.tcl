@@ -3369,7 +3369,7 @@ proc prepConvert { {type "Convert"} {ids ""} { preview 0 } } {
 	}
 
 	set ::artscript_convert(renders) [prepHandlerFiles $::artscript_convert(files)]
-	set ::artscript_convert(total_converts) [expr {([llength $::artscript_convert(files)] + $::artscript_convert(renders)) * [llength [getSizesSel 0]]}]
+	set ::artscript_convert(total_converts) [expr {[llength $::artscript_convert(files)] * [llength [getSizesSel 0]]}]
 
 	#Create progressbar
 	pBarUpdate $::widget_name(pbar-main) cur max $::artscript_convert(total_converts) current -1
