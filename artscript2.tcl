@@ -228,6 +228,16 @@ proc artscriptSettings {} {
 proc alert { title msg type icon } {
 		tk_messageBox -type $type -icon $icon -title $title -message $msg
 }
+
+# Implement notifySend type call for tk_messageBox
+# type,icon,title,msg => string
+proc notifySend { type count {priority "Critical"} } {
+	incr count -1
+	set message [mc {%1$s finished %2$s images processed} $type "\n$count" ]
+	if {[catch {exec notify-send -i [file join $::artscript(dir) icons "artscript.gif"] -u $priority "Artscript" "$message"}]} {
+		tk_messageBox -type ok -icon info -title [mc "Operations Done"] -message $message
+	}
+}
 # Find program in path
 # Return bool
 proc validate { program {msg 1}} {
@@ -2360,7 +2370,7 @@ proc prepCollage { input_files } {
 		}		
 	}
 
-	pBarUpdate $::widget_name(pbar-main) cur max [expr { ceil([llength $input_files] / [format %.2f $range]) * 2 + $::artscript_convert(total_renders) * [llength [getFinalSizelist]] }] current [expr {$::cur -2}]
+	pBarUpdate $::widget_name(pbar-main) cur max [expr { ceil([llength $input_files] / [format %.2f $range]) * 2 + $::artscript_convert(renders) * [llength [getFinalSizelist]] }] current [expr {$::cur -2}]
 
 	# Place color values
 	foreach {color} {bg_color border_color img_color label_color} {
@@ -2977,7 +2987,7 @@ proc renameFiles { {index 0} {step 0} } {
 			if {$id eq {}} {
 				pBarControl [mc "Rename Images Done!"] forget 600
 				puts [mc "Rename finished."]
-				afterConvert "Renaming" $index
+				notifySend "Renaming" $index
 				return
 			}
 
@@ -3066,7 +3076,7 @@ proc makeOra { index ilist } {
 	
 	if { $idnumber eq {} } {
 		pBarControl [mc "ORA Image Files Ready!"] forget 600
-		afterConvert "Make Ora" $index
+		notifySend "Make Ora" $index
 		return
 	}
 	
@@ -3235,16 +3245,19 @@ proc doConvert { files {step 1} args } {
 	foreach {key value} $args {
 		set $key $value
 	}
-	switch $step {
-	0 {
+	if { !$step } {
 		puts [mc "Starting Convert..."]
 		set ::artscript_convert(count) 0
+		set ::artscript_convert(converted) 0
 		after idle [list after 0 [list doConvert $files 1 {*}$args]]
-	} 1 {
+	} else {
 		if {$::artscript_convert(extract)} {
 			# wait until extraction ends to begin converting
 			vwait ::artscript_convert(extract)
 		}
+		incr ::artscript_convert(converted)
+		if {( $step > 1 )} { return }
+
 		set idnumber [lindex $files $::artscript_convert(count)]
 		incr ::artscript_convert(count)
 		
@@ -3258,7 +3271,7 @@ proc doConvert { files {step 1} args } {
 				}
 				set ::artscript_convert(collage_ids) {}
 			}
-			afterConvert "Convert" $::artscript_convert(count) {*}$args
+			afterConvert $::artscript_convert(converted) $preview
 			return
 		}
 		
@@ -3302,11 +3315,11 @@ proc doConvert { files {step 1} args } {
 					# puts $::artscript_convert(alfa_off)
 					set convertCmd [concat convert -quiet \"$opath\" $trim $resize $::artscript_convert(wmark) $::artscript_convert(alfa_off) $::artscript_convert(quality) $soname]
 					puts $convertCmd
-					runCommand $convertCmd [list doConvert $files 1 {*}$args]
+					runCommand $convertCmd [list doConvert $files $i {*}$args]
 				}
 			}
 		}
-	}}
+	}
 	return 0
 }
 
@@ -3321,36 +3334,35 @@ proc prepConvert { {type "Convert"} {ids ""} { preview 0 } } {
 		set ::artscript_convert($var) [set ::$var]
 	}
 
+	set ::artscript_convert(wmark) [watermark]
+	set ::artscript_convert(quality) [getQuality $::out_extension]
+	set ::artscript_convert(unsharp_force) [$::widget_name(adjust_image_unsharp) get]
+ 	#controls all extracts are done before convert
+	
+	#wait until Gimp, Krita and inkscape converts to Tmp files
+	set ::artscript_convert(extract) true
+
 	set ::artscript_convert(files) [processIds $ids]
 	set ::artscript_convert(collage_ids) [list]
 	if {[llength $::artscript_convert(files)] == 0} {
 		pBarControl [mc "No images loaded!"] forget 600
 		return -code break
 	}
-	set ::artscript_convert(wmark) [watermark]
-	set ::artscript_convert(quality) [getQuality $::out_extension]
-	set ::artscript_convert(unsharp_force) [$::widget_name(adjust_image_unsharp) get]
- 	#controls all extracts are done before convert
-	set ::artscript_convert(extract) true
-	
-	#process Gimp Krita and inkscape to Tmp files
-	set ::artscript_convert(files) [processIds $ids]
-	set ::artscript_convert(total_renders) [prepHandlerFiles $::artscript_convert(files)]
+
+	set ::artscript_convert(renders) [prepHandlerFiles $::artscript_convert(files)]
+	set ::artscript_convert(total_converts) [expr {([llength $::artscript_convert(files)] + $::artscript_convert(renders)) * [llength [getFinalSizelist]]}]
 
 	#Create progressbar
-	pBarUpdate $::widget_name(pbar-main) cur max [expr {([llength $::artscript_convert(files)] + $::artscript_convert(total_renders)) * [llength [getFinalSizelist]]}] current -1
+	pBarUpdate $::widget_name(pbar-main) cur max $::artscript_convert(total_converts) current -1
 	
 	do$type $::artscript_convert(files) 0 preview $preview
 }
 
-proc afterConvert { type n args} {
-	array set vars $args
-	if {!$vars(preview)} {
-		incr n -1
-		set message [mc {%1$s finished %2$s images processed} $type "\n$n" ]
-		if {[catch {exec notify-send -i [file join $::artscript(dir) icons "artscript.gif"] -u Critical "Artscript" "$message"}]} {
-			tk_messageBox -type ok -icon info -title [mc "Operations Done"] -message $message
-		}
+# Shows a notification at the end of all convert operations
+# Index= integer, preview = bool
+proc afterConvert { index preview } {
+	if {!$preview && ( $index == $::artscript_convert(total_converts) + 1 )} {
+		notifySend "Convert" $index
 	}
 }
 
