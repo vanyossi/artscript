@@ -5,7 +5,7 @@
 # Use this file load diferent settings at loading.
 # Lines starting with "#" will be ignored
 # To use rename to presets.config (remove the "example")
-# Custom variables (only autor available v1.5)
+# Custom variables (only autor available v2.2)
 autor=Autor
 
 # Use above variables like the example (ex. autor > $autor)

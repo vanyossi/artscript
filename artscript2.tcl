@@ -1,7 +1,7 @@
 #! /usr/bin/env wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: v2.2-alpha
+#  Version: v2.2.1
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #   License: GPLv3
@@ -15,7 +15,7 @@
 #   File must be in the same directory as the script.
 #
 # ---------------------::::::::::::::------------------------
-set ::version "v2.2"
+set ::version "v2.2.1"
 
 package require Tk
 package require platform
