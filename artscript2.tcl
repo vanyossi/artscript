@@ -1949,13 +1949,14 @@ proc sizeOptions { w } {
 
 	return $w
 }
+
 # Returns list of sizes with selected tag
-proc getSizesSel { {sizes {} } } {
+proc getSizesSel { { sizes_sel {} } } {
 	set selected [$::widget_name(resize_tree) tag has selected]
 	foreach item $selected {
 		lappend sizes [$::widget_name(resize_tree) set $item size]
 	}
-	return $sizes
+	return [expr {[info exists sizes] > 0 ? $sizes : $sizes_sel}]
 }
 
 proc showOperatorOptions { w mode } {
@@ -2373,7 +2374,7 @@ proc prepCollage { input_files } {
 		}		
 	}
 
-	pBarUpdate $::widget_name(pbar-main) cur max [expr { ceil([llength $input_files] / [format %.2f $range]) * 2 + $::artscript_convert(renders) * [llength [getFinalSizelist]] }] current [expr {$::cur -2}]
+	pBarUpdate $::widget_name(pbar-main) cur max [expr { ceil([llength $input_files] / [format %.2f $range]) * 2 + $::artscript_convert(renders) * [llength [getSizesSel 0]] }] current [expr {$::cur -2}]
 
 	# Place color values
 	foreach {color} {bg_color border_color img_color label_color} {
@@ -2743,14 +2744,16 @@ proc pBarControl { itext {action none} { delay 0 } {max 0} } {
 	}
 }
 
-#Resize: returns 0 if no size selected: #TODO remove the need of this func
-proc getFinalSizelist {} {
-	set sizeslist [getSizesSel]
-	if {[llength $sizeslist] == 0 } {
-		return 0
-	}
-	return $sizeslist
-}
+# Resize: returns 0 if no size selected: 
+# TODO remove the need of this func
+# proc getFinalSizelist {} {
+# 	set sizeslist [getSizesSel]
+# 	if {[llength $sizeslist] == 0 } {
+# 		return 0
+# 	}
+# 	return $sizeslist
+# }
+
 # Returns scaled size fitting in destination measures
 # w xh = original dimension dw x dh = Destination size
 proc getSizeScale { w h dw dh {mode "OnlyShrink"} } {
@@ -2799,7 +2802,7 @@ proc getSizeZoom { w h dw dh } {
 proc getOutputSizesForTree { size {formated 0}} {
 	lassign [split $size {x}] cur_w cur_h
 	
-	set sizelist [getFinalSizelist]
+	set sizelist [getSizesSel 0]
 	foreach dimension $sizelist {
 		if {[string range $dimension end end] == "%"} {
 			set ratio [string trim $dimension {%}]
@@ -3353,7 +3356,7 @@ proc prepConvert { {type "Convert"} {ids ""} { preview 0 } } {
 	}
 
 	set ::artscript_convert(renders) [prepHandlerFiles $::artscript_convert(files)]
-	set ::artscript_convert(total_converts) [expr {([llength $::artscript_convert(files)] + $::artscript_convert(renders)) * [llength [getFinalSizelist]]}]
+	set ::artscript_convert(total_converts) [expr {([llength $::artscript_convert(files)] + $::artscript_convert(renders)) * [llength [getSizesSel 0]]}]
 
 	#Create progressbar
 	pBarUpdate $::widget_name(pbar-main) cur max $::artscript_convert(total_converts) current -1
