@@ -262,7 +262,7 @@ proc prepare_krita_environment { args } {
 	}
 
 	# Choose batch converter 2.8 uses calligraconverter, 2.9 krita --export
-	if [validate "calligraconverter" 0] {
+	if { ![validate "calligraconverter" 0] } {
 		set ::artscript(kra_cmd) [list krita {$path} --export --export-filename {$outname}]
 	} else {
 		set ::artscript(kra_cmd) [list calligraconverter --batch -- {$path} {$outname}]
