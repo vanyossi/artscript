@@ -367,7 +367,7 @@ proc readFileHead { file_name {n 10} } {
 }
 
 # Get SVG and AI Width and Height.
-# Works with plain and normal svg saved from inkscape. TODO: testing
+# Works with plain and normal svg saved from inkscape.
 # returns string {widtxheight} or 0 if nothing found
 proc getWidthHeightSVG { lines } {
 	foreach l [split $lines] {
@@ -675,8 +675,6 @@ proc addTreevalues { w id } {
 # Deletes the keys from tree(w), and sets deletes value to 1
 # TODO Remove all entries of file type. (filtering)
 proc removeTreeItem { w i } {
-	# global inputfiles
-
 	# TODO undo last delete
 	foreach item $i {
 		set id [$w set $item id]
@@ -729,12 +727,12 @@ proc treeSortTagPair {tree col tag antitag} {
 
 # Updates global variable
 # var = global variable name, value = new value
-# TODO: check if necessary
-proc updateTextLabel { var value } {
-	upvar #0 $var ltext
-	set ltext $value
-	return
-}
+# TODO: check if it is still necessary
+# proc updateTextLabel { var value } {
+# 	upvar #0 $var ltext
+# 	set ltext $value
+# 	return
+# }
 
 #creates headers and assing visibility to them.
 proc treeviewHeaderAssign { {w 0} {tree_scroll 0}} {
@@ -809,7 +807,6 @@ proc printOutname { w } {
 }
 
 # Check id of thumbnail shown sends it to convert to preview.
-# TODO add size preview selection
 proc showPreview {} {
 	if {[info exists ::artscript(preview_id)]} {
 		prepConvert Convert $::artscript(preview_id) 1
@@ -817,7 +814,8 @@ proc showPreview {} {
 	return
 }
 
-# Read process for binary files, to avoid breakage fo binary data. TODO, proper fix
+# Read process for binary files, to avoid breakage fo binary data.
+# TODO: quick fix, improve.
 proc readBinaryFile { f var } {
 	set status [catch {append ::artscript(thumb_data) [read $f]} message]
 	# set status [catch { gets $f line } result]
@@ -871,7 +869,6 @@ proc showThumb { w selected_f } {
 
 	set preview_path [dict get $::inputfiles [$::widget_name(flist) set $f id] path]
 	set preview_ext [string tolower [file extension $preview_path] ]
-	# TODO avoid repetition
 	set ::artscript(preview_id) [$::widget_name(flist) set $f id]
 
 	# Get png md5sum name.
@@ -1304,7 +1301,6 @@ proc guiOptionTabs { w } {
 	set ::widget_name(tab_Resize) [tabResize $w.sz]
 	set ::widget_name(tab_Collage) [tabCollage $w.cl]
 	set ::widget_name(tab_Etc) [tabEtc $w.tw]
-	# set ::wt $::widget_name(tab_Watermark) ; #TODO remove, bidsetAction locks this variable name
 
 	bind $w <Button> {guiTabCheckbox %W [%W select] [%W identify tab %x %y]}
 	
@@ -1776,14 +1772,18 @@ proc addSizeBox { w name } {
 
 	return $w
 }
-# TODO organize and comment
+
+# Populates the widget with the values on sizes_set(key)
+# w = widget name to get key, tw = target widget to fill  
 proc sizeSetPreset { w tw } {
 	set preset [$w get]
 	$tw configure -values $::sizes_set($preset)
 	$tw set [lindex $::sizes_set($preset) 0]
 	sizeEdit $tw
 }
-# TODO organize and comment
+
+# Fill widh and height with the value of the widget
+# current size, and calculate the aspect ratio.
 proc sizeEdit { w } {
 	set size [$w get]
 	set sizes [sizeToggleWidgetWxH $size]
@@ -2268,7 +2268,10 @@ proc tabCollage { w } {
 
 	return $w
 }
-# Estimate ouptput size. TODO make the code less repetitive with prepCollage 
+
+# Estimate ouptput size.
+# Print size if its posible to estimate, otherwise tell the user
+# NOTE: in some cases its not possible to compute size. 
 proc colEstimateSize { w } {
 	foreach {value} {border padding col row } {
 		set $value [$::widget_name(collage_${value}) get]
@@ -2720,7 +2723,7 @@ proc pBarUpdate { w gvar args } {
 
 # Controls the basic operation of create update and forget from main progressbar
 proc pBarControl { itext {action none} { delay 0 } {max 0} } {
-	updateTextLabel pbtext $itext
+	set ::pbtext $itext
 	update idletasks
 	if {$delay > 0} {
 		after idle [list after $delay [list set wait 1]]
@@ -2734,7 +2737,7 @@ proc pBarControl { itext {action none} { delay 0 } {max 0} } {
 		}
 		"forget" { 
 			pack forget $::widget_name(pbar-main) $::widget_name(pbar-label)
-			updateTextLabel pbtext ""
+			set ::pbtext ""
 		 }
 		"update"  { pBarUpdate $::widget_name(pbar-main) cur }
 	}
@@ -2811,7 +2814,7 @@ proc getOutputSizesForTree { size {formated 0}} {
 		# get final size
 		set mode [dict get $::artscript(size_operators) [$::widget_name(resize_operators) get]]
 		set finalscale [getSizeScale $cur_w $cur_h $dest_w $dest_h $mode]
-		#TODO Add resize filter (better quality)
+		#TODO Add resize filter (better control)
 		lappend fsizes $finalscale
 	}
 	#Do not return repeated sizes
@@ -2821,8 +2824,8 @@ proc getOutputSizesForTree { size {formated 0}} {
 	}
 	return $fsizes
 }
+
 # Return offset x y in format +n+n
-#TODO make apply function to return 0 if empty
 proc widgetGetOffset { family type } {
 	foreach var {x y} {
 		set value [$::widget_name(${family}_${type}_offset_${var}) get]
@@ -3533,7 +3536,7 @@ set ::haskrita [validate "krita"]
 # setup environment for krita
 if $::haskrita prepare_krita_environment
 
-#-====# Global file counter TODO: separate delete to a list
+#-====# Global file counter TODO: separate deleted to a list
 set ::fc 1
 set ::artscript(human_pos) [list [mc "TopLeft"] [mc "Top"] [mc "TopRight"] [mc "Left"] [mc "Center"] [mc "Right"] [mc "BottomLeft"] [mc "Bottom"]  [mc "BottomRight"]]
 set ::artscript(magick_pos) [list "NorthWest" "North" "NorthEast" "West" "Center" "East" "SouthWest" "South" "SouthEast"]
