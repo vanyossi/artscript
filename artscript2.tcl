@@ -3253,19 +3253,32 @@ proc doConvert { files {step 1} args } {
 	}
 	if { !$step } {
 		puts [mc "Starting Convert..."]
-		set ::artscript_convert(count) 0
+		set ::artscript_convert(position) 0
 		set ::artscript_convert(converted) 0
-		after idle [list after 0 [list doConvert $files 1 {*}$args]]
+
+		# Make list for multisize output
+		foreach file $files {
+			set size [dict get $::inputfiles $file size]
+			set sizes [getOutputSizesForTree $size]
+			foreach dimension $sizes {
+				lappend sizes_files $file $dimension
+			}
+		}
+
+		after idle [list after 0 [list doConvert $sizes_files 1 {*}$args]]
 	} else {
 		if {$::artscript_convert(extract)} {
 			# wait until extraction ends to begin converting
 			vwait ::artscript_convert(extract)
 		}
+		# count total converted files
 		incr ::artscript_convert(converted)
-		if {( $step > 1 )} { return }
 
-		set idnumber [lindex $files $::artscript_convert(count)]
-		incr ::artscript_convert(count)
+		set idnumber [lindex $files $::artscript_convert(position)]
+
+		# add one and now points to size of idnumber
+		incr ::artscript_convert(position)
+		set dimension [lindex $files $::artscript_convert(position)]
 		
 		if { $idnumber eq {} } {
 			pBarControl [mc "File Conversions Done!"] forget 600
@@ -3291,38 +3304,36 @@ proc doConvert { files {step 1} args } {
 				if {[dict exists $datas tmp]} {
 					set opath $tmp
 				}
-				# necessary for resize sRGB inputfiles.
-				set file_info [exec identify -quiet $opath]
-				set colorspace_make_linear [expr {[lsearch $file_info sRGB] >= 0 ? 1 : 0}]
-				# get make resize string
-				set sizes [getOutputSizesForTree $size]
+
+				# mode has colormode
+				set colorspace_make_linear [expr {$color eq {sRGB} ? 1 : 0}]
 				
-				foreach dimension $sizes {
-					incr i
-					set resize {}
-					if { ($size != $osize) && $::artscript(select_size) } {
-						set resize [getResize $size $dimension $colorspace_make_linear]
-					}
-					set converting_string [mc {Converting... %1$s to %2$s} ${name} $dimension]
-					puts $converting_string
-					pBarControl $converting_string update
-					
-					if {$i == 1} { set dimension {}	}
-					if {$::out_extension eq {Keep format}} {
-						set ::artscript_convert(quality) [getQuality $ext]
-					}
-					
-					if {$preview} {
-						puts [mc "Generating preview"]
-						set soname "show:"
-					} else {
-						set soname \"[file join $outpath [getOutputName $path $::artscript_convert(out_extension) $::artscript_convert(out_prefix) $::artscript_convert(out_suffix) $dimension] ]\"
-					}
-					# puts $::artscript_convert(alfa_off)
-					set convertCmd [concat convert -quiet \"$opath\" $trim $resize $::artscript_convert(wmark) $::artscript_convert(alfa_off) $::artscript_convert(quality) $soname]
-					puts $convertCmd
-					runCommand $convertCmd [list doConvert $files $i {*}$args]
+				set resize {}
+				if { ($size != $osize) && $::artscript(select_size) } {
+					set resize [getResize $size $dimension $colorspace_make_linear]
 				}
+				set converting_string [mc {Converting... %1$s to %2$s} ${name} $dimension]
+				puts $converting_string
+				pBarControl $converting_string update
+
+				if {$step == 1} { set dimension {}	}
+				if {$::out_extension eq {Keep format}} {
+					set ::artscript_convert(quality) [getQuality $ext]
+				}
+
+				if {$preview} {
+					puts [mc "Generating preview"]
+					set soname "show:"
+				} else {
+					set soname \"[file join $outpath [getOutputName $path $::artscript_convert(out_extension) $::artscript_convert(out_prefix) $::artscript_convert(out_suffix) $dimension] ]\"
+				}
+
+				# add one, points to next id
+				incr ::artscript_convert(position)
+				# puts $::artscript_convert(alfa_off)
+				set convertCmd [concat convert -quiet \"$opath\" $trim $resize $::artscript_convert(wmark) $::artscript_convert(alfa_off) $::artscript_convert(quality) $soname]
+				puts $convertCmd
+				runCommand $convertCmd [list doConvert $files $::artscript_convert(position) {*}$args]
 			}
 		}
 	}
