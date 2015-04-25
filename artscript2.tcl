@@ -2397,6 +2397,7 @@ proc doCollage { files {step 1} args } {
 		puts [mc "Powering up Collage Assembly line"]
 		set ::artscript_convert(count) 0
 		set range_files [prepCollage $files]
+		set ::artscript_convert(total_converts) [llength $range_files]
 		after idle [list after 0 [list doCollage $range_files]]
 
 	} 1 {
@@ -2461,6 +2462,7 @@ proc doCollage { files {step 1} args } {
 		runCommand $Cmd [list relaunchCollage $output_path $path $files]
 	}}
 }
+
 proc relaunchCollage { file_generated destination files } {
 	# global fc deleteFileList
 	if {[file exists $file_generated]} {
