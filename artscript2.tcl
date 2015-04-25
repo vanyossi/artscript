@@ -2993,17 +2993,6 @@ proc renameFiles { {index 0} {step 0} } {
 		}
 	}
 }
-proc keepFiles { } {
-	set images_id [processIds]
-	set forbid_ids [putsHandlers g i k]
-
-	set ids {}
-	foreach id $images_id {
-		if { [lsearch $forbid_ids $id] >= 0 } { continue }
-		lappend ids $id
-	}
-	prepConvert Convert $ids
-}
 	
 # Adds command to fileevent handler
 # cmd exec command, script last cmd executed
