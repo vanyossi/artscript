@@ -1,7 +1,7 @@
 #! /usr/bin/env wish
 #
 # ---------------:::: ArtscriptTk ::::-----------------------
-#  Version: v2.2.1
+#  Version: v2.2.2
 #  Author:IvanYossi / http://colorathis.wordpress.com ghevan@gmail.com
 #  Script inspired by David Revoy artscript / www.davidrevoy.com info@davidrevoy.com
 #   License: GPLv3
@@ -15,7 +15,7 @@
 #   File must be in the same directory as the script.
 #
 # ---------------------::::::::::::::------------------------
-set ::version "v2.2.1"
+set ::version "v2.2.2"
 
 package require Tk
 package require platform
@@ -272,11 +272,8 @@ proc prepare_krita_environment { args } {
 	}
 
 	# Choose batch converter 2.8 uses calligraconverter, 2.9 krita --export
-	if { ![validate "calligraconverter" 0] } {
-		set ::artscript(kra_cmd) [list krita {$path} --export --export-filename {$outname}]
-	} else {
-		set ::artscript(kra_cmd) [list calligraconverter --batch -- {$path} {$outname}]
-	}
+	set ::artscript(kra_cmd) [list krita {$path} --export --export-filename {$outname}]
+	
 	return 0
 }
 
@@ -2973,7 +2970,7 @@ proc getUnsharpValue { {sigma 0} } {
 	set amount [format %.2f [expr {.8 / $sigma}] ]
 	switch -glob -- $::artscript_convert(unsharp_force) {
 		Soft	{ return "-unsharp 0x$sigma+$amount+0.010" }
-		Hard 	{ return "-unsharp 0x[expr {$sigma * 1.5}]+[expr {$amount * 1.5}]+0.010" }
+		Hard 	{ return "-unsharp 0x[expr {$sigma * 1.3}]+[expr {$amount * 1.3}]+0.010" }
 		{2.1 Soft}	{ return "-unsharp 0x$sigma+0.80+0.010" }
 		{Fixed sharp} { return "-unsharp 0.48x0.48+0.60+0.012" }
 		default { return {} }
