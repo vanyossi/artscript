@@ -452,7 +452,7 @@ proc listValidate { files {step 0} } {
 			}
 			# Get initial data to validate filetype
 			switch -- $filext {
-				.xcf     { binary scan [readFileHead $i 10] A14III f w h m
+				.xcf     { binary scan [readFileHead $i 2] A14III f w h m
 					set colormodes [list 0 sRGB 1 Grayscale 2 Indexed]
 				 }
 				.psd     { binary scan [readFileHead $i 2] a4SS3SIISS f s t fo h w depth m
