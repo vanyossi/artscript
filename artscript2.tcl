@@ -273,7 +273,7 @@ proc prepare_krita_environment { args } {
 
 	# Choose batch converter 2.8 uses calligraconverter, 2.9 krita --export
 	set ::artscript(kra_cmd) [list krita {$path} --export --export-filename {$outname}]
-	
+
 	return 0
 }
 
@@ -353,7 +353,7 @@ proc identifyFile { f } {
 proc readFileHead { file_name {n 10} } {
 	set data_read {}
 	set file_path [file normalize $file_name]
-	set data [open $file_path r]
+	set data [open $file_path {RDONLY BINARY}]
 	incr i
 	while {(-1 != [gets $data line]) && ($i <= $n )} {
 		append data_read $line\n
@@ -452,7 +452,7 @@ proc listValidate { files {step 0} } {
 			}
 			# Get initial data to validate filetype
 			switch -- $filext {
-				.xcf     { binary scan [readFileHead $i 2] A14III f w h m
+				.xcf     { binary scan [readFileHead $i 10] A14III f w h m
 					set colormodes [list 0 sRGB 1 Grayscale 2 Indexed]
 				 }
 				.psd     { binary scan [readFileHead $i 2] a4SS3SIISS f s t fo h w depth m
