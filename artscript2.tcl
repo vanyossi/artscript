@@ -3263,6 +3263,7 @@ proc doConvert { files {step 1} args } {
 				lappend sizes_files $file $dimension
 			}
 		}
+		set ::artscript_convert(prev_idnumber) {}
 
 		after idle [list after 0 [list doConvert $sizes_files 1 {*}$args]]
 	} else {
@@ -3315,7 +3316,9 @@ proc doConvert { files {step 1} args } {
 				puts $converting_string
 				pBarControl $converting_string update
 
-				if {$step == 1} { set dimension {}	}
+				if {$::artscript_convert(prev_idnumber) != $idnumber} { 
+					set dimension {}	
+				}
 				if {$::out_extension eq {Keep format}} {
 					set ::artscript_convert(quality) [getQuality $ext]
 				}
@@ -3329,6 +3332,7 @@ proc doConvert { files {step 1} args } {
 
 				# add one, points to next id
 				incr ::artscript_convert(position)
+				set ::artscript_convert(prev_idnumber) $idnumber
 				# puts $::artscript_convert(alfa_off)
 				set convertCmd [concat convert -quiet \"$opath\" $trim $resize $::artscript_convert(wmark) $::artscript_convert(alfa_off) $::artscript_convert(quality) $soname]
 				puts $convertCmd
