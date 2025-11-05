@@ -2921,7 +2921,7 @@ proc getResize { size dsize set_space } {
 	# - Lagrange Lanczos2 Catrom Lanczos Parzen Cosine + (sharp)
 	# with -distort Resize instead of -resize Lanczos "or LanczosRadius"
 	set sigma [format %.2f [expr { .2 / ([format %.1f $dest_w] / $cur_w) }] ]
-	set filter "-interpolate bicubic -filter LanczosRadius -define filter:blur=.9891028367558475"
+	set filter "-interpolate Catrom -filter LanczosRadius -define filter:blur=.9891028367558475"
 	#set unsharp "-unsharp 0x$sigma+0.80+0.010"
 
 	set unsharp [getUnsharpValue $sigma]
